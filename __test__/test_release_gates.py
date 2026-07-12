@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import subprocess
 import sys
@@ -23,6 +24,7 @@ def _load_script(name: str):
 
 drift = _load_script("check_version_drift")
 gate = _load_script("check_release_gate")
+bump = _load_script("bump_version")
 
 PYPROJECT = """[project]
 name = "skill-library"
@@ -183,6 +185,19 @@ class TestReleaseGate(ReleaseRepoTestCase):
         problems = "\n".join(gate.check(self.repo))
         self.assertIn("went backwards", problems)
 
+    def test_bumped_repo_passes_gate_with_code_change(self):
+        # Полный сценарий: код изменён, версия поднята через bump_version —
+        # оба гейта зелёные.
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        (self.repo / "src" / "skill_library" / "core.py").write_text(
+            "VALUE = 2\n", encoding="utf-8"
+        )
+        bump.bump(self.repo, "0.1.1", datetime.date(2026, 7, 12))
+        self.commit_all()
+        self.assertEqual(drift.check(self.repo), [])
+        self.assertEqual(gate.check(self.repo), [])
+
     def test_picks_highest_semver_tag(self):
         # v0.9.0 и v0.10.0: по SemVer старше 0.10.0 (строковое сравнение дало
         # бы 0.9.0). Код изменён без bump относительно 0.10.0 — гейт падает
@@ -201,3 +216,39 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.commit_all()
         problems = "\n".join(gate.check(self.repo))
         self.assertIn("version is still 0.10.0", problems)
+
+
+class TestBumpVersion(ReleaseRepoTestCase):
+    DATE = datetime.date(2026, 7, 12)
+
+    def test_explicit_bump_updates_all_three_files(self):
+        self.make_repo("0.0.0")
+        bump.bump(self.repo, "0.0.1", self.DATE)
+        self.assertEqual(drift.read_pyproject_version(self.repo), "0.0.1")
+        self.assertEqual(drift.read_init_version(self.repo), "0.0.1")
+        self.assertEqual(drift.read_changelog_version(self.repo), "0.0.1")
+        self.assertEqual(drift.check(self.repo), [])
+
+    def test_changelog_stub_inserted_before_previous_entry(self):
+        self.make_repo("0.1.0")
+        bump.bump(self.repo, "0.2.0", self.DATE)
+        text = (self.repo / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertLess(text.index("## [0.2.0] — 2026-07-12"), text.index("## [0.1.0]"))
+        self.assertIn("TODO", text)
+
+    def test_next_version_parts(self):
+        self.assertEqual(bump.next_version("0.1.2", "patch"), "0.1.3")
+        self.assertEqual(bump.next_version("0.1.2", "minor"), "0.2.0")
+        self.assertEqual(bump.next_version("0.1.2", "major"), "1.0.0")
+
+    def test_downgrade_and_same_version_rejected(self):
+        self.make_repo("0.2.0")
+        with self.assertRaises(SystemExit):
+            bump.bump(self.repo, "0.1.0", self.DATE)
+        with self.assertRaises(SystemExit):
+            bump.bump(self.repo, "0.2.0", self.DATE)
+
+    def test_invalid_version_rejected(self):
+        self.make_repo("0.1.0")
+        with self.assertRaises(SystemExit):
+            bump.bump(self.repo, "0.1.x", self.DATE)

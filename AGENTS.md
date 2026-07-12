@@ -69,11 +69,19 @@
   push to `main` only (direct commit or merged PR). Branches `test` and `dev`
   never produce releases. Release assets: a `git archive` source tarball plus
   its SHA256; no build artifacts.
+- To bump the version, ALWAYS run `python3 scripts/bump_version.py <X.Y.Z>`
+  (or `--patch/--minor/--major`) — it updates all three files atomically,
+  inserts a `CHANGELOG.md` entry stub and self-checks for drift. Never edit
+  the version in the three files by hand: that is duplicate work and a drift
+  risk. The only manual step left is replacing the TODO line in the new
+  `CHANGELOG.md` entry with the actual change description (it becomes the
+  GitHub release notes).
 - Version bump rules, enforced by `scripts/check_release_gate.py` (runs on PRs
   to `main` and on `main` pushes):
   - changing used code (`skills/`, `src/`, `scripts/`, `templates/`,
     `skills.yaml`, `pyproject.toml`, `LICENSE`) requires bumping the version
-    in all three files above and adding a `CHANGELOG.md` entry;
+    (via `scripts/bump_version.py`) and describing the change in
+    `CHANGELOG.md`;
   - infrastructure-only changes (`__test__/`, `.github/`, `README.md`,
     `AGENTS.md`, etc.) must NOT change the version — no release is published;
   - the version only grows; `0.0.0` is the unreleased baseline and is never
