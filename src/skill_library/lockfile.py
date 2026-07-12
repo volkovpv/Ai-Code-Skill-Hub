@@ -1,0 +1,103 @@
+"""Read/write the per-project ``.agent-skills.lock.yaml``.
+
+The lock file lives in the root of the *target* project and records the
+provenance of every installed skill::
+
+    version: 1
+    skills:
+      - name: example-skill
+        source: /абсолютный/путь/к/библиотеке        # или URL git-репозитория
+        source_commit: <hex или null>
+        skill_version: 0.1.0
+        agent: universal
+        mode: copy                                   # copy | link
+        target_path: .agents/skills/example-skill    # относительно проекта
+        checksum: sha256:<агрегат по файлам>
+        installed_at: 2026-07-12T12:00:00+00:00
+        updated_at: null
+        files:                                       # только управляемые файлы
+          - path: SKILL.md
+            sha256: <hex>
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from . import yamlio
+
+__all__ = [
+    "LOCKFILE_NAME",
+    "LOCK_VERSION",
+    "LockError",
+    "lock_path",
+    "load_lock",
+    "save_lock",
+    "get_entry",
+    "upsert_entry",
+    "remove_entry",
+]
+
+LOCKFILE_NAME = ".agent-skills.lock.yaml"
+LOCK_VERSION = 1
+
+
+class LockError(Exception):
+    """Raised when the lock file is unreadable or malformed."""
+
+
+def lock_path(target_root: Path) -> Path:
+    return Path(target_root) / LOCKFILE_NAME
+
+
+def _empty_lock() -> dict:
+    return {"version": LOCK_VERSION, "skills": []}
+
+
+def load_lock(target_root: Path) -> dict:
+    path = lock_path(target_root)
+    if not path.is_file():
+        return _empty_lock()
+    try:
+        data = yamlio.load_file(path)
+    except yamlio.YamlError as exc:
+        raise LockError(f"{path}: {exc}") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("skills", []), list):
+        raise LockError(f"{path}: malformed lock file")
+    if data.get("version") != LOCK_VERSION:
+        raise LockError(
+            f"{path}: unsupported lock version {data.get('version')!r} (expected {LOCK_VERSION})"
+        )
+    data.setdefault("skills", [])
+    return data
+
+
+def save_lock(target_root: Path, data: dict) -> None:
+    data = {"version": LOCK_VERSION, "skills": data.get("skills", [])}
+    yamlio.dump_file(lock_path(target_root), data)
+
+
+def get_entry(data: dict, name: str) -> dict | None:
+    for entry in data.get("skills", []):
+        if isinstance(entry, dict) and entry.get("name") == name:
+            return entry
+    return None
+
+
+def upsert_entry(data: dict, entry: dict) -> None:
+    skills = data.setdefault("skills", [])
+    for i, existing in enumerate(skills):
+        if isinstance(existing, dict) and existing.get("name") == entry.get("name"):
+            skills[i] = entry
+            return
+    skills.append(entry)
+    skills.sort(key=lambda e: str(e.get("name", "")))
+
+
+def remove_entry(data: dict, name: str) -> bool:
+    skills = data.get("skills", [])
+    for i, existing in enumerate(skills):
+        if isinstance(existing, dict) and existing.get("name") == name:
+            del skills[i]
+            return True
+    return False

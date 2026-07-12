@@ -1,0 +1,21 @@
+# Каталог публикуемых skills библиотеки.
+# ВАЖНО: список `skills:` должен оставаться последним top-level ключом файла —
+# `skillctl new` дописывает новые записи в конец.
+version: 1
+skills:
+  - name: example-skill
+    path: skills/example-skill
+    version: 0.2.0
+    status: stable
+    summary: Reference skill; drafts a Conventional Commits message from a git diff.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
+    capabilities:
+      knowledge: true
+      data: true
+      observations: true
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true

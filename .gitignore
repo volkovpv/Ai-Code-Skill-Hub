@@ -67,3 +67,5 @@ mutants/
 docker-compose.override.yml
 
 .output.txt
+
+promts/*

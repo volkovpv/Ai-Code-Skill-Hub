@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skill-library"
+version = "0.0.0"
+description = "Self-contained, vendor-neutral Agent Skills library with a management CLI (skillctl)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Волков Петр Викторович" }]
+# Зависимостей нет намеренно: CLI и тесты работают на чистой stdlib.
+dependencies = []
+
+[project.scripts]
+skillctl = "skill_library.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

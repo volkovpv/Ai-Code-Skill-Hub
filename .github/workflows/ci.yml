@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: CLI smoke — list
+        run: python scripts/skillctl.py list
+
+      - name: CLI smoke — validate
+        run: python scripts/skillctl.py validate
+
+      - name: Validate all skills (structure + metadata)
+        run: python scripts/validate_all.py
+
+      - name: Run the full test suite (__test__/)
+        run: python -m unittest discover -s __test__ -t . -v
+
+      - name: Layer smoke — knowledge/observations/data commands
+        run: |
+          python scripts/skillctl.py knowledge list example-skill
+          python scripts/skillctl.py observation list example-skill
+          python scripts/skillctl.py data validate example-skill
+
+      - name: Lifecycle smoke — install/status/diff/update/remove (runtime + full)
+        run: |
+          PROJ="$(mktemp -d)"
+          python scripts/skillctl.py install example-skill --target "$PROJ" --agent universal --copy --mode runtime
+          test ! -e "$PROJ/.agents/skills/example-skill/observations/candidates"
+          test ! -e "$PROJ/.agents/skills/example-skill/data/fixtures"
+          test -f "$PROJ/.agents/skills/example-skill/knowledge/INDEX.md"
+          python scripts/skillctl.py status --target "$PROJ"
+          python scripts/skillctl.py diff example-skill --target "$PROJ"
+          python scripts/skillctl.py update example-skill --target "$PROJ"
+          python scripts/skillctl.py remove example-skill --target "$PROJ" --dry-run
+          python scripts/skillctl.py remove example-skill --target "$PROJ"
+          test ! -e "$PROJ/.agents/skills/example-skill"
+          PROJ2="$(mktemp -d)"
+          python scripts/skillctl.py install example-skill --target "$PROJ2" --agent claude --mode full
+          test -f "$PROJ2/.claude/skills/example-skill/SKILL.md"
+          test -f "$PROJ2/.claude/skills/example-skill/observations/candidates/OBS-20260712-002.md"
+          test -f "$PROJ2/.claude/skills/example-skill/data/fixtures/mixed_change.diff"

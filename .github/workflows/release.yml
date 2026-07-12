@@ -1,0 +1,128 @@
+name: Release
+
+# Авторелиз по образцу yandexdisk-dsm-app, адаптированный под библиотеку без
+# бинарной сборки.
+#
+# Ветки: релизы собираются ТОЛЬКО из main (push = прямой коммит или мерж PR);
+# test и dev релизов не дают — этот workflow там даже не запускается (тесты на
+# всех ветках гоняет ci.yml). На PR в main запускаются только гейты — они ловят
+# забытый bump версии до мержа.
+#
+# Версия — единственный источник pyproject.toml; дрейф по __init__.py и
+# CHANGELOG.md ловит scripts/check_version_drift.py. Дисциплину «изменился
+# используемый код → bump версии; инфраструктура → версия не меняется, релиза
+# нет» принудительно проверяет scripts/check_release_gate.py.
+#
+# Публикация идемпотентна и привязана к bump версии: если релиз v<версия> уже
+# существует (мерж без поднятия версии), шаг ничего не делает. Версия 0.0.0 —
+# базовая линия и не публикуется никогда. Ассеты релиза: архив исходников
+# (git archive) + его SHA256; сборка артефактов не нужна.
+#
+# workflow_dispatch на main допускается как ручной повтор: защита от дублей
+# (gh release view) делает его безопасным.
+#
+# Actions запинены по commit-SHA, а не по тегу: тег изменяем, SHA — нет.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags — нужны релизные теги для гейта)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Version drift gate (pyproject = __init__ = CHANGELOG)
+        run: python3 scripts/check_version_drift.py
+
+      - name: Release gate (code change ⇔ version bump)
+        run: python3 scripts/check_release_gate.py
+
+  release:
+    # Только push/dispatch в main; PR-запуски ограничиваются гейтами.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # создание тега/Release и загрузка ассетов
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      # Никогда не публиковать красный код: полный набор проверок ci.yml
+      # прогоняется ещё раз в этом же job перед публикацией.
+      - name: Validate all skills (structure + metadata)
+        run: python3 scripts/validate_all.py
+
+      - name: Run the full test suite (__test__/)
+        run: python3 -m unittest discover -s __test__ -t . -v
+
+      - name: Publish GitHub Release (on version bump)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          VER="$(python3 scripts/check_version_drift.py --print-version)"
+          [ -n "$VER" ] || { echo "ERROR: version missing in pyproject.toml" >&2; exit 1; }
+          TAG="v${VER}"
+
+          # 0.0.0 — базовая линия без релиза (см. CHANGELOG.md).
+          if [ "$VER" = "0.0.0" ]; then
+            echo "Версия 0.0.0 — базовая линия, релиз не публикуется."
+            exit 0
+          fi
+
+          # Идемпотентность: релиз привязан к версии. Если v<версия> уже есть —
+          # значит, в этом мерже версия не поднималась: ничего не публикуем.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — версия не поднята, публикация пропущена."
+            exit 0
+          fi
+
+          # Ассеты: воспроизводимый архив исходников + его SHA256.
+          # (GitHub дополнительно сам приложит zip/tar.gz «Source code».)
+          ARCHIVE="skill-library-${VER}.tar.gz"
+          git archive --format=tar.gz --prefix="skill-library-${VER}/" \
+            -o "$ARCHIVE" HEAD
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+
+          # Заметки релиза — секция текущей версии из CHANGELOG.md
+          # (формат заголовка: «## [X.Y.Z] — YYYY-MM-DD»).
+          awk -v ver="$VER" '
+            BEGIN { gsub(/\./, "\\.", ver); re = "^## \\[" ver "\\]" }
+            $0 ~ re { flag=1; print; next }
+            flag && /^## \[/ { exit }
+            flag { print }
+          ' CHANGELOG.md > release-notes.md
+          [ -s release-notes.md ] || { echo "ERROR: no CHANGELOG.md section for $VER" >&2; exit 1; }
+          {
+            echo
+            echo "---"
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo "Проверка целостности скачанного архива:"
+            echo '```sh'
+            echo "sha256sum -c ${ARCHIVE}.sha256"
+            echo '```'
+          } >> release-notes.md
+
+          gh release create "$TAG" \
+            "$ARCHIVE" "${ARCHIVE}.sha256" \
+            --title "skill-library ${VER}" \
+            --target "${GITHUB_SHA}" \
+            --notes-file release-notes.md
+          echo "Опубликован релиз $TAG (${GITHUB_SHA}) с ассетами ${ARCHIVE}{,.sha256}"

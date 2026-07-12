@@ -1,0 +1,5 @@
+# Vendor-specific adapter for OpenAI harnesses (Codex).
+# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
+interface:
+  display_name: Example Skill
+  short_description: Draft a Conventional Commits message from a git diff.

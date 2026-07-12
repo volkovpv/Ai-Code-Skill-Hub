@@ -1,0 +1,12 @@
+diff --git a/src/app/cache.py b/src/app/cache.py
+index 3333333..4444444 100644
+--- a/src/app/cache.py
++++ b/src/app/cache.py
+@@ -10,9 +10,4 @@
+ def invalidate(key):
+-    # legacy double-invalidation workaround
+-    if key in _cache:
+-        del _cache[key]
+-    if key in _cache:
+-        del _cache[key]
++    _cache.pop(key, None)

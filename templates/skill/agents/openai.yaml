@@ -1,0 +1,5 @@
+# Vendor-specific adapter for OpenAI harnesses (Codex).
+# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
+interface:
+  display_name: __SKILL_NAME__
+  short_description: TODO one-line description for OpenAI harness UI.
