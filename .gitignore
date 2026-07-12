@@ -1,0 +1,69 @@
+# Build output
+dist/
+build/
+
+# Test & coverage reports
+__test__/reports/
+coverage/
+.stryker-tmp/
+playwright-report/
+test-results/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.idea/
+.vscode/
+.junie/
+# Claude Code: версионируется только .claude/settings.json (harness enforcement);
+# coding-rules — в ../news-intel-docs/.claude/rules/ (single-source), локально не дублируются.
+.claude/*
+!.claude/settings.json
+.gigaide/
+.aiassistant/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logging/
+audit-project/
+
+# Python
+.import_linter_cache
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.mypy_cache/
+.ruff_cache/
+.pyright
+.pytest_cache
+.coverage
+.coverage.*
+htmlcov/
+
+# DB
+*.db
+*.sqlite
+*.sqlite3
+
+# Mutation testing
+mutants/
+.mutmut-cache
+
+# any
+*:Zone.Identifier
+docker-compose.override.yml
+
+.output.txt
