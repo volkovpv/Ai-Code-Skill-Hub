@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from contextlib import redirect_stderr
 import datetime
 import importlib.util
+from io import StringIO
 import subprocess
 import sys
 from pathlib import Path
@@ -25,6 +27,7 @@ def _load_script(name: str):
 drift = _load_script("check_version_drift")
 gate = _load_script("check_release_gate")
 bump = _load_script("bump_version")
+mutation_gate = _load_script("check_mutation_score")
 
 PYPROJECT = """[project]
 name = "skill-library"
@@ -153,8 +156,8 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.assertIn("only infrastructure changed", problems)
 
     def test_version_bump_alone_counts_as_infra_only(self):
-        # Строки версии в pyproject/__init__ и запись CHANGELOG не являются
-        # «используемым кодом» — bump без изменений кода запрещён.
+        # Version lines in pyproject/__init__ and the CHANGELOG entry are not
+        # "used code" — a bump without code changes is forbidden.
         self.make_repo("0.1.0")
         self.tag("v0.1.0")
         self.write_versions("0.2.0")
@@ -167,7 +170,7 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.tag("v0.1.0")
         pyproject = self.repo / "pyproject.toml"
         pyproject.write_text(
-            pyproject.read_text(encoding="utf-8") + 'requires-python = ">=3.11"\n',
+            pyproject.read_text(encoding="utf-8") + 'requires-python = ">=3.12"\n',
             encoding="utf-8",
         )
         self.commit_all()
@@ -186,8 +189,8 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.assertIn("went backwards", problems)
 
     def test_bumped_repo_passes_gate_with_code_change(self):
-        # Полный сценарий: код изменён, версия поднята через bump_version —
-        # оба гейта зелёные.
+        # Full scenario: code changed, version bumped via bump_version —
+        # both gates are green.
         self.make_repo("0.1.0")
         self.tag("v0.1.0")
         (self.repo / "src" / "skill_library" / "core.py").write_text(
@@ -199,9 +202,9 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.assertEqual(gate.check(self.repo), [])
 
     def test_picks_highest_semver_tag(self):
-        # v0.9.0 и v0.10.0: по SemVer старше 0.10.0 (строковое сравнение дало
-        # бы 0.9.0). Код изменён без bump относительно 0.10.0 — гейт падает
-        # с упоминанием именно 0.10.0.
+        # v0.9.0 and v0.10.0: by SemVer 0.10.0 is higher (string comparison
+        # would pick 0.9.0). Code changed without a bump relative to 0.10.0 —
+        # the gate fails mentioning exactly 0.10.0.
         self.make_repo("0.9.0")
         self.tag("v0.9.0")
         self.write_versions("0.10.0")
@@ -220,7 +223,7 @@ class TestReleaseGate(ReleaseRepoTestCase):
 
 UV_LOCK = """version = 1
 revision = 3
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [[package]]
 name = "skill-library"
@@ -275,17 +278,41 @@ class TestBumpVersion(ReleaseRepoTestCase):
         self.assertNotIn('"0.1.0"', text)
 
     def test_bump_without_uv_lock_succeeds(self):
-        # Zero-tooling fallback: отсутствие uv.lock — не ошибка.
+        # Zero-tooling fallback: a missing uv.lock is not an error.
         self.make_repo("0.1.0")
         bump.bump(self.repo, "0.2.0", self.DATE)
         self.assertEqual(drift.check(self.repo), [])
 
     def test_bump_fails_on_uv_lock_without_project_entry(self):
-        # Fail-closed: lock есть, но записи пакета проекта в нём нет.
+        # Fail-closed: the lock exists but has no entry for the project package.
         self.make_repo("0.1.0")
         (self.repo / "uv.lock").write_text(
-            'version = 1\nrevision = 3\nrequires-python = ">=3.11"\n',
+            'version = 1\nrevision = 3\nrequires-python = ">=3.12"\n',
             encoding="utf-8",
         )
         with self.assertRaises(SystemExit):
             bump.bump(self.repo, "0.2.0", self.DATE)
+
+class TestMutationScoreGate(TempDirTestCase):
+    def test_score_counts_survivors_and_timeouts_as_not_killed(self):
+        actual = mutation_gate.score(
+            {"killed": 75, "survived": 20, "timeout": 5, "no_tests": 0}
+        )
+        self.assertEqual(actual, 75.0)
+
+    def test_empty_mutation_set_is_not_a_failure(self):
+        self.assertEqual(mutation_gate.score({}), 100.0)
+
+    def test_main_enforces_threshold_and_rejects_malformed_stats(self):
+        stats = self.tmp / "stats.json"
+        stats.write_text(
+            '{"killed": 74, "survived": 26, "timeout": 0}',
+            encoding="utf-8",
+        )
+        errors = StringIO()
+        with redirect_stderr(errors):
+            self.assertEqual(mutation_gate.main([str(stats), "--minimum", "75"]), 1)
+            stats.write_text("{broken", encoding="utf-8")
+            self.assertEqual(mutation_gate.main([str(stats)]), 2)
+        self.assertIn("required >= 75.00%", errors.getvalue())
+        self.assertIn("cannot read", errors.getvalue())

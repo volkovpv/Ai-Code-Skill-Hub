@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""check_version_drift.py — одна версия, много файлов: любой дрейф — ошибка.
+"""check_version_drift.py — one version, many files: any drift is an error.
 
-Источник истины версии проекта — ``pyproject.toml`` ([project].version).
-С ним обязаны совпадать:
+The source of truth for the project version is ``pyproject.toml``
+([project].version). The following must match it:
 
 - ``src/skill_library/__init__.py`` — ``__version__``;
-- ``CHANGELOG.md`` — первая запись ``## [X.Y.Z]``.
+- ``CHANGELOG.md`` — the first ``## [X.Y.Z]`` entry.
 
-Версии skills в ``skills.yaml`` — независимые версии контента skills и здесь
-не проверяются (их дисциплина описана в AGENTS.md).
+Skill versions in ``skills.yaml`` are independent skill-content versions and
+are not checked here (their discipline is described in AGENTS.md).
 
-Запуск: ``python3 scripts/check_version_drift.py [--root DIR] [--print-version]``.
-``--print-version`` печатает версию из pyproject.toml и больше ничего —
-так workflow получает версию из единственного источника.
+Usage: ``python3 scripts/check_version_drift.py [--root DIR] [--print-version]``.
+``--print-version`` prints the version from pyproject.toml and nothing else —
+that is how workflows obtain the version from the single source.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def read_changelog_version(root: Path) -> str | None:
 
 
 def check(root: Path) -> list[str]:
-    """Вернуть список расхождений; пустой список — дрейфа нет."""
+    """Return the list of mismatches; empty list — no drift."""
     problems: list[str] = []
     version = read_pyproject_version(root)
     if not VERSION_RE.match(version):

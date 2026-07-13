@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "skill": "example-skill",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "commit-message-from-diff",
+      "kind": "behavior",
+      "requirement": "Return one Conventional Commits subject grounded in the supplied diff.",
+      "prompt": "Create a commit message for this diff: diff --git a/src/auth.ts b/src/auth.ts; +export function validateToken() { return true; }",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?m)^(feat|fix|refactor|chore)(\\([a-z0-9_-]+\\))?: .{1,72}$"],
+        "stdout_not_contains": ["TODO", "FIXME"]
+      }
+    },
+    {
+      "id": "mixed-change-warning",
+      "kind": "trigger",
+      "requirement": "Recognize unrelated changes and recommend separate commits.",
+      "prompt": "Draft a commit message. The diff both adds a payment API and rewrites unrelated landing-page CSS.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(split|separate|unrelated|different commits?)"]
+      }
+    },
+    {
+      "id": "unrelated-request-does-not-force-commit-format",
+      "kind": "negative",
+      "requirement": "Do not force the skill workflow onto an unrelated request.",
+      "prompt": "Explain in one sentence why the sky appears blue.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["feat(", "fix(", "chore("]
+      }
+    }
+  ]
+}

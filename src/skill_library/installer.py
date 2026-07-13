@@ -11,10 +11,12 @@ Safety model (fail-closed):
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import difflib
 import hashlib
 import shutil
 import subprocess
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -237,7 +239,11 @@ def _validated_source(
 ) -> tuple[Path, list[dict], str]:
     skill_dir = _source_skill_dir(library_root, name)
     cat = catalog_entry(library_root, name)
-    problems = validate_skill_dir(skill_dir, cat.content_policy if cat else None)
+    problems = validate_skill_dir(
+        skill_dir,
+        cat.content_policy if cat else None,
+        status=cat.status if cat else None,
+    )
     if problems:
         raise InstallError(
             f"skill {name!r} fails validation:\n  - " + "\n  - ".join(problems)
@@ -255,6 +261,54 @@ def _copy_files(skill_dir: Path, dest: Path, files: list[dict]) -> None:
         target = safe_join(dest, *Path(rel).parts)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(skill_dir / rel, target)
+
+
+def _remove_destination(path: Path) -> None:
+    """Remove a file, symlink, or directory without following symlinks."""
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+@contextmanager
+def _rollback_destinations(*paths: Path | None):
+    """Restore destination trees if a mutating operation fails."""
+    unique: list[Path] = []
+    for raw in paths:
+        if raw is None:
+            continue
+        path = Path(raw)
+        if path not in unique:
+            unique.append(path)
+
+    snapshots: list[tuple[Path, Path, bool]] = []
+    try:
+        for path in unique:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            backup_root = Path(
+                tempfile.mkdtemp(prefix=f".{path.name}.skillctl-backup-", dir=path.parent)
+            )
+            snapshot_path = backup_root / "snapshot"
+            existed = path.exists() or path.is_symlink()
+            if path.is_symlink():
+                snapshot_path.symlink_to(path.readlink(), target_is_directory=True)
+            elif path.exists():
+                shutil.copytree(path, snapshot_path, symlinks=True)
+            snapshots.append((backup_root, snapshot_path, existed))
+        yield
+    except BaseException:
+        for path, (_, snapshot_path, existed) in zip(unique, snapshots):
+            _remove_destination(path)
+            if existed:
+                if snapshot_path.is_symlink():
+                    path.symlink_to(snapshot_path.readlink(), target_is_directory=True)
+                else:
+                    snapshot_path.replace(path)
+        raise
+    finally:
+        for backup_root, _, _ in snapshots:
+            shutil.rmtree(backup_root, ignore_errors=True)
 
 
 def _delete_managed_files(dest: Path, entry: dict, *, verify: bool, force: bool) -> None:
@@ -399,42 +453,44 @@ def install_skill(
         action = "symlink" if link else f"copy {len(files)} file(s)"
         return f"[dry-run] {name}: would {action} to {dest} and record it in {lockfile.LOCKFILE_NAME}"
 
-    # Clear whatever we manage (or, with --force, whatever is in the way).
-    if entry is not None:
-        old_dest = _dest_dir(target_root, entry)
-        if entry.get("mode") == "link" and old_dest.is_symlink():
-            old_dest.unlink()
-        elif old_dest.is_dir():
-            _delete_managed_files(old_dest, entry, verify=True, force=force)
-    if dest.exists() and force and not dest.is_symlink():
-        shutil.rmtree(dest)
-    elif dest.is_symlink():
-        dest.unlink()
+    old_dest = _dest_dir(target_root, entry) if entry is not None else None
+    with _rollback_destinations(old_dest, dest):
+        # Clear whatever we manage (or, with --force, whatever is in the way).
+        if entry is not None:
+            if entry.get("mode") == "link" and old_dest.is_symlink():
+                old_dest.unlink()
+            elif old_dest.is_dir():
+                _delete_managed_files(old_dest, entry, verify=True, force=force)
+        if dest.exists() and force and not dest.is_symlink():
+            shutil.rmtree(dest)
+        elif dest.is_symlink():
+            dest.unlink()
 
-    link_target: str | None = None
-    if link:
-        link_target = str(skill_dir.resolve())
-        dest.symlink_to(skill_dir.resolve(), target_is_directory=True)
-        files_record: list[dict] = []
-    else:
-        _copy_files(skill_dir, dest, files)
-        files_record = files
+        link_target: str | None = None
+        if link:
+            link_target = str(skill_dir.resolve())
+            dest.symlink_to(skill_dir.resolve(), target_is_directory=True)
+            files_record: list[dict] = []
+        else:
+            _copy_files(skill_dir, dest, files)
+            files_record = files
 
-    new_entry = _build_entry(
-        name=name,
-        library_root=library_root,
-        agent=agent,
-        mode=mode,
-        install_mode=install_mode,
-        target_root=target_root,
-        dest=dest,
-        files=files_record,
-        checksum=checksum,
-        link_target=link_target,
-    )
-    lockfile.upsert_entry(lock, new_entry)
-    lockfile.save_lock(target_root, lock)
-    return f"{name}: installed to {dest} ({mode}, {install_mode} mode, {len(files)} file(s))"
+        new_entry = _build_entry(
+            name=name,
+            library_root=library_root,
+            agent=agent,
+            mode=mode,
+            install_mode=install_mode,
+            target_root=target_root,
+            dest=dest,
+            files=files_record,
+            checksum=checksum,
+            link_target=link_target,
+        )
+        lockfile.upsert_entry(lock, new_entry)
+        lockfile.save_lock(target_root, lock)
+    detail = "symlink to the library" if link else f"{len(files)} file(s)"
+    return f"{name}: installed to {dest} ({mode}, {install_mode} mode, {detail})"
 
 
 def diff_skill(library_root: Path, name: str, target_root: Path) -> str:
@@ -524,24 +580,25 @@ def update_skill(
     if dry_run:
         return f"[dry-run] {name}: would update {dest} to library version ({len(files)} file(s))"
 
-    _delete_managed_files(dest, entry, verify=True, force=force or state == "missing")
-    _copy_files(skill_dir, dest, files)
+    with _rollback_destinations(dest):
+        _delete_managed_files(dest, entry, verify=True, force=force or state == "missing")
+        _copy_files(skill_dir, dest, files)
 
-    new_entry = _build_entry(
-        name=name,
-        library_root=library_root,
-        agent=str(entry.get("agent", "universal")),
-        mode="copy",
-        install_mode=install_mode,
-        target_root=target_root,
-        dest=dest,
-        files=files,
-        checksum=checksum,
-        installed_at=str(entry.get("installed_at") or _now_iso()),
-        updated_at=_now_iso(),
-    )
-    lockfile.upsert_entry(lock, new_entry)
-    lockfile.save_lock(target_root, lock)
+        new_entry = _build_entry(
+            name=name,
+            library_root=library_root,
+            agent=str(entry.get("agent", "universal")),
+            mode="copy",
+            install_mode=install_mode,
+            target_root=target_root,
+            dest=dest,
+            files=files,
+            checksum=checksum,
+            installed_at=str(entry.get("installed_at") or _now_iso()),
+            updated_at=_now_iso(),
+        )
+        lockfile.upsert_entry(lock, new_entry)
+        lockfile.save_lock(target_root, lock)
     return f"{name}: updated to version {new_entry['skill_version']} ({len(files)} file(s))"
 
 
@@ -563,25 +620,27 @@ def remove_skill(
     if entry.get("mode") == "link":
         if dry_run:
             return f"[dry-run] {name}: would remove symlink {dest} and the lock entry"
-        if dest.is_symlink():
-            expected = str(entry.get("link_target", ""))
-            if not force and expected and str(dest.resolve()) != expected:
-                raise InstallError(
-                    f"{name}: symlink {dest} points to an unexpected location; use --force"
-                )
-            dest.unlink()
-        lockfile.remove_entry(lock, name)
-        lockfile.save_lock(target_root, lock)
+        with _rollback_destinations(dest):
+            if dest.is_symlink():
+                expected = str(entry.get("link_target", ""))
+                if not force and expected and str(dest.resolve()) != expected:
+                    raise InstallError(
+                        f"{name}: symlink {dest} points to an unexpected location; use --force"
+                    )
+                dest.unlink()
+            lockfile.remove_entry(lock, name)
+            lockfile.save_lock(target_root, lock)
         return f"{name}: removed (symlink)"
 
     managed = len(entry.get("files", []))
     if dry_run:
         return f"[dry-run] {name}: would delete {managed} managed file(s) under {dest}"
 
-    if dest.is_dir():
-        _delete_managed_files(dest, entry, verify=True, force=force)
-    lockfile.remove_entry(lock, name)
-    lockfile.save_lock(target_root, lock)
+    with _rollback_destinations(dest):
+        if dest.is_dir():
+            _delete_managed_files(dest, entry, verify=True, force=force)
+        lockfile.remove_entry(lock, name)
+        lockfile.save_lock(target_root, lock)
     leftover = ""
     if dest.is_dir() and any(dest.iterdir()):
         leftover = f"; unmanaged files were kept in {dest}"

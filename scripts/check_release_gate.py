@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
-"""check_release_gate.py — гейт релизной дисциплины «версия ↔ изменения кода».
+"""check_release_gate.py — release-discipline gate ("version ⇔ code changes").
 
-Сравнивает изменения с последнего релизного тега (``vX.Y.Z``) с текущей
-версией из ``pyproject.toml`` и проверяет три правила:
+Compares the changes since the last release tag (``vX.Y.Z``) against the
+current version in ``pyproject.toml`` and enforces three rules:
 
-1. Изменился используемый код → версия обязана быть поднята (иначе мерж в
-   main не даст релиза, а изменения уйдут «в никуда»).
-2. Изменения только в инфраструктуре (тесты, CI, документация) → версия
-   обязана остаться прежней: инфраструктурные правки не публикуются релизом.
-3. Версия растёт монотонно — откат версии назад запрещён.
+1. Used code changed → the version must have been bumped (otherwise a merge
+   into main produces no release and the changes go nowhere).
+2. Infrastructure-only changes (tests, CI, documentation) → the version must
+   stay the same: infrastructure edits are never published as a release.
+3. The version grows monotonically — rolling it back is forbidden.
 
-«Используемый код» — то, что получает потребитель библиотеки:
+"Used code" is what a consumer of the library receives:
 ``skills/``, ``src/``, ``scripts/``, ``templates/``, ``skills.yaml``,
-``pyproject.toml``, ``LICENSE``. Всё остальное (``__test__/``, ``.github/``,
-``README.md``, ``CHANGELOG.md``, ``AGENTS.md`` и т.п.) — инфраструктура.
-В файлах-носителях версии (pyproject.toml, __init__.py) строки самой версии
-не считаются изменением кода — иначе любой bump сам себя оправдывал бы.
+``pyproject.toml``, ``LICENSE``. Everything else (``__test__/``, ``.github/``,
+``README.md``, ``CHANGELOG.md``, ``AGENTS.md``, …) is infrastructure.
+In version-carrying files (pyproject.toml, __init__.py) the version lines
+themselves do not count as a code change — otherwise every bump would justify
+itself.
 
-Если релизных тегов ещё нет, гейт всегда проходит: базовая линия ``0.0.0``
-живёт без релиза, а первый bump создаст первый тег.
+While there are no release tags yet the gate always passes: the ``0.0.0``
+baseline lives without a release, and the first bump creates the first tag.
 
-Запуск: ``python3 scripts/check_release_gate.py [--root DIR]``.
-Требует полной git-истории с тегами (в CI — checkout с fetch-depth: 0).
+Usage: ``python3 scripts/check_release_gate.py [--root DIR]``.
+Requires full git history with tags (in CI — checkout with fetch-depth: 0).
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from check_version_drift import read_pyproject_version  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Каталоги — со слэшем на конце, файлы — точным именем.
+# Directories end with a slash; files are exact names.
 RELEASE_PATHS = (
     "skills/",
     "src/",
@@ -48,8 +49,8 @@ RELEASE_PATHS = (
     "LICENSE",
 )
 
-# Файлы-носители версии: строки, совпадающие с шаблоном, не считаются
-# изменением используемого кода.
+# Version-carrying files: lines matching the pattern do not count as a
+# used-code change.
 VERSION_LINE_RE = {
     "pyproject.toml": re.compile(r'^\s*version\s*=\s*"[^"]*"\s*$'),
     "src/skill_library/__init__.py": re.compile(r'^__version__\s*=\s*"[^"]*"\s*$'),
@@ -71,7 +72,7 @@ def parse_version(version: str) -> tuple[int, ...]:
 
 
 def last_release_tag(root: Path) -> str | None:
-    """Старший (по SemVer) релизный тег, достижимый из HEAD."""
+    """Highest (by SemVer) release tag reachable from HEAD."""
     tags = [
         tag
         for tag in git(root, "tag", "--list", "v*", "--merged", "HEAD").splitlines()
@@ -83,7 +84,7 @@ def last_release_tag(root: Path) -> str | None:
 
 
 def is_release_relevant(root: Path, tag: str, path: str) -> bool:
-    """Считается ли изменение файла изменением используемого кода."""
+    """Whether a change to the file counts as a used-code change."""
     if not any(
         path.startswith(prefix) if prefix.endswith("/") else path == prefix
         for prefix in RELEASE_PATHS
@@ -92,7 +93,7 @@ def is_release_relevant(root: Path, tag: str, path: str) -> bool:
     version_line = VERSION_LINE_RE.get(path)
     if version_line is None:
         return True
-    # Носитель версии: смотрим содержимое диффа без строк самой версии.
+    # Version carrier: inspect the diff content minus the version lines.
     diff = git(root, "diff", tag, "HEAD", "--", path)
     for line in diff.splitlines():
         if line.startswith(("+++", "---")) or not line.startswith(("+", "-")):
@@ -103,7 +104,7 @@ def is_release_relevant(root: Path, tag: str, path: str) -> bool:
 
 
 def check(root: Path) -> list[str]:
-    """Вернуть список нарушений релизной дисциплины; пустой список — всё ок."""
+    """Return the list of release-discipline violations; empty list — all good."""
     version = read_pyproject_version(root)
     tag = last_release_tag(root)
     if tag is None:

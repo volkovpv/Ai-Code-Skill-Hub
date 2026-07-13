@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+
+from unittest import mock
 from skill_library import yamlio
 from skill_library.lockfile import (
     LOCKFILE_NAME,
@@ -67,6 +69,53 @@ class TestLockfile(TempDirTestCase):
         with self.assertRaises(LockError):
             load_lock(self.tmp)
 
+    def test_load_lock_defaults_missing_skills_key_to_empty_list(self):
+        (self.tmp / LOCKFILE_NAME).write_text("version: 1\n", encoding="utf-8")
+        self.assertEqual(load_lock(self.tmp), {"version": 1, "skills": []})
+
+    def test_malformed_lock_message_names_the_problem(self):
+        (self.tmp / LOCKFILE_NAME).write_text(
+            "version: 1\nskills: not-a-list\n", encoding="utf-8"
+        )
+        with self.assertRaisesRegex(LockError, "malformed lock file"):
+            load_lock(self.tmp)
+
+    def test_save_lock_creates_missing_target_directories(self):
+        nested = self.tmp / "deep" / "project"
+        save_lock(nested, {"skills": []})
+        self.assertEqual(load_lock(nested), {"version": 1, "skills": []})
+
+    def test_entry_helpers_tolerate_missing_skills_key(self):
+        self.assertIsNone(get_entry({}, "alpha-skill"))
+        self.assertFalse(remove_entry({}, "alpha-skill"))
+        data: dict = {}
+        upsert_entry(data, dict(SAMPLE_ENTRY))
+        self.assertEqual(data["skills"], [SAMPLE_ENTRY])
+
+    def test_upsert_sorts_nameless_entries_under_the_empty_string(self):
+        # Entries without a 'name' sort under "" — before any named entry.
+        data = {"version": 1, "skills": [{"name": "AAA"}]}
+        upsert_entry(data, {"note": "no name"})
+        self.assertEqual(data["skills"], [{"note": "no name"}, {"name": "AAA"}])
+
+    def test_unsupported_version_message_names_both_versions(self):
+        (self.tmp / LOCKFILE_NAME).write_text("version: 2\nskills: []\n", encoding="utf-8")
+        with self.assertRaisesRegex(LockError, r"unsupported lock version 2 \(expected 1\)"):
+            load_lock(self.tmp)
+
+    def test_save_lock_normalizes_missing_sections(self):
+        save_lock(self.tmp, {})
+        self.assertEqual(load_lock(self.tmp), {"version": 1, "skills": []})
+        text = lock_path(self.tmp).read_text(encoding="utf-8")
+        self.assertIn("version: 1", text)
+
+    def test_lookup_skips_entries_that_are_not_mappings(self):
+        data = {"version": 1, "skills": ["junk", dict(SAMPLE_ENTRY)]}
+        self.assertEqual(get_entry(data, "alpha-skill"), SAMPLE_ENTRY)
+        self.assertIsNone(get_entry(data, "junk"))
+        self.assertTrue(remove_entry(data, "alpha-skill"))
+        self.assertEqual(data["skills"], ["junk"])
+
 
 class TestYamlSubset(TempDirTestCase):
     def test_scalar_types(self):
@@ -123,3 +172,21 @@ class TestYamlSubset(TempDirTestCase):
     def test_tabs_rejected(self):
         with self.assertRaises(yamlio.YamlError):
             yamlio.loads("a:\n\tb: 1\n")
+
+    def test_empty_flow_list_items_rejected(self):
+        # Fail closed: "[a,,b]" and trailing commas are typos, not data.
+        for text in ("x: [a,,b]\n", "x: [a,]\n", "x: [,]\n"):
+            with self.assertRaisesRegex(yamlio.YamlError, "empty item in flow list", msg=text):
+                yamlio.loads(text)
+
+
+class TestAtomicLockWrite(TempDirTestCase):
+    def test_replace_failure_preserves_previous_lock_and_cleans_temp_file(self):
+        path = lock_path(self.tmp)
+        path.write_text("original lock\n", encoding="utf-8")
+        with mock.patch("skill_library.lockfile.os.replace", side_effect=OSError("injected")):
+            with self.assertRaises(OSError):
+                save_lock(self.tmp, {"version": 1, "skills": [dict(SAMPLE_ENTRY)]})
+        self.assertEqual(path.read_text(encoding="utf-8"), "original lock\n")
+        leftovers = [p for p in self.tmp.iterdir() if p != path]
+        self.assertEqual(leftovers, [])

@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A self-contained, vendor-neutral library of **Agent Skills** ("git repo as a skill": instructions + tools + knowledge + data, versioned together) plus its management CLI **`skillctl`**. Two distinct kinds of content live here, with different rules:
 
 - **Skill content**: `skills/` (canonical sources), `skills.yaml` (catalog), `templates/skill/` (scaffold for `skillctl new` — never validated or installed directly).
-- **CLI implementation**: `src/skill_library/` (Python ≥ 3.11, **stdlib only — never add dependencies**), thin wrappers in `scripts/`.
+- **CLI implementation**: `src/skill_library/` (Python ≥ 3.12, **stdlib only — never add dependencies**), thin wrappers in `scripts/`.
 
-`AGENTS.md` is the authoritative rules file for agents/developers; `README.md` is in **Russian** (all other docs in English) and must be kept in sync with actual CLI behaviour — never document features that don't exist.
+`AGENTS.md` is the authoritative rules file for agents/developers; only the root `README.md` and `__test__/README.md` are in **Russian** — all other docs (including `CHANGELOG.md` and `__test__/scenarios/README.md`) are in English; audit reports under `_audit/` are exempt from the language rule. `README.md` must be kept in sync with actual CLI behaviour — never document features that don't exist.
 
 ## Commands
 
@@ -32,7 +32,7 @@ uv run scripts/check_version_drift.py            # pyproject = __init__.py = CHA
 uv run scripts/check_release_gate.py             # code-change ⇔ version-bump gate (needs full git history)
 ```
 
-Zero-tooling fallback (no uv, no venv — the library has no dependencies): `python scripts/skillctl.py <command>` is equivalent to `uv run skillctl <command>`; CI uses the plain-python form to prove self-containment on 3.11 and 3.12.
+Zero-tooling fallback (no uv, no venv — the library has no dependencies): `python scripts/skillctl.py <command>` is equivalent to `uv run skillctl <command>`; CI uses the plain-python form to prove self-containment on 3.12 and 3.13.
 
 **Definition of done** (from AGENTS.md): `skillctl validate` and `skillctl test` both run with real output and exit code 0. Any behaviour change requires adding/updating tests in `__test__/`.
 
@@ -56,6 +56,8 @@ Zero-tooling fallback (no uv, no venv — the library has no dependencies): `pyt
 
 1. **Per-skill versions** live in `skills.yaml`. Changing any skill's content (including its layers) requires bumping that skill's `version` there.
 2. **Project version** lives in `pyproject.toml` and is mirrored in `src/skill_library/__init__.py`, the top `CHANGELOG.md` entry and the project entry in `uv.lock`. Never edit these by hand — always `scripts/bump_version.py` (it updates all of them, including `uv.lock`, without invoking uv); then replace the TODO line in the new CHANGELOG entry (it becomes the GitHub release notes).
+
+Which component of the project version to bump: **major** — a skill is created or deleted; **minor** — the rules of an existing skill change; **patch** — a bug fix with no functional change, or a change to the package's own infrastructure (`src/`, `scripts/`, `templates/`) that doesn't affect skill behaviour. This picks the digit only when the release gate requires a bump at all — gate-infrastructure paths below still get no bump.
 
 The release gate (CI, on PRs to main and main pushes) enforces both directions:
 - changed **used code** (`skills/`, `src/`, `scripts/`, `templates/`, `skills.yaml`, `pyproject.toml`, `LICENSE`) → project version **must** be bumped;

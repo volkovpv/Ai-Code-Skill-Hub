@@ -58,7 +58,9 @@
 - Never declare work complete without real command output; both commands must
   exit with code 0.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
-  features that do not exist.
+  features that do not exist. Only the root `README.md` and
+  `__test__/README.md` are written in Russian; every other document is in
+  English (audit reports under `_audit/` are exempt).
 - Bump the skill's `version` in `skills.yaml` whenever its content changes.
 
 ## Release discipline
@@ -79,6 +81,17 @@
   work and a drift risk. The only manual step left is replacing the TODO line in the new
   `CHANGELOG.md` entry with the actual change description (it becomes the
   GitHub release notes).
+- Which SemVer component of the project version to bump:
+  - **major** (first digit) — a skill is created in or deleted from the
+    library (a `skills/<name>/` directory appears or disappears);
+  - **minor** (middle digit) — the rules of an existing skill change
+    (`SKILL.md`, layers, its catalog entry);
+  - **patch** (last digit) — a bug fix that does not change functionality, or
+    a change to the package's own infrastructure (`src/`, `scripts/`,
+    `templates/`, `pyproject.toml`) that does not affect skill behaviour.
+  This chooses the digit only when the release gate requires a bump at all;
+  gate-infrastructure paths (`__test__/`, `.github/`, docs) still must not
+  change the version.
 - Version bump rules, enforced by `scripts/check_release_gate.py` (runs on PRs
   to `main` and on `main` pushes):
   - changing used code (`skills/`, `src/`, `scripts/`, `templates/`,

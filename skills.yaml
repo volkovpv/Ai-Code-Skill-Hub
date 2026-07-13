@@ -1,6 +1,6 @@
-# Каталог публикуемых skills библиотеки.
-# ВАЖНО: список `skills:` должен оставаться последним top-level ключом файла —
-# `skillctl new` дописывает новые записи в конец.
+# Catalog of the library's published skills.
+# IMPORTANT: the `skills:` list must remain the last top-level key of this
+# file — `skillctl new` appends new entries textually at the end.
 version: 1
 skills:
   - name: example-skill

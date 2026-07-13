@@ -10,6 +10,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "__test__" / "fixtures"
 
+NETWORK_BLOCKER = ROOT / "__test__" / "network_blocker"
+
+
+def sandboxed_env() -> dict[str, str]:
+    """Minimal environment for Python skill scripts, with network denied.
+
+    PATH is pinned to the system directories: scripts under test are launched
+    via ``sys.executable`` (absolute), so an inherited host PATH is never
+    needed and must not leak custom entries into the sandbox.
+    """
+    return {
+        "PATH": "/usr/bin:/bin",
+        "PYTHONPATH": str(NETWORK_BLOCKER),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
 SKILL_MD_TEMPLATE = """---
 name: {name}
 description: {description}

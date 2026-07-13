@@ -68,4 +68,5 @@ docker-compose.override.yml
 
 .output.txt
 
-promts/*
+_promts/*
+_audit/*

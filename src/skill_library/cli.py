@@ -8,6 +8,7 @@ Every command returns a process exit code: 0 on success, 1 on failure,
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 import unittest
 from datetime import date
@@ -93,7 +94,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
         except DiscoveryError as exc:
             return _err(str(exc))
         policy = cat.content_policy if cat else None
-        problems = [f"{args.skill}: {p}" for p in validate_skill_dir(skill_dir, policy)]
+        problems = [
+            f"{args.skill}: {p}"
+            for p in validate_skill_dir(
+                skill_dir, policy, status=cat.status if cat else None
+            )
+        ]
     else:
         problems = validate_library(root)
     if problems:
@@ -201,13 +207,42 @@ def cmd_test(args: argparse.Namespace) -> int:
         rc = cmd_validate(argparse.Namespace(library_root=root, skill=args.skill))
         if rc != 0:
             return rc
-        slug = args.skill.replace("-", "_")
-        pattern = f"test_{slug}*.py"
+        # Exact file name: a prefix wildcard (test_<slug>*.py) would match the
+        # dedicated tests of another skill whose name extends this one.
+        pattern = f"test_{args.skill.replace('-', '_')}.py"
     else:
         pattern = "test_*.py"
+    if not args.skill:
+        try:
+            catalog = load_catalog(root)
+        except DiscoveryError as exc:
+            return _err(str(exc))
+        missing = []
+        for entry in catalog:
+            if entry.status != "stable":
+                continue
+            stable_pattern = f"test_{entry.name.replace('-', '_')}.py"
+            stable_suite = unittest.TestLoader().discover(
+                str(tests_dir), pattern=stable_pattern, top_level_dir=str(root)
+            )
+            if stable_suite.countTestCases() == 0:
+                missing.append(f"{entry.name} ({stable_pattern})")
+        if missing:
+            return _err(
+                "stable skills without dedicated tests: " + ", ".join(missing)
+            )
     loader = unittest.TestLoader()
     suite = loader.discover(str(tests_dir), pattern=pattern, top_level_dir=str(root))
     if args.skill and suite.countTestCases() == 0:
+        try:
+            cat = catalog_entry(root, args.skill)
+        except DiscoveryError as exc:
+            return _err(str(exc))
+        if cat is not None and cat.status == "stable":
+            return _err(
+                f"{args.skill}: stable skill has no dedicated tests "
+                f"(expected pattern {pattern})"
+            )
         print(f"{args.skill}: no dedicated tests found (pattern {pattern}); validation passed")
         return 0
     runner = unittest.TextTestRunner(verbosity=2 if args.verbose else 1)
@@ -223,6 +258,29 @@ def _parse_layers(raw: str) -> set[str]:
             f"unknown layer(s): {', '.join(sorted(unknown))}; allowed: {', '.join(LAYER_DIRS)}"
         )
     return layers
+
+
+def _copy_skill_template(
+    template: Path, dest: Path, layers: set[str], name: str, today: str
+) -> None:
+    dest.mkdir(parents=True)
+    for src in sorted(template.rglob("*")):
+        rel = src.relative_to(template)
+        if rel.parts[0] in LAYER_DIRS and rel.parts[0] not in layers:
+            continue
+        target = dest / rel
+        if src.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        data = src.read_bytes()
+        try:
+            text = data.decode("utf-8")
+            text = text.replace("__SKILL_NAME__", name).replace("__TODAY__", today)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        except UnicodeDecodeError:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
 
 
 def cmd_new(args: argparse.Namespace) -> int:
@@ -248,25 +306,11 @@ def cmd_new(args: argparse.Namespace) -> int:
         return _err(str(exc))
 
     today = date.today().isoformat()
-    dest.mkdir(parents=True)
-    for src in sorted(template.rglob("*")):
-        rel = src.relative_to(template)
-        # Optional layers are copied only when explicitly requested via --with.
-        if rel.parts[0] in LAYER_DIRS and rel.parts[0] not in layers:
-            continue
-        target = dest / rel
-        if src.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
-            continue
-        data = src.read_bytes()
-        try:
-            text = data.decode("utf-8")
-            text = text.replace("__SKILL_NAME__", name).replace("__TODAY__", today)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(text, encoding="utf-8")
-        except UnicodeDecodeError:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
+    try:
+        _copy_skill_template(template, dest, layers, name, today)
+    except OSError as exc:
+        shutil.rmtree(dest, ignore_errors=True)
+        return _err(f"failed to scaffold {name!r}; rolled back partial files: {exc}")
 
     catalog_path = root / CATALOG_FILENAME
     if catalog_path.is_file():
@@ -294,14 +338,25 @@ def cmd_new(args: argparse.Namespace) -> int:
                     "      observation_review_required: true",
                 ]
             )
-        content = catalog_path.read_text(encoding="utf-8")
+        original_content = catalog_path.read_text(encoding="utf-8")
+        content = original_content
         if not content.endswith("\n"):
             content += "\n"
-        catalog_path.write_text(content + "\n".join(lines) + "\n", encoding="utf-8")
         try:
+            catalog_path.write_text(content + "\n".join(lines) + "\n", encoding="utf-8")
             load_catalog(root)
-        except DiscoveryError as exc:
-            return _err(f"failed to append catalog entry: {exc}")
+        except (OSError, DiscoveryError) as exc:
+            shutil.rmtree(dest, ignore_errors=True)
+            try:
+                catalog_path.write_text(original_content, encoding="utf-8")
+            except OSError as restore_exc:
+                return _err(
+                    f"failed to create {name!r}: {exc}; additionally failed to "
+                    f"restore {CATALOG_FILENAME}: {restore_exc}"
+                )
+            return _err(
+                f"failed to create {name!r}; rolled back partial changes: {exc}"
+            )
         catalog_note = f"and registered in {CATALOG_FILENAME} (status: draft)"
     else:
         catalog_note = f"({CATALOG_FILENAME} not found — register the skill manually)"

@@ -6,12 +6,13 @@ so the tests double as evidence for the skill's accepted observations.
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from __test__.helpers import sandboxed_env
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL = ROOT / "skills" / "example-skill"
@@ -32,7 +33,7 @@ index 1111111..2222222 100644
 
 def run_script(stdin: str, cwd: Path) -> subprocess.CompletedProcess:
     # Sanitized environment: skill scripts must not need or see any secrets.
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    env = sandboxed_env()
     return subprocess.run(
         [sys.executable, str(SCRIPT)],
         input=stdin,

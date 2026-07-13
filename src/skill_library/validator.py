@@ -77,6 +77,8 @@ _CODE_PATH_RE = re.compile(
 _TOC_RE = re.compile(r"^#{1,3}\s+(contents|table of contents|оглавление|содержание)\s*$",
                      re.IGNORECASE | re.MULTILINE)
 
+_PLACEHOLDER_RE = re.compile(r"\b(?:TODO|TBD|FIXME)\b", re.IGNORECASE)
+
 # Heuristic secret scan. A match fail-closed blocks validation until reviewed.
 _SECRET_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "private key block"),
@@ -273,7 +275,9 @@ def _check_observations_layer(skill_dir: Path, problems: list[str]) -> None:
     problems.extend(collect_observation_problems(skill_dir))
 
 
-def validate_skill_dir(skill_dir: Path, policy: dict | None = None) -> list[str]:
+def validate_skill_dir(
+    skill_dir: Path, policy: dict | None = None, *, status: str | None = None
+) -> list[str]:
     """Validate one skill directory. Returns a list of problems (empty = OK)."""
     skill_dir = Path(skill_dir)
     problems: list[str] = []
@@ -297,8 +301,9 @@ def validate_skill_dir(skill_dir: Path, policy: dict | None = None) -> list[str]
         problems.append(f"missing {SKILL_FILENAME}")
         return problems
 
+    skill_md_text = skill_md.read_text(encoding="utf-8")
     try:
-        fm, body = split_frontmatter(skill_md.read_text(encoding="utf-8"))
+        fm, body = split_frontmatter(skill_md_text)
     except DiscoveryError as exc:
         problems.append(f"{SKILL_FILENAME}: {exc}")
         return problems
@@ -325,6 +330,10 @@ def validate_skill_dir(skill_dir: Path, policy: dict | None = None) -> list[str]
 
     if not body.strip():
         problems.append(f"{SKILL_FILENAME} body is empty")
+    if status == "stable" and _PLACEHOLDER_RE.search(skill_md_text):
+        problems.append(
+            f"{SKILL_FILENAME}: stable skill must not contain TODO/TBD/FIXME placeholders"
+        )
 
     _check_origin(skill_dir, problems)
     _check_layout(skill_dir, problems)
@@ -387,7 +396,9 @@ def validate_library(library_root: Path) -> list[str]:
                 continue
             cat = catalog_by_name.get(entry.name)
             policy = cat.content_policy if cat else None
-            for problem in validate_skill_dir(entry, policy):
+            for problem in validate_skill_dir(
+                entry, policy, status=cat.status if cat else None
+            ):
                 problems.append(f"{entry.name}: {problem}")
 
     seen: dict[str, str] = {}

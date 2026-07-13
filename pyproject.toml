@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skill-library"
-version = "0.0.0"
+version = "0.0.1"
 description = "Self-contained, vendor-neutral Agent Skills library with a management CLI (skillctl)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Волков Петр Викторович" }]
-# Зависимостей нет намеренно: CLI и тесты работают на чистой stdlib.
+# Intentionally no dependencies: the CLI and tests run on pure stdlib.
 dependencies = []
 
 [project.scripts]
@@ -18,3 +18,42 @@ skillctl = "skill_library.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.15.1",
+    "mutmut>=3.6.0",
+]
+
+# skills/ scripts are executed by tests via subprocess and are not measured
+# by the coverage hook, so source lists only the importable library code.
+[tool.coverage.run]
+branch = true
+source = ["src/skill_library"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+
+[tool.mutmut]
+source_paths = ["src/skill_library"]
+only_mutate = [
+    "src/skill_library/security.py",
+    "src/skill_library/lockfile.py",
+    "src/skill_library/installer.py",
+    "src/skill_library/yamlio.py",
+    "src/skill_library/validator.py",
+]
+also_copy = ["__test__", "skills", "scripts", "skills.yaml", "pyproject.toml"]
+pytest_add_cli_args = ["-q"]
+pytest_add_cli_args_test_selection = [
+    "__test__/test_yamlio.py",
+    "__test__/test_security.py",
+    "__test__/test_lockfile.py",
+    "__test__/test_installer.py",
+    "__test__/test_validator.py",
+    "__test__/test_layers.py",
+    "__test__/test_observations.py",
+]
+mutate_only_covered_lines = true

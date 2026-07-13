@@ -1,27 +1,28 @@
 name: Release
 
-# Авторелиз по образцу yandexdisk-dsm-app, адаптированный под библиотеку без
-# бинарной сборки.
+# Auto-release modelled after yandexdisk-dsm-app, adapted for a library with no
+# binary build step.
 #
-# Ветки: релизы собираются ТОЛЬКО из main (push = прямой коммит или мерж PR);
-# test и dev релизов не дают — этот workflow там даже не запускается (тесты на
-# всех ветках гоняет ci.yml). На PR в main запускаются только гейты — они ловят
-# забытый bump версии до мержа.
+# Branches: releases are built ONLY from main (push = direct commit or merged
+# PR); test and dev branches never release — this workflow does not even run
+# there (ci.yml runs the tests on every branch). On PRs to main only the gates
+# run — they catch a forgotten version bump before the merge.
 #
-# Версия — единственный источник pyproject.toml; дрейф по __init__.py и
-# CHANGELOG.md ловит scripts/check_version_drift.py. Дисциплину «изменился
-# используемый код → bump версии; инфраструктура → версия не меняется, релиза
-# нет» принудительно проверяет scripts/check_release_gate.py.
+# The version has a single source of truth, pyproject.toml; drift against
+# __init__.py and CHANGELOG.md is caught by scripts/check_version_drift.py.
+# The discipline "used code changed → version bump; infrastructure only → the
+# version must not change, no release" is enforced by
+# scripts/check_release_gate.py.
 #
-# Публикация идемпотентна и привязана к bump версии: если релиз v<версия> уже
-# существует (мерж без поднятия версии), шаг ничего не делает. Версия 0.0.0 —
-# базовая линия и не публикуется никогда. Ассеты релиза: архив исходников
-# (git archive) + его SHA256; сборка артефактов не нужна.
+# Publishing is idempotent and tied to the version bump: if release v<version>
+# already exists (a merge without a bump), the step does nothing. Version
+# 0.0.0 is the baseline and is never published. Release assets: a source
+# archive (git archive) + its SHA256; no artifact build is needed.
 #
-# workflow_dispatch на main допускается как ручной повтор: защита от дублей
-# (gh release view) делает его безопасным.
+# workflow_dispatch on main is allowed as a manual retry: the duplicate guard
+# (gh release view) makes it safe.
 #
-# Actions запинены по commit-SHA, а не по тегу: тег изменяем, SHA — нет.
+# Actions are pinned by commit SHA, not by tag: tags are mutable, SHAs are not.
 
 on:
   push:
@@ -37,7 +38,7 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full history + tags — нужны релизные теги для гейта)
+      - name: Checkout (full history + tags — the gate needs release tags)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
@@ -49,22 +50,22 @@ jobs:
         run: python3 scripts/check_release_gate.py
 
   release:
-    # Только push/dispatch в main; PR-запуски ограничиваются гейтами.
+    # Push/dispatch on main only; PR runs are limited to the gates.
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: gates
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # создание тега/Release и загрузка ассетов
+      contents: write   # create the tag/Release and upload assets
     steps:
       - name: Checkout (full history + tags)
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
-      # Никогда не публиковать красный код: полный набор проверок ci.yml
-      # прогоняется ещё раз в этом же job перед публикацией.
+      # Never publish red code: the full ci.yml check set is executed once
+      # more in this job right before publishing.
       - name: Validate all skills (structure + metadata)
         run: python3 scripts/validate_all.py
 
@@ -80,28 +81,28 @@ jobs:
           [ -n "$VER" ] || { echo "ERROR: version missing in pyproject.toml" >&2; exit 1; }
           TAG="v${VER}"
 
-          # 0.0.0 — базовая линия без релиза (см. CHANGELOG.md).
+          # 0.0.0 is the unreleased baseline (see CHANGELOG.md).
           if [ "$VER" = "0.0.0" ]; then
-            echo "Версия 0.0.0 — базовая линия, релиз не публикуется."
+            echo "Version 0.0.0 is the baseline; no release is published."
             exit 0
           fi
 
-          # Идемпотентность: релиз привязан к версии. Если v<версия> уже есть —
-          # значит, в этом мерже версия не поднималась: ничего не публикуем.
+          # Idempotency: the release is tied to the version. If v<version>
+          # already exists, this merge did not bump — publish nothing.
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — версия не поднята, публикация пропущена."
+            echo "Release $TAG already exists — version was not bumped, publishing skipped."
             exit 0
           fi
 
-          # Ассеты: воспроизводимый архив исходников + его SHA256.
-          # (GitHub дополнительно сам приложит zip/tar.gz «Source code».)
+          # Assets: a reproducible source archive + its SHA256.
+          # (GitHub also attaches its own "Source code" zip/tar.gz.)
           ARCHIVE="skill-library-${VER}.tar.gz"
           git archive --format=tar.gz --prefix="skill-library-${VER}/" \
             -o "$ARCHIVE" HEAD
           sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
 
-          # Заметки релиза — секция текущей версии из CHANGELOG.md
-          # (формат заголовка: «## [X.Y.Z] — YYYY-MM-DD»).
+          # Release notes — the current version's section of CHANGELOG.md
+          # (header format: "## [X.Y.Z] — YYYY-MM-DD").
           awk -v ver="$VER" '
             BEGIN { gsub(/\./, "\\.", ver); re = "^## \\[" ver "\\]" }
             $0 ~ re { flag=1; print; next }
@@ -114,7 +115,7 @@ jobs:
             echo "---"
             echo "Commit: \`${GITHUB_SHA}\`"
             echo
-            echo "Проверка целостности скачанного архива:"
+            echo "To verify the integrity of the downloaded archive:"
             echo '```sh'
             echo "sha256sum -c ${ARCHIVE}.sha256"
             echo '```'
@@ -125,4 +126,4 @@ jobs:
             --title "skill-library ${VER}" \
             --target "${GITHUB_SHA}" \
             --notes-file release-notes.md
-          echo "Опубликован релиз $TAG (${GITHUB_SHA}) с ассетами ${ARCHIVE}{,.sha256}"
+          echo "Published release $TAG (${GITHUB_SHA}) with assets ${ARCHIVE}{,.sha256}"

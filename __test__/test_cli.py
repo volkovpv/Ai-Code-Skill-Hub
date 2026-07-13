@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import io
 import shutil
+from unittest import mock
 
 from skill_library.cli import main
 from skill_library.validator import validate_library, validate_skill_dir
@@ -129,6 +130,17 @@ class TestCliNew(TempDirTestCase):
         self.assertIn("unknown layer", err)
 
 
+    def test_new_rolls_back_files_and_catalog_on_registration_failure(self):
+        catalog = self.library / "skills.yaml"
+        before = catalog.read_bytes()
+        with mock.patch(
+            "skill_library.cli.load_catalog", side_effect=OSError("injected")
+        ):
+            code, _, err = run_cli("--library-root", str(self.library), "new", "rollback-skill")
+        self.assertEqual(code, 1, err)
+        self.assertFalse((self.library / "skills" / "rollback-skill").exists())
+        self.assertEqual(catalog.read_bytes(), before)
+
 class TestCliLayerCommands(TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -197,3 +209,62 @@ class TestCliLayerCommands(TempDirTestCase):
         code, out, _ = self.cli("status", "--target", str(project))
         self.assertEqual(code, 0)
         self.assertIn("mode=full", out)
+
+
+class TestCliStableTestGate(TempDirTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.library = make_library(self.tmp, names=(SKILL,))
+        (self.library / "__test__").mkdir()
+        (self.library / "__test__" / "__init__.py").write_text("", encoding="utf-8")
+
+    def cli(self, *argv: str) -> tuple[int, str, str]:
+        return run_cli("--library-root", str(self.library), *argv)
+
+    def test_targeted_stable_skill_requires_dedicated_tests(self):
+        code, _, err = self.cli("test", SKILL)
+        self.assertEqual(code, 1)
+        self.assertIn("stable skill has no dedicated tests", err)
+
+    def test_full_suite_rejects_stable_skill_without_tests(self):
+        code, _, err = self.cli("test")
+        self.assertEqual(code, 1)
+        self.assertIn("stable skills without dedicated tests", err)
+
+    def test_draft_skill_may_have_no_dedicated_tests(self):
+        catalog = self.library / "skills.yaml"
+        catalog.write_text(
+            catalog.read_text(encoding="utf-8").replace("status: stable", "status: draft"),
+            encoding="utf-8",
+        )
+        code, out, err = self.cli("test", SKILL)
+        self.assertEqual(code, 0, err)
+        self.assertIn("no dedicated tests found", out)
+
+    def test_stable_gate_requires_exact_module_name_not_prefix(self):
+        # Skill "alpha" must not be considered covered by "test_alpha_skill.py"
+        # (the dedicated tests of the longer-named skill "alpha-skill").
+        self.library = make_library(self.tmp / "prefix", names=("alpha", SKILL))
+        tests_dir = self.library / "__test__"
+        tests_dir.mkdir()
+        (tests_dir / "__init__.py").write_text("", encoding="utf-8")
+        (tests_dir / "test_alpha_skill.py").write_text("", encoding="utf-8")
+        code, _, err = self.cli("test")
+        self.assertEqual(code, 1)
+        self.assertIn("alpha (test_alpha.py)", err)
+        self.assertNotIn("alpha-skill (", err)
+
+    def test_targeted_run_uses_exact_test_module_name(self):
+        self.library = make_library(self.tmp / "exact", names=("alpha", SKILL))
+        catalog = self.library / "skills.yaml"
+        catalog.write_text(
+            catalog.read_text(encoding="utf-8").replace("status: stable", "status: draft"),
+            encoding="utf-8",
+        )
+        tests_dir = self.library / "__test__"
+        tests_dir.mkdir()
+        (tests_dir / "__init__.py").write_text("", encoding="utf-8")
+        (tests_dir / "test_alpha_skill.py").write_text("", encoding="utf-8")
+        code, out, err = self.cli("test", "alpha")
+        self.assertEqual(code, 0, err)
+        self.assertIn("(pattern test_alpha.py)", out)

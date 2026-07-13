@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
-"""bump_version.py — единственный правильный способ поднять версию проекта.
+"""bump_version.py — the only correct way to bump the project version.
 
-Атомарно проставляет новую версию во всех файлах-носителях:
+Atomically stamps the new version into every version-carrying file:
 
-- ``pyproject.toml`` — [project].version (источник истины);
+- ``pyproject.toml`` — [project].version (the source of truth);
 - ``src/skill_library/__init__.py`` — ``__version__``;
-- ``CHANGELOG.md`` — вставляет заготовку записи ``## [X.Y.Z] — YYYY-MM-DD``
-  перед предыдущей записью; текст изменений вписывается вручную;
-- ``uv.lock`` (если присутствует) — версия пакета проекта. Правится тем же
-  текстовым способом, без вызова ``uv``: скрипт остаётся stdlib-only и
-  офлайн, а результат байт-в-байт совпадает с тем, что записал бы
-  ``uv lock``. Иначе lock отставал бы от pyproject на один шаг: ``uv run``
-  фиксирует lock ДО запуска скрипта.
+- ``CHANGELOG.md`` — inserts a ``## [X.Y.Z] — YYYY-MM-DD`` entry stub before
+  the previous entry; the change description is filled in by hand;
+- ``uv.lock`` (when present) — the project package version. Patched with the
+  same textual substitution, without invoking ``uv``: the script stays
+  stdlib-only and offline, and the result is byte-identical to what
+  ``uv lock`` would write. Otherwise the lock would trail pyproject by one
+  step: ``uv run`` freezes the lock BEFORE the script starts.
 
-После правки сам прогоняет гейт дрейфа (scripts/check_version_drift.py) и
-падает, если файлы разошлись. Версию руками в трёх файлах не правим —
-и разработчик, и агент пользуются только этим скриптом (см. AGENTS.md
-«Release discipline» и README «Версия проекта и авторелизы на GitHub»).
+Afterwards it runs the drift gate itself (scripts/check_version_drift.py) and
+fails if the files diverged. Never edit the version by hand in three files —
+both developers and agents use only this script (see AGENTS.md
+"Release discipline" and the README section on project versioning and
+auto-releases).
 
-Запуск:
-    python3 scripts/bump_version.py 0.0.1        # явная версия
+Usage:
+    python3 scripts/bump_version.py 0.0.1        # explicit version
     python3 scripts/bump_version.py --patch      # 0.0.0 -> 0.0.1
     python3 scripts/bump_version.py --minor      # 0.0.1 -> 0.1.0
     python3 scripts/bump_version.py --major      # 0.1.0 -> 1.0.0
 
-Новая версия обязана быть строго больше текущей (SemVer, монотонный рост).
+The new version must be strictly greater than the current one (SemVer,
+monotonic growth).
 """
 
 from __future__ import annotations
@@ -42,7 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 CHANGELOG_STUB = """## [{version}] — {date}
 
-- TODO: опишите изменения этой версии (текст станет release notes на GitHub).
+- TODO: describe this version's changes (the text becomes the GitHub release notes).
 
 """
 
@@ -69,7 +71,7 @@ def _substitute(path: Path, pattern: str, replacement: str) -> None:
 
 
 def _project_name(root: Path) -> str:
-    """Имя пакета из pyproject.toml, нормализованное по правилам uv (PEP 503)."""
+    """Package name from pyproject.toml, normalized per uv's rules (PEP 503)."""
     text = (root / "pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^name\s*=\s*"([^"]+)"', text, re.MULTILINE)
     if match is None:
@@ -97,8 +99,8 @@ def bump(root: Path, new_version: str, date: datetime.date) -> None:
         f'__version__ = "{new_version}"',
     )
 
-    # uv.lock опционален (zero-tooling fallback живёт без uv), но если он
-    # есть — версия пакета проекта обязана совпасть с pyproject.toml.
+    # uv.lock is optional (the zero-tooling fallback lives without uv), but
+    # when present the project package version must match pyproject.toml.
     uv_lock = root / "uv.lock"
     if uv_lock.is_file():
         _substitute(
@@ -116,7 +118,7 @@ def bump(root: Path, new_version: str, date: datetime.date) -> None:
     changelog.write_text(text[: match.start()] + stub + text[match.start():], encoding="utf-8")
 
     problems = check(root)
-    if problems:  # самопроверка: после bump дрейфа быть не может
+    if problems:  # self-check: no drift may remain after a bump
         for problem in problems:
             print(f"FAIL(bump): {problem}", file=sys.stderr)
         raise SystemExit(1)
@@ -124,7 +126,7 @@ def bump(root: Path, new_version: str, date: datetime.date) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("version", nargs="?", help="явная новая версия X.Y.Z")
+    parser.add_argument("version", nargs="?", help="explicit new version X.Y.Z")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--patch", action="store_true")
     group.add_argument("--minor", action="store_true")
@@ -134,16 +136,16 @@ def main(argv: list[str] | None = None) -> int:
 
     part = "major" if args.major else "minor" if args.minor else "patch" if args.patch else None
     if bool(args.version) == bool(part):
-        parser.error("укажите либо явную версию, либо ровно один из --patch/--minor/--major")
+        parser.error("pass either an explicit version or exactly one of --patch/--minor/--major")
 
     root = args.root.resolve()
     current = read_pyproject_version(root)
     new_version = args.version or next_version(current, part)
     bump(root, new_version, datetime.date.today())
 
-    print(f"Версия поднята: {current} -> {new_version}")
-    print("Осталось: заполнить запись в CHANGELOG.md (строка TODO) — "
-          "её текст станет release notes.")
+    print(f"Version bumped: {current} -> {new_version}")
+    print("Next: fill in the CHANGELOG.md entry (the TODO line) — "
+          "its text becomes the release notes.")
     return 0
 
 

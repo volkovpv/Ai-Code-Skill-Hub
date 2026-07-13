@@ -6,22 +6,25 @@ provenance of every installed skill::
     version: 1
     skills:
       - name: example-skill
-        source: /абсолютный/путь/к/библиотеке        # или URL git-репозитория
-        source_commit: <hex или null>
+        source: /absolute/path/to/the/library        # or a git repository URL
+        source_commit: <hex or null>
         skill_version: 0.1.0
         agent: universal
         mode: copy                                   # copy | link
-        target_path: .agents/skills/example-skill    # относительно проекта
-        checksum: sha256:<агрегат по файлам>
+        target_path: .agents/skills/example-skill    # relative to the project
+        checksum: sha256:<aggregate over files>
         installed_at: 2026-07-12T12:00:00+00:00
         updated_at: null
-        files:                                       # только управляемые файлы
+        files:                                       # managed files only
           - path: SKILL.md
             sha256: <hex>
 """
 
 from __future__ import annotations
 
+
+import os
+import tempfile
 from pathlib import Path
 
 from . import yamlio
@@ -74,7 +77,16 @@ def load_lock(target_root: Path) -> dict:
 
 def save_lock(target_root: Path, data: dict) -> None:
     data = {"version": LOCK_VERSION, "skills": data.get("skills", [])}
-    yamlio.dump_file(lock_path(target_root), data)
+    path = lock_path(target_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        yamlio.dump_file(tmp_path, data)
+        os.replace(tmp_path, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def get_entry(data: dict, name: str) -> dict | None:

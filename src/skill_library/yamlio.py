@@ -122,7 +122,10 @@ def _parse_flow_list(s: str, lineno: int) -> list:
     if quote:
         raise YamlError(f"line {lineno}: unterminated quote in flow list")
     items.append("".join(buf).strip())
-    return [_parse_scalar(item, lineno) for item in items if item != ""]
+    # Fail closed: an empty element ("[a,,b]", "[a,]") is a typo, not data.
+    if any(item == "" for item in items):
+        raise YamlError(f"line {lineno}: empty item in flow list")
+    return [_parse_scalar(item, lineno) for item in items]
 
 
 def _parse_scalar(s: str, lineno: int):
