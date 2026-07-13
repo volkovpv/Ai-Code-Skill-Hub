@@ -94,6 +94,20 @@ _SECRET_PATTERNS: list[tuple[re.Pattern, str]] = [
 ]
 
 
+def _read_text(path: Path, label: str, problems: list[str]) -> str | None:
+    """Read a UTF-8 text file, recording a fail-closed problem on bad encoding.
+
+    A binary or mis-encoded file must not crash the validator with a bare
+    ``UnicodeDecodeError`` — it becomes a reported problem instead so
+    ``skillctl validate`` stays fail-closed with a proper exit code.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        problems.append(f"{label}: is not valid UTF-8 ({exc})")
+        return None
+
+
 def resolve_content_policy(policy: dict | None) -> dict:
     resolved = dict(DEFAULT_CONTENT_POLICY)
     if isinstance(policy, dict):
@@ -161,7 +175,13 @@ def _check_origin(skill_dir: Path, problems: list[str]) -> None:
 
 def _check_content_policy(skill_dir: Path, policy: dict, problems: list[str]) -> None:
     """File sizes and the heuristic secret scan (both fail-closed)."""
-    max_bytes = int(policy.get("max_tracked_file_bytes") or 0)
+    try:
+        max_bytes = int(policy.get("max_tracked_file_bytes") or 0)
+    except (TypeError, ValueError):
+        # A non-numeric policy value (e.g. ``max_tracked_file_bytes: abc``) must
+        # not crash the validator with a bare ValueError — treat it as invalid so
+        # the range check below reports a problem and falls back to the default.
+        max_bytes = -1
     if max_bytes <= 0 or max_bytes > HARD_MAX_FILE_BYTES:
         problems.append(
             f"content_policy: max_tracked_file_bytes must be within 1..{HARD_MAX_FILE_BYTES}"
@@ -222,12 +242,16 @@ def _check_knowledge_layer(skill_dir: Path, problems: list[str]) -> None:
     if not index.is_file():
         problems.append(f"{KNOWLEDGE_DIRNAME}/ has content but no {KNOWLEDGE_DIRNAME}/INDEX.md")
         return
+    index_text = _read_text(index, f"{KNOWLEDGE_DIRNAME}/INDEX.md", problems)
+    if index_text is None:
+        return
     _check_local_links(
-        index.read_text(encoding="utf-8"), knowledge, skill_dir,
-        f"{KNOWLEDGE_DIRNAME}/INDEX.md", problems,
+        index_text, knowledge, skill_dir, f"{KNOWLEDGE_DIRNAME}/INDEX.md", problems,
     )
     for path in sorted(knowledge.rglob("*.md")):
-        text = path.read_text(encoding="utf-8")
+        text = _read_text(path, path.relative_to(skill_dir).as_posix(), problems)
+        if text is None:
+            continue
         if len(text.splitlines()) > 100 and not _TOC_RE.search(text):
             problems.append(
                 f"{path.relative_to(skill_dir).as_posix()}: files longer than 100 lines "
@@ -254,7 +278,8 @@ def validate_data_layer(
             f"{DATA_DIRNAME}/ has content but no {DATA_DIRNAME}/README.md (the dataset "
             "contract: purpose, source, license, format, PII statement, update procedure)"
         )
-    elif not readme.read_text(encoding="utf-8").strip():
+    elif (readme_text := _read_text(readme, f"{DATA_DIRNAME}/README.md", problems)) is not None \
+            and not readme_text.strip():
         problems.append(f"{DATA_DIRNAME}/README.md is empty")
     if scan_policy:
         resolved = resolve_content_policy(policy)
@@ -301,7 +326,9 @@ def validate_skill_dir(
         problems.append(f"missing {SKILL_FILENAME}")
         return problems
 
-    skill_md_text = skill_md.read_text(encoding="utf-8")
+    skill_md_text = _read_text(skill_md, SKILL_FILENAME, problems)
+    if skill_md_text is None:
+        return problems
     try:
         fm, body = split_frontmatter(skill_md_text)
     except DiscoveryError as exc:

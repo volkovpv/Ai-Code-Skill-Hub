@@ -420,7 +420,7 @@ wheels = [
 
 [[package]]
 name = "skill-library"
-version = "0.0.1"
+version = "0.0.5"
 source = { editable = "." }
 
 [package.dev-dependencies]

@@ -1,0 +1,23 @@
+# Deterministic line endings across every platform (audit H-2).
+#
+# installer.py hashes skill files by their raw bytes and records the sha256 in
+# .agent-skills.lock.yaml. Without normalization those bytes depend on each
+# contributor's core.autocrlf setting: a single CRLF commit would give a
+# different checkout on another OS, the hash would mismatch, and update/remove
+# would refuse the file as "locally modified". Forcing LF keeps the hashes
+# stable and the diffs quiet regardless of local git config.
+#
+# The whole repository is text (no tracked binaries); `text=auto` still lets git
+# leave any future binary untouched via NUL detection.
+* text=auto eol=lf
+
+# Explicit for the file types the library actually ships and hashes.
+*.py         text eol=lf
+*.md         text eol=lf
+*.yaml       text eol=lf
+*.yml        text eol=lf
+*.toml       text eol=lf
+*.lock       text eol=lf
+*.json       text eol=lf
+*.diff       text eol=lf
+*.expected   text eol=lf

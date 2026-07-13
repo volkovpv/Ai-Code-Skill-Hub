@@ -3,8 +3,10 @@ content policy (sizes, secret scan) and capability consistency."""
 
 from __future__ import annotations
 
+from skill_library import validator
 from skill_library.validator import (
     DEFAULT_CONTENT_POLICY,
+    _check_content_policy,
     validate_data_layer,
     validate_library,
     validate_skill_dir,
@@ -123,6 +125,21 @@ class TestContentPolicy(TempDirTestCase):
         policy = {"max_tracked_file_bytes": 1024 * 1024}
         self.assertEqual(validate_skill_dir(self.skill, policy), [])
 
+    def test_non_integer_max_bytes_is_reported_not_raised(self):
+        # M-2: a non-numeric max_tracked_file_bytes must degrade to a problem,
+        # not a bare ValueError traceback out of the fail-closed validator.
+        problems = validate_skill_dir(self.skill, {"max_tracked_file_bytes": "abc"})
+        self.assertTrue(
+            any("max_tracked_file_bytes must be within" in p for p in problems), problems
+        )
+
+    def test_valid_integer_max_bytes_reports_no_policy_problem(self):
+        # negative control: a legitimate integer limit raises no size problem.
+        problems = validate_skill_dir(self.skill, {"max_tracked_file_bytes": 262144})
+        self.assertFalse(
+            any("max_tracked_file_bytes" in p for p in problems), problems
+        )
+
     def test_pii_and_secret_flags_must_stay_false(self):
         problems = "\n".join(validate_skill_dir(self.skill, {"secrets_allowed": True}))
         self.assertIn("must stay false", problems)
@@ -154,6 +171,17 @@ class TestObservationValidation(TempDirTestCase):
         obs.write_text(
             "---\nid: OBS-20260101-003\nstatus: accepted\nobserved_at: 2026-01-01\n"
             "scope: x\nevidence: []\nreviewed_by: r\nreviewed_at: 2026-01-02\n---\n\nBody.\n",
+            encoding="utf-8",
+        )
+        problems = "\n".join(validate_skill_dir(self.skill))
+        self.assertIn("non-empty 'evidence'", problems)
+
+    def test_accepted_with_only_blank_evidence_fails(self):
+        obs = self.accepted / "OBS-20260101-003.md"
+        obs.write_text(
+            "---\nid: OBS-20260101-003\nstatus: accepted\nobserved_at: 2026-01-01\n"
+            "scope: x\nevidence:\n  - \"\"\n  - \"  \"\nreviewed_by: r\n"
+            "reviewed_at: 2026-01-02\n---\n\nBody.\n",
             encoding="utf-8",
         )
         problems = "\n".join(validate_skill_dir(self.skill))
@@ -216,3 +244,52 @@ class TestCapabilityConsistency(TempDirTestCase):
         )
         problems = "\n".join(validate_library(library))
         self.assertIn("knowledge/ has content but the capability flag", problems)
+
+
+# H-5: one obviously-fake positive marker (must be caught) and one non-secret
+# look-alike (must NOT be flagged) per secret-scan heuristic. Sample lengths are
+# crafted to sit just above / below each pattern's threshold. Every marker is an
+# obvious placeholder ("FAKE"/canonical AWS doc key), never a real credential.
+SECRET_SCAN_CASES = [
+    (
+        "private key block",
+        "-----BEGIN PRIVATE KEY-----\nFAKE-NOT-A-REAL-KEY\n-----END PRIVATE KEY-----\n",
+        "-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----\n",
+    ),
+    ("AWS access key id", "AKIAIOSFODNN7EXAMPLE\n", "AKIA1234\n"),
+    ("GitHub token", "ghp_FAKE" + "0" * 32 + "\n", "ghp_tooshort\n"),
+    ("GitHub fine-grained token", "github_pat_FAKE" + "0" * 20 + "\n", "github_pat_tooshort\n"),
+    ("Slack token", "xoxb-FAKE" + "0" * 8 + "\n", "xoxb-short\n"),
+    ("API secret key", "sk-FAKE" + "0" * 30 + "\n", "sk-shortkey\n"),
+    ("hardcoded credential", 'api_key = "FAKE' + "0" * 16 + '"\n', 'password = "hunter2"\n'),
+]
+
+
+class TestSecretScanCoverage(TempDirTestCase):
+    """H-5: every one of the 7 secret-scan heuristics is guarded by a positive
+    (fake marker is caught) and a negative (look-alike is not flagged) case, so
+    a mutation/typo in any single regex fails at least one test."""
+
+    def _scan(self, name: str, content: str) -> str:
+        skill = self.make_dir(name)
+        (skill / "sample.txt").write_text(content, encoding="utf-8")
+        problems: list[str] = []
+        _check_content_policy(skill, dict(DEFAULT_CONTENT_POLICY), problems)
+        return "\n".join(problems)
+
+    def test_every_scanner_pattern_has_a_paired_case(self):
+        # Structural guard: adding a pattern without a paired case fails here,
+        # closing the exact gap H-5 describes (untested regex mutates silently).
+        kinds_under_test = {kind for kind, _, _ in SECRET_SCAN_CASES}
+        kinds_in_scanner = {kind for _, kind in validator._SECRET_PATTERNS}
+        self.assertEqual(kinds_under_test, kinds_in_scanner)
+
+    def test_positive_markers_are_flagged(self):
+        for i, (kind, positive, _negative) in enumerate(SECRET_SCAN_CASES):
+            with self.subTest(kind=kind):
+                self.assertIn(f"possible {kind} detected", self._scan(f"pos-{i}", positive))
+
+    def test_negative_lookalikes_are_not_flagged(self):
+        for i, (kind, _positive, negative) in enumerate(SECRET_SCAN_CASES):
+            with self.subTest(kind=kind):
+                self.assertNotIn("secrets are forbidden", self._scan(f"neg-{i}", negative))

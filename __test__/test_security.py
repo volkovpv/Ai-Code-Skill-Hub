@@ -185,3 +185,22 @@ class TestSandboxedScriptExecution(TempDirTestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("network access is disabled in skill tests", result.stderr)
+
+    def test_python_udp_sendmsg_is_denied_without_connect(self):
+        # L-16: sendmsg is a second connect-less egress path; the blocker denies
+        # it explicitly, so it needs its own test (sendto's does not cover it).
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); "
+                "s.sendmsg([b'x'], [], 0, ('127.0.0.1', 9))",
+            ],
+            cwd=self.tmp,
+            env=sandboxed_env(),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("network access is disabled in skill tests", result.stderr)

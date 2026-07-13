@@ -9,6 +9,7 @@ from io import StringIO
 import subprocess
 import sys
 from pathlib import Path
+from unittest import mock
 
 from .helpers import ROOT, TempDirTestCase
 
@@ -201,6 +202,62 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.assertEqual(drift.check(self.repo), [])
         self.assertEqual(gate.check(self.repo), [])
 
+    def test_rename_out_of_release_paths_without_bump_fails(self):
+        # H-1: moving used code out of a released location must still count as a
+        # used-code change. `git diff --name-only` collapses the rename to the
+        # new (infra) path only, hiding the removal from src/ — the gate would
+        # wave it through as infra-only. `--name-status -M` sees both endpoints.
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        (self.repo / "_attic").mkdir()
+        self.git("mv", "src/skill_library/core.py", "_attic/core.py")
+        self.commit_all()
+        problems = "\n".join(gate.check(self.repo))
+        self.assertIn("version is still 0.1.0", problems)
+        self.assertIn("src/skill_library/core.py", problems)
+
+    def test_rename_into_release_paths_without_bump_fails(self):
+        # Symmetric direction: moving a file into a released location adds new
+        # used code — relevant by the new endpoint of the rename.
+        self.make_repo("0.1.0")
+        (self.repo / "extra.py").write_text("VALUE = 9\n", encoding="utf-8")
+        self.commit_all("add extra at repo root")
+        self.tag("v0.1.0")
+        self.git("mv", "extra.py", "src/skill_library/extra.py")
+        self.commit_all()
+        problems = "\n".join(gate.check(self.repo))
+        self.assertIn("version is still 0.1.0", problems)
+        self.assertIn("src/skill_library/extra.py", problems)
+
+    def test_delete_used_code_without_bump_fails(self):
+        # Deleting used code is a used-code change (relevant by the old path).
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        self.git("rm", "-q", "src/skill_library/core.py")
+        self.commit_all()
+        problems = "\n".join(gate.check(self.repo))
+        self.assertIn("version is still 0.1.0", problems)
+
+    def test_rename_within_infra_without_bump_passes(self):
+        # Guard against over-firing: a rename with both endpoints in infra is
+        # not release-relevant.
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        (self.repo / "docs").mkdir()
+        self.git("mv", "README.md", "docs/README.md")
+        self.commit_all()
+        self.assertEqual(gate.check(self.repo), [])
+
+    def test_rename_used_code_to_infra_with_bump_passes(self):
+        # The H-1 scenario, handled correctly: relevant change + a bump = green.
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        (self.repo / "_attic").mkdir()
+        self.git("mv", "src/skill_library/core.py", "_attic/core.py")
+        self.write_versions("0.1.1")
+        self.commit_all()
+        self.assertEqual(gate.check(self.repo), [])
+
     def test_picks_highest_semver_tag(self):
         # v0.9.0 and v0.10.0: by SemVer 0.10.0 is higher (string comparison
         # would pick 0.9.0). Code changed without a bump relative to 0.10.0 —
@@ -292,6 +349,117 @@ class TestBumpVersion(ReleaseRepoTestCase):
         )
         with self.assertRaises(SystemExit):
             bump.bump(self.repo, "0.2.0", self.DATE)
+
+    def _read_all_versions(self, repo: Path) -> dict[str, str]:
+        return {
+            "pyproject": (repo / "pyproject.toml").read_text(encoding="utf-8"),
+            "init": (repo / "src" / "skill_library" / "__init__.py").read_text(encoding="utf-8"),
+            "changelog": (repo / "CHANGELOG.md").read_text(encoding="utf-8"),
+        }
+
+    def test_bump_aborting_on_uv_lock_leaves_no_partial_write(self):
+        # H-4: a bump that fails on uv.lock (regenerated / missing the project
+        # entry) used to abort AFTER pyproject.toml and __init__.py were already
+        # stamped, leaving a half-bumped tree with no rollback. The pre-flight
+        # now computes every substitution before touching disk, so a failing
+        # bump changes nothing.
+        self.make_repo("0.1.0")
+        (self.repo / "uv.lock").write_text(
+            'version = 1\nrevision = 3\nrequires-python = ">=3.12"\n',
+            encoding="utf-8",
+        )
+        before = self._read_all_versions(self.repo)
+        with self.assertRaises(SystemExit):
+            bump.bump(self.repo, "0.2.0", self.DATE)
+        self.assertEqual(self._read_all_versions(self.repo), before)
+        self.assertEqual(drift.read_pyproject_version(self.repo), "0.1.0")
+        self.assertEqual(drift.check(self.repo), [])  # still internally consistent
+
+    def test_bump_rolls_back_files_written_before_a_mid_commit_failure(self):
+        # H-4 residual: even past the pre-flight, an IO error part-way through the
+        # write set must not leave a half-stamped tree. Fail the third atomic
+        # write and assert the two already-written files are restored byte-for-byte.
+        self.make_repo("0.1.0")
+        (self.repo / "uv.lock").write_text(
+            UV_LOCK.format(version="0.1.0"), encoding="utf-8"
+        )
+        before = self._read_all_versions(self.repo)
+        real_write = bump._atomic_write
+        calls = {"n": 0}
+
+        def flaky_write(path: Path, text: str) -> None:
+            calls["n"] += 1
+            if calls["n"] == 3:  # blow up mid-commit, after two files landed
+                raise OSError("disk full")
+            real_write(path, text)
+
+        with mock.patch.object(bump, "_atomic_write", flaky_write):
+            with self.assertRaises(OSError):
+                bump.bump(self.repo, "0.2.0", self.DATE)
+        self.assertEqual(self._read_all_versions(self.repo), before)
+        self.assertEqual(drift.check(self.repo), [])
+
+    def test_bump_rejects_non_semver_current_version(self):
+        # L-9: a non-standard current version (e.g. a pre-release tag) must give a
+        # diagnosable SystemExit, not a bare ValueError from parse_version's int().
+        self.make_repo("0.1.0rc1")
+        with self.assertRaises(SystemExit) as ctx:
+            bump.bump(self.repo, "0.2.0", self.DATE)
+        self.assertIn("not a valid X.Y.Z", str(ctx.exception))
+
+    def test_main_rejects_non_semver_current_before_computing_next(self):
+        # L-9: the --patch/--minor/--major path parses `current` via next_version;
+        # main() must reject a malformed current up front rather than let int() throw.
+        self.make_repo("0.1.0rc1")
+        errors = StringIO()
+        with redirect_stderr(errors), self.assertRaises(SystemExit):
+            bump.main(["--patch", "--root", str(self.repo)])
+
+    def _write_versions_crlf(self, repo: Path, version: str) -> None:
+        def crlf(text: str) -> bytes:
+            return text.replace("\n", "\r\n").encode("utf-8")
+
+        (repo / "pyproject.toml").write_bytes(crlf(PYPROJECT.format(version=version)))
+        init = repo / "src" / "skill_library" / "__init__.py"
+        init.parent.mkdir(parents=True, exist_ok=True)
+        init.write_bytes(crlf(INIT.format(version=version)))
+        (repo / "CHANGELOG.md").write_bytes(crlf(CHANGELOG.format(version=version)))
+        (repo / "uv.lock").write_bytes(crlf(UV_LOCK.format(version=version)))
+
+    def test_bump_preserves_crlf_line_endings(self):
+        # M-1: bumping must not silently rewrite CRLF files to LF (which under
+        # core.autocrlf=true produced a hundreds-of-lines noise diff and broke
+        # the "byte-identical to uv lock" contract).
+        repo = self.make_dir("crlf")
+        self._write_versions_crlf(repo, "0.1.0")
+        bump.bump(repo, "0.2.0", self.DATE)
+
+        for name in ("pyproject.toml", "src/skill_library/__init__.py",
+                     "CHANGELOG.md", "uv.lock"):
+            data = (repo / name).read_bytes()
+            self.assertIn(b"\r\n", data, f"{name} lost its CRLF endings")
+            self.assertEqual(
+                data.count(b"\n"), data.count(b"\r\n"),
+                f"{name} gained a bare LF (mixed line endings)",
+            )
+        # The change actually landed, and the inserted CHANGELOG stub is CRLF too.
+        self.assertEqual(drift.read_pyproject_version(repo), "0.2.0")
+        self.assertIn(b"## [0.2.0] \xe2\x80\x94 2026-07-12\r\n",
+                      (repo / "CHANGELOG.md").read_bytes())
+        self.assertIn('version = "0.2.0"',
+                      (repo / "uv.lock").read_text(encoding="utf-8"))
+
+    def test_bump_preserves_lf_line_endings(self):
+        # Guard the other direction: an LF repo must never gain a stray CR.
+        self.make_repo("0.1.0")
+        (self.repo / "uv.lock").write_text(
+            UV_LOCK.format(version="0.1.0"), encoding="utf-8"
+        )
+        bump.bump(self.repo, "0.2.0", self.DATE)
+        for name in ("pyproject.toml", "src/skill_library/__init__.py",
+                     "CHANGELOG.md", "uv.lock"):
+            self.assertNotIn(b"\r", (self.repo / name).read_bytes(),
+                             f"{name} gained a CR on an LF repo")
 
 class TestMutationScoreGate(TempDirTestCase):
     def test_score_counts_survivors_and_timeouts_as_not_killed(self):

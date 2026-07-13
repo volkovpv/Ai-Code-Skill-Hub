@@ -37,7 +37,7 @@ import re
 from datetime import date
 from pathlib import Path
 
-from . import yamlio
+from . import security, yamlio
 from .discovery import DiscoveryError, split_frontmatter
 
 __all__ = [
@@ -65,6 +65,32 @@ class ObservationError(Exception):
     """Raised when an observation operation cannot proceed."""
 
 
+def _require_valid_obs_id(obs_id: str) -> str:
+    """Fail-closed guard for an observation id used to build a file path.
+
+    The id ends up as ``<id>.md`` inside the skill; an unconstrained value
+    (e.g. ``../../tmp/x`` from untrusted frontmatter) would escape the skill
+    directory, so we require the canonical ``OBS-YYYYMMDD-NNN`` shape before
+    any path is constructed. :func:`security.safe_join` is the second backstop.
+    """
+    if not isinstance(obs_id, str) or not OBS_ID_RE.match(obs_id):
+        raise ObservationError(
+            f"invalid observation id {obs_id!r}; expected OBS-YYYYMMDD-NNN"
+        )
+    return obs_id
+
+
+def _has_content_evidence(evidence: object) -> bool:
+    """True only if *evidence* lists at least one non-empty string entry.
+
+    An empty list, a non-list, or a list of blank strings (``[""]``) all fail
+    the non-empty-evidence invariant that gates observation approval.
+    """
+    return isinstance(evidence, list) and any(
+        isinstance(item, str) and item.strip() for item in evidence
+    )
+
+
 def _serialize(meta: dict, body: str) -> str:
     return "---\n" + yamlio.dumps(meta) + "---\n\n" + body.strip() + "\n"
 
@@ -87,10 +113,19 @@ def list_observations(skill_dir: Path, status: str | None = None) -> list[dict]:
         if not directory.is_dir():
             continue
         for path in sorted(directory.glob("*.md")):
-            meta, body = _parse_file(path)
+            try:
+                meta, body = _parse_file(path)
+            except ObservationError:
+                # One malformed file must not block add/list/review of the
+                # rest; the validator (collect_observation_problems) reports
+                # it separately, per-file.
+                continue
             records.append(
                 {
-                    "id": str(meta.get("id", path.stem)),
+                    # The on-disk file name is authoritative — never the
+                    # untrusted frontmatter 'id', which may carry a traversal
+                    # payload. The validator flags any id/filename mismatch.
+                    "id": path.stem,
                     "status": meta.get("status"),
                     "dir_status": dir_status,
                     "path": path,
@@ -157,8 +192,7 @@ def collect_observation_problems(skill_dir: Path) -> list[str]:
                     if not meta.get(field):
                         problems.append(f"{rel}: reviewed observation must set '{field}'")
             if status == "accepted":
-                evidence = meta.get("evidence")
-                if not isinstance(evidence, list) or not evidence:
+                if not _has_content_evidence(meta.get("evidence")):
                     problems.append(f"{rel}: accepted observation must list non-empty 'evidence'")
     return problems
 
@@ -247,19 +281,22 @@ def review_observation(
         raise ObservationError(f"decision must be 'accepted' or 'rejected', got {decision!r}")
     if not reviewed_by or not reviewed_by.strip():
         raise ObservationError("a non-empty reviewer name is required (--reviewed-by)")
+    _require_valid_obs_id(obs_id)
     skill_dir = Path(skill_dir)
     record = _find(skill_dir, obs_id)
-    if record["status"] != "candidate":
+    # The directory the file lives in — not the frontmatter 'status' — decides
+    # what may be reviewed; a candidate/ file with a forged status can't skip
+    # the gate, and an accepted/ file can't be silently re-reviewed.
+    if record["dir_status"] != "candidate":
         raise ObservationError(
-            f"{obs_id} has status {record['status']!r}; only candidates can be reviewed"
+            f"{obs_id} lives in {record['dir_status']!r}; only candidates can be reviewed"
         )
     meta = dict(record["meta"])
     if decision == "accepted":
-        evidence = meta.get("evidence")
-        if not isinstance(evidence, list) or not evidence:
+        if not _has_content_evidence(meta.get("evidence")):
             raise ObservationError(
                 f"{obs_id}: cannot approve without evidence; edit the candidate file "
-                "and add at least one evidence entry first"
+                "and add at least one non-empty evidence entry first"
             )
     today = today or date.today()
     meta["status"] = decision
@@ -268,7 +305,10 @@ def review_observation(
     if note:
         meta["review_note"] = note
 
-    dest = skill_dir / OBS_DIRNAME / STATUS_DIR[decision] / f"{obs_id}.md"
+    # safe_join re-validates every segment and guarantees the result stays
+    # inside the skill directory — the fail-closed backstop behind
+    # _require_valid_obs_id above (CLAUDE.md: every mutating path via security).
+    dest = security.safe_join(skill_dir, OBS_DIRNAME, STATUS_DIR[decision], f"{obs_id}.md")
     if dry_run:
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)

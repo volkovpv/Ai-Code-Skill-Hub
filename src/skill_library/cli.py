@@ -301,6 +301,17 @@ def cmd_new(args: argparse.Namespace) -> int:
     if dest.exists():
         return _err(f"skill {name!r} already exists at {dest}")
     try:
+        # Guard against a ghost entry: the skill directory may be gone while a
+        # stale line lingers in skills.yaml. Without this, `new` appends a
+        # second entry and load_catalog would only choke on the duplicate later.
+        if catalog_entry(root, name) is not None:
+            return _err(
+                f"skill {name!r} is already registered in {CATALOG_FILENAME}; "
+                "remove the stale catalog entry before recreating it"
+            )
+    except DiscoveryError as exc:
+        return _err(str(exc))
+    try:
         ensure_no_symlinks(template)
     except SecurityError as exc:
         return _err(str(exc))
@@ -384,7 +395,11 @@ def cmd_knowledge_list(args: argparse.Namespace) -> int:
     for path in files:
         rel = path.relative_to(skill_dir).as_posix()
         title = ""
-        for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = []  # not UTF-8: list the file without a title, don't crash
+        for line in lines:
             if line.startswith("#"):
                 title = line.lstrip("#").strip()
                 break
@@ -635,7 +650,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.library_root = Path(args.library_root).resolve()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, UnicodeDecodeError, DiscoveryError, SecurityError) as exc:
+        # Fail-closed safety net: an untrusted/broken input (non-UTF-8 file,
+        # unreadable path) must yield 'error: ...' and exit 1, never a bare
+        # traceback. Commands still catch these first for tailored messages;
+        # this only guards paths that slip through.
+        return _err(str(exc))
 
 
 if __name__ == "__main__":

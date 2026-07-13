@@ -123,6 +123,99 @@ class TestReview(ObservationTestCase):
             review_observation(self.skill, "OBS-20990101-001", "accepted", reviewed_by="r")
 
 
+class TestReviewSecurity(ObservationTestCase):
+    """C-1: a mutating review must never write outside the skill directory."""
+
+    def _write_candidate(self, filename: str, obs_id: str) -> None:
+        cand = self.skill / "observations" / "candidates" / filename
+        cand.write_text(
+            f"---\nid: {obs_id}\nstatus: candidate\nobserved_at: 2026-07-13\n"
+            "scope: evil\nevidence:\n  - e\nreviewed_by: null\nreviewed_at: null\n"
+            "---\n\nbody\n",
+            encoding="utf-8",
+        )
+
+    def test_review_rejects_traversal_id_argument(self):
+        evil = "../../../../../../tmp/pwned-obs"
+        with self.assertRaises(ObservationError) as ctx:
+            review_observation(self.skill, evil, "accepted", reviewed_by="x", today=TODAY)
+        self.assertIn("invalid observation id", str(ctx.exception))
+        self.assertFalse((self.tmp / "tmp" / "pwned-obs.md").exists())
+
+    def test_listing_uses_filename_not_untrusted_frontmatter_id(self):
+        # A candidate whose frontmatter carries a traversal payload but whose
+        # file name is a valid OBS id: the on-disk name must win.
+        self._write_candidate("OBS-20260713-050.md", "../../../../../../tmp/pwned")
+        ids = [r["id"] for r in list_observations(self.skill, status="candidate")]
+        self.assertIn("OBS-20260713-050", ids)
+        self.assertNotIn("../../../../../../tmp/pwned", ids)
+        # The forged frontmatter id cannot be used to drive the write anywhere.
+        with self.assertRaises(ObservationError):
+            review_observation(
+                self.skill, "../../../../../../tmp/pwned", "accepted",
+                reviewed_by="x", today=TODAY,
+            )
+
+    def test_review_by_real_filename_stays_inside_skill(self):
+        self._write_candidate("OBS-20260713-051.md", "../../../../../../tmp/pwned")
+        dest = review_observation(
+            self.skill, "OBS-20260713-051", "accepted", reviewed_by="x", today=TODAY
+        )
+        self.assertTrue(dest.resolve().is_relative_to(self.skill.resolve()))
+        self.assertEqual(dest.parent.name, "accepted")
+
+    def test_candidate_gate_uses_directory_not_forged_status(self):
+        # A file living in accepted/ with a forged 'candidate' status must not
+        # be re-reviewable — the directory is authoritative.
+        acc = self.skill / "observations" / "accepted" / "OBS-20260713-052.md"
+        acc.write_text(
+            "---\nid: OBS-20260713-052\nstatus: candidate\nobserved_at: 2026-07-13\n"
+            "scope: x\nevidence:\n  - e\nreviewed_by: r\nreviewed_at: 2026-07-13\n"
+            "---\n\nbody\n",
+            encoding="utf-8",
+        )
+        with self.assertRaises(ObservationError) as ctx:
+            review_observation(
+                self.skill, "OBS-20260713-052", "accepted", reviewed_by="x", today=TODAY
+            )
+        self.assertIn("only candidates can be reviewed", str(ctx.exception))
+
+
+class TestReviewEvidenceContent(ObservationTestCase):
+    """M-8: a list of blank strings is not evidence."""
+
+    def test_approve_rejects_blank_string_evidence(self):
+        obs_id, _ = add_observation(self.skill, self.note, evidence=[""], today=TODAY)
+        with self.assertRaises(ObservationError) as ctx:
+            review_observation(self.skill, obs_id, "accepted", reviewed_by="r", today=TODAY)
+        self.assertIn("evidence", str(ctx.exception))
+
+    def test_approve_accepts_evidence_with_one_real_entry(self):
+        obs_id, _ = add_observation(
+            self.skill, self.note, evidence=["", "  ", "data/fixtures/sample.txt"], today=TODAY
+        )
+        dest = review_observation(self.skill, obs_id, "accepted", reviewed_by="r", today=TODAY)
+        self.assertEqual(dest.parent.name, "accepted")
+
+
+class TestListingResilience(ObservationTestCase):
+    """M-9: one malformed observation file must not block the rest."""
+
+    def test_broken_file_does_not_block_listing_or_review(self):
+        broken = self.skill / "observations" / "candidates" / "broken.md"
+        broken.write_text("---\nid: OBS-20260713-060\nnot closed frontmatter\n",
+                          encoding="utf-8")
+        # listing still returns the healthy fixture observations
+        ids = [r["id"] for r in list_observations(self.skill)]
+        self.assertIn("OBS-20260101-001", ids)
+        # add still works despite the broken neighbour
+        new_id, _ = add_observation(self.skill, self.note, evidence=["e"], today=TODAY)
+        self.assertEqual(new_id, "OBS-20260712-001")
+        # and the freshly added candidate can be reviewed
+        dest = review_observation(self.skill, new_id, "accepted", reviewed_by="r", today=TODAY)
+        self.assertEqual(dest.parent.name, "accepted")
+
+
 class TestListing(ObservationTestCase):
     def test_list_filters_by_status(self):
         add_observation(self.skill, self.note, today=TODAY)

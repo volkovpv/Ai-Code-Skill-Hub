@@ -437,6 +437,43 @@ class TestLibraryScanning(TempDirTestCase):
         self.assertIn("directories 'alpha-copy' and 'alpha-skill'", problems)
 
 
+class TestNonUtf8IsFailClosed(TempDirTestCase):
+    """H-3: a non-UTF-8 file is a fail-closed problem, never a crash."""
+
+    def test_non_utf8_skill_md(self):
+        library = make_library(self.tmp, names=())
+        bad = library / "skills" / "bad-skill"
+        bad.mkdir(parents=True)
+        (bad / "SKILL.md").write_bytes(b"\xff\xfe binary")
+        (bad / "ORIGIN.yaml").write_text(ORIGIN_TEMPLATE, encoding="utf-8")
+        problems = validate_skill_dir(bad)
+        self.assertTrue(any("SKILL.md" in p and "UTF-8" in p for p in problems))
+
+    def test_non_utf8_knowledge_file(self):
+        library = make_library(self.tmp, names=())
+        skill_dir = write_skill(library / "skills", "alpha-skill")
+        add_layers(skill_dir)
+        (skill_dir / "knowledge" / "patterns.md").write_bytes(b"\xff\xfe")
+        problems = validate_skill_dir(skill_dir)
+        self.assertTrue(any("patterns.md" in p and "UTF-8" in p for p in problems))
+
+    def test_non_utf8_data_readme(self):
+        library = make_library(self.tmp, names=())
+        skill_dir = write_skill(library / "skills", "alpha-skill")
+        add_layers(skill_dir)
+        (skill_dir / "data" / "README.md").write_bytes(b"\xff\xfe")
+        problems = validate_data_layer(skill_dir)
+        self.assertTrue(any("README.md" in p and "UTF-8" in p for p in problems))
+
+    def test_valid_utf8_layers_have_no_encoding_problem(self):
+        # Negative control: well-formed UTF-8 layers raise no UTF-8 problem.
+        library = make_library(self.tmp, names=())
+        skill_dir = write_skill(library / "skills", "alpha-skill")
+        add_layers(skill_dir)
+        problems = validate_skill_dir(skill_dir)
+        self.assertFalse(any("UTF-8" in p for p in problems))
+
+
 class TestStablePlaceholders(TempDirTestCase):
     def test_stable_skill_rejects_placeholders(self):
         library = make_library(self.tmp, names=("alpha-skill",))

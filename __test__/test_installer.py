@@ -100,6 +100,19 @@ class TestInstall(InstallerTestCase):
         self.assertTrue((stray_dir / "SKILL.md").is_file())
         self.assertFalse((stray_dir / "precious.txt").exists())
 
+    def test_regular_file_at_destination_is_recoverable(self):
+        # M-4: a plain file sitting where the skill dir should go must yield a
+        # clear error (not NotADirectoryError), and --force must recover.
+        stray = self.dest()
+        stray.parent.mkdir(parents=True, exist_ok=True)
+        stray.write_text("i am a file, not a dir\n", encoding="utf-8")
+        with self.assertRaises(InstallError) as ctx:
+            self.install()
+        self.assertIn("not a directory", str(ctx.exception))
+        self.assertTrue(stray.is_file())  # nothing changed without --force
+        self.install(force=True)
+        self.assertTrue((self.dest() / "SKILL.md").is_file())
+
     def test_skill_with_symlink_is_refused(self):
         evil = self.library / "skills" / SKILL / "references" / "evil.md"
         evil.symlink_to("/etc/hostname")
@@ -761,6 +774,16 @@ class TestStatus(InstallerTestCase):
         rows = status(self.library, self.project)
         self.assertEqual(rows[0]["name"], "?")
         self.assertEqual(rows[0]["update"], "missing in library")
+
+    def test_status_skips_non_mapping_lock_entries(self):
+        # M-3: a junk (non-mapping) lock entry must not crash status().
+        self.install()
+        lock_path = self.project / lockfile.LOCKFILE_NAME
+        text = lock_path.read_text(encoding="utf-8")
+        text = text.replace("skills:\n", "skills:\n  - junk-string\n", 1)
+        lock_path.write_text(text, encoding="utf-8")
+        rows = status(self.library, self.project)
+        self.assertEqual([r["name"] for r in rows], [SKILL])
 
 
 class TestSourceValidationGate(InstallerTestCase):

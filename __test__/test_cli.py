@@ -122,6 +122,16 @@ class TestCliNew(TempDirTestCase):
         self.assertFalse((skill_dir / "observations").exists())
         self.assertEqual(validate_library(self.library), [])
 
+    def test_new_refuses_ghost_catalog_entry(self):
+        # M-7: the skill directory is gone but a stale catalog line lingers;
+        # `new` must refuse rather than append a duplicate entry.
+        shutil.rmtree(self.library / "skills" / SKILL)
+        code, _, err = run_cli("--library-root", str(self.library), "new", SKILL)
+        self.assertEqual(code, 1)
+        self.assertIn("already registered", err)
+        catalog = (self.library / "skills.yaml").read_text(encoding="utf-8")
+        self.assertEqual(catalog.count(f"name: {SKILL}"), 1)
+
     def test_new_rejects_unknown_layer(self):
         code, _, err = run_cli(
             "--library-root", str(self.library), "new", "x-skill", "--with", "history"
@@ -268,3 +278,44 @@ class TestCliStableTestGate(TempDirTestCase):
         code, out, err = self.cli("test", "alpha")
         self.assertEqual(code, 0, err)
         self.assertIn("(pattern test_alpha.py)", out)
+
+
+class TestCliHandlesBrokenEncoding(TempDirTestCase):
+    """H-3: broken/untrusted inputs yield 'error:'/warnings, never a traceback."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.library = make_layered_library(self.tmp)
+
+    def cli(self, *argv: str) -> tuple[int, str, str]:
+        return run_cli("--library-root", str(self.library), *argv)
+
+    def test_list_survives_non_utf8_skill_md(self):
+        (self.library / "skills" / "alpha-skill" / "SKILL.md").write_bytes(b"\xff\xfe")
+        code, _, err = self.cli("list")
+        self.assertEqual(code, 0)  # list is lenient: unreadable skill -> warning
+        self.assertIn("UTF-8", err)
+        self.assertNotIn("Traceback", err)
+
+    def test_validate_reports_non_utf8_without_traceback(self):
+        (self.library / "skills" / "alpha-skill" / "SKILL.md").write_bytes(b"\xff\xfe")
+        code, out, err = self.cli("validate")
+        self.assertEqual(code, 1)
+        self.assertIn("UTF-8", out)
+        self.assertNotIn("Traceback", err)
+
+    def test_knowledge_list_survives_non_utf8(self):
+        (self.library / "skills" / "alpha-skill" / "knowledge" / "patterns.md").write_bytes(b"\xff\xfe")
+        code, out, err = self.cli("knowledge", "list", "alpha-skill")
+        self.assertEqual(code, 0)
+        self.assertIn("patterns.md", out)
+        self.assertNotIn("Traceback", err)
+
+    def test_top_level_handler_catches_unexpected_oserror(self):
+        # The safety net in main() turns an OSError that slips past a command
+        # into 'error: ...' + exit 1 instead of a bare traceback.
+        with mock.patch("skill_library.cli.cmd_list", side_effect=OSError("disk gone")):
+            code, _, err = run_cli("--library-root", str(ROOT), "list")
+        self.assertEqual(code, 1)
+        self.assertIn("error:", err)
+        self.assertIn("disk gone", err)

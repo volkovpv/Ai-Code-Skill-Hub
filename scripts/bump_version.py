@@ -19,11 +19,17 @@ both developers and agents use only this script (see AGENTS.md
 "Release discipline" and the README section on project versioning and
 auto-releases).
 
+The bump is all-or-nothing: every file's new text is computed first (pre-flight),
+and disk is touched only once all substitutions have matched. Each file is
+written through a temp file + ``os.replace``, and a mid-write failure rolls the
+already-written files back to their original bytes — a failing bump never leaves
+the version half-stamped.
+
 Usage:
-    python3 scripts/bump_version.py 0.0.1        # explicit version
-    python3 scripts/bump_version.py --patch      # 0.0.0 -> 0.0.1
-    python3 scripts/bump_version.py --minor      # 0.0.1 -> 0.1.0
-    python3 scripts/bump_version.py --major      # 0.1.0 -> 1.0.0
+    python3 scripts/bump_version.py X.Y.Z        # explicit version
+    python3 scripts/bump_version.py --patch      # bump the patch digit
+    python3 scripts/bump_version.py --minor      # bump minor, reset patch
+    python3 scripts/bump_version.py --major      # bump major, reset minor+patch
 
 The new version must be strictly greater than the current one (SemVer,
 monotonic growth).
@@ -33,8 +39,10 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -47,6 +55,17 @@ CHANGELOG_STUB = """## [{version}] — {date}
 - TODO: describe this version's changes (the text becomes the GitHub release notes).
 
 """
+
+
+def _require_semver(version: str, label: str) -> None:
+    """Reject a non ``X.Y.Z`` version before it reaches ``parse_version``.
+
+    ``parse_version`` calls ``int()`` on each dotted part, so a non-standard
+    version read from pyproject (e.g. ``0.1.0rc1``) would otherwise die with a
+    bare ``ValueError`` traceback instead of a diagnosable message.
+    """
+    if not VERSION_RE.match(version):
+        raise SystemExit(f"ERROR: {label} version '{version}' is not a valid X.Y.Z version")
 
 
 def parse_version(version: str) -> tuple[int, ...]:
@@ -62,12 +81,81 @@ def next_version(current: str, part: str) -> str:
     return f"{major}.{minor}.{patch + 1}"
 
 
-def _substitute(path: Path, pattern: str, replacement: str) -> None:
-    text = path.read_text(encoding="utf-8")
+def _read_keep_eol(path: Path) -> str:
+    """Read UTF-8 text without translating line endings.
+
+    ``newline=""`` disables the universal-newlines pass, so CRLF/CR bytes survive
+    verbatim into the string (``Path.read_text`` grew a ``newline`` argument only
+    in 3.13; the project still supports 3.12, hence the explicit ``open``).
+    """
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write UTF-8 text verbatim via a temp file + ``os.replace``.
+
+    ``newline=""`` keeps whatever line endings ``text`` holds; the temp file
+    lives in the target directory so ``os.replace`` is a same-filesystem atomic
+    rename (no torn file if the process dies mid-write). Mirrors the lockfile
+    writer's idiom in ``skill_library.lockfile``.
+    """
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        os.replace(tmp_path, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def _plan_substitution(path: Path, pattern: str, replacement: str) -> str:
+    """Compute a file's new text (no write); fail closed if the anchor is absent.
+
+    Part of the pre-flight: every substitution is validated in memory before any
+    file is touched, so a non-matching pattern (e.g. a regenerated ``uv.lock``)
+    aborts the whole bump before it can leave a half-stamped tree.
+    """
+    text = _read_keep_eol(path)
     new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE)
     if count != 1:
         raise SystemExit(f"ERROR: no version line matched in {path}")
-    path.write_text(new_text, encoding="utf-8")
+    return new_text
+
+
+def _plan_changelog(path: Path, new_version: str, date: datetime.date) -> str:
+    """Compute the CHANGELOG's new text with the stub inserted (no write)."""
+    text = _read_keep_eol(path)
+    match = re.search(r"^## \[", text, re.MULTILINE)
+    if match is None:
+        raise SystemExit("ERROR: CHANGELOG.md has no '## [X.Y.Z]' entry to insert before")
+    eol = "\r\n" if "\r\n" in text else "\n"
+    stub = CHANGELOG_STUB.format(version=new_version, date=date.isoformat())
+    if eol != "\n":  # match the stub's newlines to the file's own style
+        stub = stub.replace("\n", eol)
+    return text[: match.start()] + stub + text[match.start():]
+
+
+def _commit(plans: list[tuple[Path, str]]) -> None:
+    """Apply every planned (path, new_text) atomically, rolling back on failure.
+
+    The pre-flight already rules out the realistic abort (a non-matching
+    pattern); this guards the residual risk of an IO error part-way through the
+    write set by snapshotting the originals and restoring the files already
+    written before re-raising. Best-effort transactionality across files without
+    a journal — the invariant is: a failed bump changes nothing on disk.
+    """
+    originals = {path: path.read_bytes() for path, _ in plans}
+    written: list[Path] = []
+    try:
+        for path, new_text in plans:
+            _atomic_write(path, new_text)
+            written.append(path)
+    except BaseException:
+        for path in reversed(written):
+            path.write_bytes(originals[path])
+        raise
 
 
 def _project_name(root: Path) -> str:
@@ -81,41 +169,56 @@ def _project_name(root: Path) -> str:
 
 def bump(root: Path, new_version: str, date: datetime.date) -> None:
     current = read_pyproject_version(root)
-    if not VERSION_RE.match(new_version):
-        raise SystemExit(f"ERROR: '{new_version}' is not a valid X.Y.Z version")
+    _require_semver(current, "current")
+    _require_semver(new_version, "new")
     if parse_version(new_version) <= parse_version(current):
         raise SystemExit(
             f"ERROR: new version {new_version} must be greater than current {current}"
         )
 
-    _substitute(
-        root / "pyproject.toml",
-        r'^version\s*=\s*"[^"]*"',
-        f'version = "{new_version}"',
-    )
-    _substitute(
-        root / "src" / "skill_library" / "__init__.py",
-        r'^__version__\s*=\s*"[^"]*"',
-        f'__version__ = "{new_version}"',
-    )
+    # --- Pre-flight: compute every file's new text. Any missing anchor raises
+    # here, before a single byte is written, so the tree is never left partly
+    # stamped (H-4: a non-matching uv.lock used to abort after pyproject and
+    # __init__.py had already been rewritten).
+    plans: list[tuple[Path, str]] = [
+        (
+            root / "pyproject.toml",
+            _plan_substitution(
+                root / "pyproject.toml",
+                r'^version\s*=\s*"[^"]*"',
+                f'version = "{new_version}"',
+            ),
+        ),
+        (
+            root / "src" / "skill_library" / "__init__.py",
+            _plan_substitution(
+                root / "src" / "skill_library" / "__init__.py",
+                r'^__version__\s*=\s*"[^"]*"',
+                f'__version__ = "{new_version}"',
+            ),
+        ),
+    ]
 
     # uv.lock is optional (the zero-tooling fallback lives without uv), but
     # when present the project package version must match pyproject.toml.
     uv_lock = root / "uv.lock"
     if uv_lock.is_file():
-        _substitute(
+        # ``\r?\n`` keeps the two-line anchor matchable on a CRLF-checked-out
+        # lock; the captured group reproduces whichever newline was there.
+        plans.append((
             uv_lock,
-            rf'^(name = "{re.escape(_project_name(root))}"\nversion) = "[^"]*"',
-            rf'\1 = "{new_version}"',
-        )
+            _plan_substitution(
+                uv_lock,
+                rf'^(name = "{re.escape(_project_name(root))}"\r?\nversion) = "[^"]*"',
+                rf'\1 = "{new_version}"',
+            ),
+        ))
 
-    changelog = root / "CHANGELOG.md"
-    text = changelog.read_text(encoding="utf-8")
-    match = re.search(r"^## \[", text, re.MULTILINE)
-    if match is None:
-        raise SystemExit("ERROR: CHANGELOG.md has no '## [X.Y.Z]' entry to insert before")
-    stub = CHANGELOG_STUB.format(version=new_version, date=date.isoformat())
-    changelog.write_text(text[: match.start()] + stub + text[match.start():], encoding="utf-8")
+    plans.append((root / "CHANGELOG.md", _plan_changelog(root / "CHANGELOG.md", new_version, date)))
+
+    # --- Commit: every substitution matched, so write them all (atomic per file,
+    # rolled back as a set on any IO failure).
+    _commit(plans)
 
     problems = check(root)
     if problems:  # self-check: no drift may remain after a bump
@@ -140,6 +243,7 @@ def main(argv: list[str] | None = None) -> int:
 
     root = args.root.resolve()
     current = read_pyproject_version(root)
+    _require_semver(current, "current")  # guard next_version's int() parse
     new_version = args.version or next_version(current, part)
     bump(root, new_version, datetime.date.today())
 

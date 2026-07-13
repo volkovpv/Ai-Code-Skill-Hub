@@ -83,12 +83,17 @@ def last_release_tag(root: Path) -> str | None:
     return max(tags, key=lambda tag: parse_version(tag[1:]))
 
 
-def is_release_relevant(root: Path, tag: str, path: str) -> bool:
-    """Whether a change to the file counts as a used-code change."""
-    if not any(
+def in_release_paths(path: str) -> bool:
+    """Whether the path lives under a released (used-code) location."""
+    return any(
         path.startswith(prefix) if prefix.endswith("/") else path == prefix
         for prefix in RELEASE_PATHS
-    ):
+    )
+
+
+def is_release_relevant(root: Path, tag: str, path: str) -> bool:
+    """Whether an in-place edit of the file counts as a used-code change."""
+    if not in_release_paths(path):
         return False
     version_line = VERSION_LINE_RE.get(path)
     if version_line is None:
@@ -103,6 +108,37 @@ def is_release_relevant(root: Path, tag: str, path: str) -> bool:
     return False
 
 
+def relevant_changes(root: Path, tag: str) -> list[str]:
+    """Used-code paths changed since ``tag`` — rename- and delete-aware.
+
+    ``git diff --name-only`` collapses a rename to its *new* path only, so
+    moving used code out of a released location (e.g. ``src/foo.py`` →
+    ``_attic/foo.py``) would look like an infra-only change and silently skip
+    the release. ``--name-status -M`` exposes both endpoints of every rename;
+    such a change is release-relevant if *either* endpoint is used code, and a
+    deletion is relevant by its (old) path.
+    """
+    out = git(root, "diff", "--name-status", "-M", tag, "HEAD")
+    relevant: list[str] = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split("\t")
+        code = fields[0][:1]
+        if code == "R":  # rename: old path leaves, new path arrives
+            relevant.extend(p for p in (fields[1], fields[2]) if in_release_paths(p))
+        elif code == "C":  # copy: only the new path is a fresh file
+            if in_release_paths(fields[2]):
+                relevant.append(fields[2])
+        elif code == "D":  # deletion: relevant by the removed (old) path
+            if in_release_paths(fields[1]):
+                relevant.append(fields[1])
+        else:  # A, M, T, … — in-place; honour the version-line exclusion
+            if is_release_relevant(root, tag, fields[1]):
+                relevant.append(fields[1])
+    return relevant
+
+
 def check(root: Path) -> list[str]:
     """Return the list of release-discipline violations; empty list — all good."""
     version = read_pyproject_version(root)
@@ -111,12 +147,7 @@ def check(root: Path) -> list[str]:
         return []
     released = tag[1:]
 
-    changed = [
-        path
-        for path in git(root, "diff", "--name-only", tag, "HEAD").splitlines()
-        if path
-    ]
-    relevant = [path for path in changed if is_release_relevant(root, tag, path)]
+    relevant = relevant_changes(root, tag)
 
     problems: list[str] = []
     if relevant and version == released:

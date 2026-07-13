@@ -103,6 +103,19 @@ class ScalarTests(unittest.TestCase):
     def test_false_spellings(self):
         self.assertEqual(loads("a: False\nb: FALSE"), {"a": False, "b": False})
 
+    def test_zero_padded_int_stays_string(self):
+        # M-17: a leading-zero token (id/index/code) is a string in YAML 1.2;
+        # coercing to int would drop the padding irreversibly.
+        self.assertEqual(loads("a: 007\nb: 00\nc: -042"),
+                         {"a": "007", "b": "00", "c": "-042"})
+
+    def test_bare_zero_and_plain_ints_still_coerce(self):
+        self.assertEqual(loads("a: 0\nb: -0\nc: 42\nd: -7"),
+                         {"a": 0, "b": 0, "c": 42, "d": -7})
+
+    def test_zero_padded_int_round_trips_as_string(self):
+        self.assertEqual(loads(dumps({"pin": "007"})), {"pin": "007"})
+
 
 class FlowListTests(unittest.TestCase):
     def test_plain_items_never_enter_quote_mode(self):
@@ -263,6 +276,15 @@ class FileIoTests(TempDirTestCase):
         dump_file(path, data)
         self.assertIn("проверка", path.read_text(encoding="utf-8"))
         self.assertEqual(load_file(path), data)
+
+    def test_load_file_reports_non_utf8_as_yamlerror(self):
+        # A binary/mis-encoded file must surface as YamlError (which callers
+        # already handle), not a bare UnicodeDecodeError (audit H-3).
+        path = self.tmp / "broken.yaml"
+        path.write_bytes(b"version: \xff\xfe\n")
+        with self.assertRaises(YamlError) as ctx:
+            load_file(path)
+        self.assertIn("UTF-8", str(ctx.exception))
 
 
 if __name__ == "__main__":

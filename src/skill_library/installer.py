@@ -293,8 +293,12 @@ def _rollback_destinations(*paths: Path | None):
             existed = path.exists() or path.is_symlink()
             if path.is_symlink():
                 snapshot_path.symlink_to(path.readlink(), target_is_directory=True)
-            elif path.exists():
+            elif path.is_dir():
                 shutil.copytree(path, snapshot_path, symlinks=True)
+            elif path.exists():
+                # A plain file may legitimately sit where the skill goes;
+                # copytree would raise NotADirectoryError, so snapshot it flat.
+                shutil.copy2(path, snapshot_path)
             snapshots.append((backup_root, snapshot_path, existed))
         yield
     except BaseException:
@@ -443,11 +447,20 @@ def install_skill(
                     f"{name}: already installed with different agent/mode/path; "
                     "remove it first or use --force"
                 )
-    elif dest.exists() and any(dest.iterdir()) and not force:
-        raise InstallError(
-            f"{name}: destination {dest} exists but is not managed by skillctl; "
-            "use --force to replace it"
-        )
+    elif dest.exists() and not force:
+        if not dest.is_dir():
+            # A regular file (or foreign non-dir node) blocks the skill dir;
+            # iterdir() on it would raise NotADirectoryError before the guard,
+            # so --force could never recover — classify the node type first.
+            raise InstallError(
+                f"{name}: destination {dest} exists and is not a directory; "
+                "use --force to replace it"
+            )
+        if any(dest.iterdir()):
+            raise InstallError(
+                f"{name}: destination {dest} exists but is not managed by skillctl; "
+                "use --force to replace it"
+            )
 
     if dry_run:
         action = "symlink" if link else f"copy {len(files)} file(s)"
@@ -461,10 +474,12 @@ def install_skill(
                 old_dest.unlink()
             elif old_dest.is_dir():
                 _delete_managed_files(old_dest, entry, verify=True, force=force)
-        if dest.exists() and force and not dest.is_symlink():
-            shutil.rmtree(dest)
-        elif dest.is_symlink():
+        if dest.is_symlink():
             dest.unlink()
+        elif dest.exists() and force:
+            # dest may be a non-managed directory OR a plain file in the way;
+            # _remove_destination handles both (rmtree would fail on a file).
+            _remove_destination(dest)
 
         link_target: str | None = None
         if link:
@@ -654,6 +669,10 @@ def status(library_root: Path, target_root: Path) -> list[dict]:
     lock = lockfile.load_lock(target_root)
     rows: list[dict] = []
     for entry in lock.get("skills", []):
+        if not isinstance(entry, dict):
+            # get_entry/upsert_entry/remove_entry already tolerate non-mapping
+            # lock entries; status() must stay consistent and not raise.
+            continue
         name = str(entry.get("name", "?"))
         try:
             state = installed_state(target_root, entry)

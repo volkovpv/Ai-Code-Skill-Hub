@@ -154,6 +154,12 @@ def _parse_scalar(s: str, lineno: int):
     if s in ("false", "False", "FALSE"):
         return False
     if _INT_RE.match(s):
+        # A zero-padded token (e.g. "007", an ID or index) is a string in the
+        # YAML 1.2 core schema; coercing it to int would silently drop the
+        # padding and lose the original value irreversibly.
+        digits = s.lstrip("-")
+        if len(digits) > 1 and digits[0] == "0":
+            return s
         return int(s)
     if _FLOAT_RE.match(s):
         return float(s)
@@ -290,7 +296,13 @@ def loads(text: str):
 
 
 def load_file(path: Path):
-    return loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        # A binary or mis-encoded file must not crash callers with a bare
+        # UnicodeDecodeError; surface it as a YamlError they already handle.
+        raise YamlError(f"file is not valid UTF-8 ({exc})") from exc
+    return loads(text)
 
 
 # ----------------------------------------------------------------------------

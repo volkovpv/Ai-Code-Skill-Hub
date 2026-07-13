@@ -57,7 +57,13 @@ def load_skill(skill_dir: Path) -> SkillMeta:
     if not skill_md.is_file():
         raise DiscoveryError(f"{skill_dir.name}: missing {SKILL_FILENAME}")
     try:
-        fm, _ = split_frontmatter(skill_md.read_text(encoding="utf-8"))
+        raw = skill_md.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise DiscoveryError(
+            f"{skill_dir.name}: {SKILL_FILENAME}: is not valid UTF-8 ({exc})"
+        ) from exc
+    try:
+        fm, _ = split_frontmatter(raw)
     except DiscoveryError as exc:
         raise DiscoveryError(f"{skill_dir.name}: {SKILL_FILENAME}: {exc}") from exc
     name = fm.get("name")
@@ -107,10 +113,18 @@ def load_catalog(library_root: Path) -> list[CatalogEntry]:
     if not isinstance(entries, list):
         raise DiscoveryError(f"{CATALOG_FILENAME}: 'skills' must be a list")
     result = []
+    seen: set[str] = set()
     for item in entries:
         if not isinstance(item, dict):
             raise DiscoveryError(f"{CATALOG_FILENAME}: every skill entry must be a mapping")
-        result.append(CatalogEntry.from_dict(item))
+        try:
+            entry = CatalogEntry.from_dict(item)
+        except (TypeError, ValueError) as exc:
+            raise DiscoveryError(f"{CATALOG_FILENAME}: {exc}") from exc
+        if entry.name in seen:
+            raise DiscoveryError(f"{CATALOG_FILENAME}: duplicate skill entry {entry.name!r}")
+        seen.add(entry.name)
+        result.append(entry)
     return result
 
 
