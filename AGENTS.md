@@ -50,9 +50,11 @@
 - Any behaviour change requires adding or updating tests in `__test__/`.
 - Before declaring work done, actually run and show the output of:
   ```bash
-  python scripts/skillctl.py validate
-  python scripts/skillctl.py test
+  uv run skillctl validate
+  uv run skillctl test
   ```
+  (`uv` is the project's default package manager; `python scripts/skillctl.py …`
+  is the equivalent zero-tooling fallback used by CI.)
 - Never declare work complete without real command output; both commands must
   exit with code 0.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
@@ -70,10 +72,11 @@
   never produce releases. Release assets: a `git archive` source tarball plus
   its SHA256; no build artifacts.
 - To bump the version, ALWAYS run `python3 scripts/bump_version.py <X.Y.Z>`
-  (or `--patch/--minor/--major`) — it updates all three files atomically,
-  inserts a `CHANGELOG.md` entry stub and self-checks for drift. Never edit
-  the version in the three files by hand: that is duplicate work and a drift
-  risk. The only manual step left is replacing the TODO line in the new
+  (or `--patch/--minor/--major`) — it updates all version-carrying files
+  atomically (including the project entry in `uv.lock` when present, without
+  invoking `uv`), inserts a `CHANGELOG.md` entry stub and self-checks for
+  drift. Never edit the version in these files by hand: that is duplicate
+  work and a drift risk. The only manual step left is replacing the TODO line in the new
   `CHANGELOG.md` entry with the actual change description (it becomes the
   GitHub release notes).
 - Version bump rules, enforced by `scripts/check_release_gate.py` (runs on PRs

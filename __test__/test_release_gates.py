@@ -218,6 +218,17 @@ class TestReleaseGate(ReleaseRepoTestCase):
         self.assertIn("version is still 0.10.0", problems)
 
 
+UV_LOCK = """version = 1
+revision = 3
+requires-python = ">=3.11"
+
+[[package]]
+name = "skill-library"
+version = "{version}"
+source = {{ editable = "." }}
+"""
+
+
 class TestBumpVersion(ReleaseRepoTestCase):
     DATE = datetime.date(2026, 7, 12)
 
@@ -252,3 +263,29 @@ class TestBumpVersion(ReleaseRepoTestCase):
         self.make_repo("0.1.0")
         with self.assertRaises(SystemExit):
             bump.bump(self.repo, "0.1.x", self.DATE)
+
+    def test_bump_updates_uv_lock_when_present(self):
+        self.make_repo("0.1.0")
+        (self.repo / "uv.lock").write_text(
+            UV_LOCK.format(version="0.1.0"), encoding="utf-8"
+        )
+        bump.bump(self.repo, "0.2.0", self.DATE)
+        text = (self.repo / "uv.lock").read_text(encoding="utf-8")
+        self.assertIn('name = "skill-library"\nversion = "0.2.0"', text)
+        self.assertNotIn('"0.1.0"', text)
+
+    def test_bump_without_uv_lock_succeeds(self):
+        # Zero-tooling fallback: отсутствие uv.lock — не ошибка.
+        self.make_repo("0.1.0")
+        bump.bump(self.repo, "0.2.0", self.DATE)
+        self.assertEqual(drift.check(self.repo), [])
+
+    def test_bump_fails_on_uv_lock_without_project_entry(self):
+        # Fail-closed: lock есть, но записи пакета проекта в нём нет.
+        self.make_repo("0.1.0")
+        (self.repo / "uv.lock").write_text(
+            'version = 1\nrevision = 3\nrequires-python = ">=3.11"\n',
+            encoding="utf-8",
+        )
+        with self.assertRaises(SystemExit):
+            bump.bump(self.repo, "0.2.0", self.DATE)

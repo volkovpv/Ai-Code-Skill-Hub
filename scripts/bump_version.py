@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """bump_version.py — единственный правильный способ поднять версию проекта.
 
-Атомарно проставляет новую версию во всех трёх файлах-носителях:
+Атомарно проставляет новую версию во всех файлах-носителях:
 
 - ``pyproject.toml`` — [project].version (источник истины);
 - ``src/skill_library/__init__.py`` — ``__version__``;
 - ``CHANGELOG.md`` — вставляет заготовку записи ``## [X.Y.Z] — YYYY-MM-DD``
-  перед предыдущей записью; текст изменений вписывается вручную.
+  перед предыдущей записью; текст изменений вписывается вручную;
+- ``uv.lock`` (если присутствует) — версия пакета проекта. Правится тем же
+  текстовым способом, без вызова ``uv``: скрипт остаётся stdlib-only и
+  офлайн, а результат байт-в-байт совпадает с тем, что записал бы
+  ``uv lock``. Иначе lock отставал бы от pyproject на один шаг: ``uv run``
+  фиксирует lock ДО запуска скрипта.
 
 После правки сам прогоняет гейт дрейфа (scripts/check_version_drift.py) и
 падает, если файлы разошлись. Версию руками в трёх файлах не правим —
@@ -63,6 +68,15 @@ def _substitute(path: Path, pattern: str, replacement: str) -> None:
     path.write_text(new_text, encoding="utf-8")
 
 
+def _project_name(root: Path) -> str:
+    """Имя пакета из pyproject.toml, нормализованное по правилам uv (PEP 503)."""
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^name\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    if match is None:
+        raise SystemExit("ERROR: no [project].name found in pyproject.toml")
+    return re.sub(r"[-_.]+", "-", match.group(1)).lower()
+
+
 def bump(root: Path, new_version: str, date: datetime.date) -> None:
     current = read_pyproject_version(root)
     if not VERSION_RE.match(new_version):
@@ -82,6 +96,16 @@ def bump(root: Path, new_version: str, date: datetime.date) -> None:
         r'^__version__\s*=\s*"[^"]*"',
         f'__version__ = "{new_version}"',
     )
+
+    # uv.lock опционален (zero-tooling fallback живёт без uv), но если он
+    # есть — версия пакета проекта обязана совпасть с pyproject.toml.
+    uv_lock = root / "uv.lock"
+    if uv_lock.is_file():
+        _substitute(
+            uv_lock,
+            rf'^(name = "{re.escape(_project_name(root))}"\nversion) = "[^"]*"',
+            rf'\1 = "{new_version}"',
+        )
 
     changelog = root / "CHANGELOG.md"
     text = changelog.read_text(encoding="utf-8")

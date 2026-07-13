@@ -168,19 +168,27 @@ review-изменением.
 
 ## Требования и быстрый старт
 
-Нужен только **Python 3.11+** (проверено на 3.12). Зависимостей нет — ни для
-CLI, ни для тестов; ничего устанавливать через pip не требуется.
+Пакетный менеджер проекта — **[uv](https://docs.astral.sh/uv/)**: в репозитории
+закоммичены `uv.lock` и `.python-version` (CPython 3.12). `uv sync` создаёт
+`.venv` с editable-установкой проекта, после чего доступна консольная команда
+`skillctl`; правки кода подхватываются без повторной синхронизации.
 
 ```bash
 git clone https://github.com/volkovpv/Ai-Code-Skill-Hub.git && cd Ai-Code-Skill-Hub
-python scripts/skillctl.py list                 # что есть в библиотеке
-python scripts/skillctl.py validate             # библиотека консистентна?
-python scripts/skillctl.py test                 # весь набор тестов
-python scripts/skillctl.py install example-skill --target /путь/к/проекту
+uv sync                                  # однократная настройка окружения
+uv run skillctl list                     # что есть в библиотеке
+uv run skillctl validate                 # библиотека консистентна?
+uv run skillctl test                     # весь набор тестов
+uv run skillctl install example-skill --target /путь/к/проекту
 ```
 
-Опционально: `pip install -e .` даст консольную команду `skillctl`
-(эквивалент `python scripts/skillctl.py`).
+Runtime-зависимостей у библиотеки нет — ни для CLI, ни для тестов: uv управляет
+окружением, а не зависимостями, и добавлять пакеты в `dependencies` нельзя.
+Поэтому работает и **fallback без uv**: `python scripts/skillctl.py <команда>`
+эквивалентен `uv run skillctl <команда>` на любом Python 3.11+ без venv —
+именно так библиотеку гоняет CI, доказывая самодостаточность. Примеры команд
+ниже используют форму `python scripts/skillctl.py …`; всюду допустима замена
+на `uv run skillctl …`.
 
 ## Команды CLI
 
@@ -509,16 +517,19 @@ python -m unittest __test__.test_layers -v              # один модуль
 - заметки релиза берутся из секции текущей версии в `CHANGELOG.md`, в конец
   дописывается commit SHA и команда проверки целостности архива.
 
-Поднятие версии — **только** скриптом, руками три файла не правим (это
-двойная работа и риск дрейфа; правило одинаково для разработчика и агента):
+Поднятие версии — **только** скриптом, руками файлы-носители версии не правим
+(это двойная работа и риск дрейфа; правило одинаково для разработчика и
+агента):
 
 ```bash
 python3 scripts/bump_version.py 0.0.1     # явная версия
 python3 scripts/bump_version.py --patch   # 0.0.0 -> 0.0.1 (есть --minor, --major)
 ```
 
-Скрипт атомарно проставит версию в `pyproject.toml`, `__init__.py` и вставит
-заготовку записи в `CHANGELOG.md`, после чего сам проверит отсутствие дрейфа.
+Скрипт атомарно проставит версию в `pyproject.toml`, `__init__.py` и `uv.lock`
+(версию пакета проекта; сам `uv` при этом не вызывается — иначе при запуске
+через `uv run` lock отставал бы на шаг), вставит заготовку записи в
+`CHANGELOG.md`, после чего сам проверит отсутствие дрейфа.
 Единственный ручной шаг — заменить строку `TODO` в новой записи CHANGELOG
 описанием изменений: этот текст станет release notes на GitHub.
 
