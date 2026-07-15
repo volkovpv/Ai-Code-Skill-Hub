@@ -74,7 +74,7 @@ _CODE_PATH_RE = re.compile(
     r"`((?:references|scripts|assets|agents|knowledge|data|observations)/[A-Za-z0-9._/-]+)`"
 )
 
-_TOC_RE = re.compile(r"^#{1,3}\s+(contents|table of contents|оглавление|содержание)\s*$",
+_TOC_RE = re.compile(r"^#{1,3}\s+(contents|table of contents)\s*$",
                      re.IGNORECASE | re.MULTILINE)
 
 _PLACEHOLDER_RE = re.compile(r"\b(?:TODO|TBD|FIXME)\b", re.IGNORECASE)
@@ -234,6 +234,29 @@ def _check_layout(skill_dir: Path, problems: list[str]) -> None:
             problems.append(f"{rel_posix}: unexpected executable bit outside scripts/")
 
 
+def _check_agents_dir(skill_dir: Path, problems: list[str]) -> None:
+    """Vendor adapters must stay machine-readable (fail-closed).
+
+    Every ``agents/*.yaml`` file has to parse in the in-house YAML subset and
+    hold a mapping at the top level — a broken adapter would otherwise ship
+    silently and fail only on the consumer's side.
+    """
+    agents_dir = skill_dir / "agents"
+    if not agents_dir.is_dir():
+        return
+    for path in sorted(agents_dir.rglob("*")):
+        if not path.is_file() or path.suffix not in (".yaml", ".yml"):
+            continue
+        rel = path.relative_to(skill_dir).as_posix()
+        try:
+            data = yamlio.load_file(path)
+        except yamlio.YamlError as exc:
+            problems.append(f"{rel}: {exc}")
+            continue
+        if not isinstance(data, dict):
+            problems.append(f"{rel}: top level must be a mapping")
+
+
 def _check_knowledge_layer(skill_dir: Path, problems: list[str]) -> None:
     knowledge = skill_dir / KNOWLEDGE_DIRNAME
     if not layer_has_content(knowledge):
@@ -255,7 +278,7 @@ def _check_knowledge_layer(skill_dir: Path, problems: list[str]) -> None:
         if len(text.splitlines()) > 100 and not _TOC_RE.search(text):
             problems.append(
                 f"{path.relative_to(skill_dir).as_posix()}: files longer than 100 lines "
-                "must start with a short table of contents ('## Contents' / '## Оглавление')"
+                "must start with a short table of contents ('## Contents')"
             )
 
 
@@ -364,6 +387,7 @@ def validate_skill_dir(
 
     _check_origin(skill_dir, problems)
     _check_layout(skill_dir, problems)
+    _check_agents_dir(skill_dir, problems)
     _check_local_links(body, skill_dir, skill_dir, SKILL_FILENAME, problems)
     _check_knowledge_layer(skill_dir, problems)
     problems.extend(validate_data_layer(skill_dir, policy, scan_policy=False))

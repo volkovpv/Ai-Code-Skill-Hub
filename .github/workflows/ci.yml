@@ -38,6 +38,9 @@ jobs:
       - name: Validate all skills (structure + metadata)
         run: python scripts/validate_all.py
 
+      - name: Enforce the language policy (English outside the allowlist)
+        run: python scripts/check_language.py
+
       # The test convention is stdlib unittest; pytest is only present
       # transitively (via mutmut) and must not leak into the test suite.
       - name: Enforce stdlib unittest (no pytest idioms in __test__/)
@@ -60,7 +63,7 @@ jobs:
           uv run coverage report
 
       - name: Validate versioned eval manifests (offline)
-        run: python scripts/run_skill_evals.py --validate-only __test__/evals/example-skill/cases.json
+        run: python scripts/run_skill_evals.py --validate-only __test__/evals/*/cases.json
 
       - name: Layer smoke — knowledge/observations/data commands
         run: |

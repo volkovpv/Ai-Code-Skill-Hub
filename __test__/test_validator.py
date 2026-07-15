@@ -295,9 +295,18 @@ class TestKnowledgeLayer(TempDirTestCase):
         problems = validate_skill_dir(skill)
         self.assertIn(
             "knowledge/long.md: files longer than 100 lines must start with a short "
-            "table of contents ('## Contents' / '## Оглавление')",
+            "table of contents ('## Contents')",
             problems,
         )
+
+    def test_english_toc_heading_satisfies_the_requirement(self):
+        # Only the English heading counts: skill content is English-only
+        # (the language policy gate), so no localized variants are accepted.
+        skill = self._layered_skill()
+        long_md = skill / "knowledge" / "long.md"
+        long_md.write_text("## Contents\n" + "line\n" * 101, encoding="utf-8")
+        problems = validate_skill_dir(skill)
+        self.assertFalse(any("table of contents" in p for p in problems), problems)
 
     def test_index_broken_link_names_the_index(self):
         skill = self._layered_skill()
@@ -309,6 +318,46 @@ class TestKnowledgeLayer(TempDirTestCase):
         self.assertIn(
             "knowledge/INDEX.md links to a missing local resource: missing.md", problems
         )
+
+
+class TestAgentsAdapters(TempDirTestCase):
+    """agents/*.yaml must parse in the YAML subset and be a mapping (fail-closed)."""
+
+    def _skill_with_adapter(self, content: str, filename: str = "openai.yaml"):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "adapter-skill")
+        agents = skill / "agents"
+        agents.mkdir()
+        (agents / filename).write_text(content, encoding="utf-8")
+        return skill
+
+    def test_valid_adapter_passes(self):
+        skill = self._skill_with_adapter(
+            "interface:\n  display_name: Adapter Skill\n  default_prompt: \"Use it.\"\n"
+        )
+        self.assertEqual(validate_skill_dir(skill), [])
+
+    def test_unparseable_adapter_is_reported(self):
+        # A YAML anchor is outside the supported subset -> must be a problem.
+        skill = self._skill_with_adapter("interface: &anchor\n  display_name: X\n")
+        problems = validate_skill_dir(skill)
+        self.assertTrue(any(p.startswith("agents/openai.yaml:") for p in problems), problems)
+
+    def test_multiline_scalar_adapter_is_reported(self):
+        # Folded scalars are multiline strings, rejected by the subset parser.
+        skill = self._skill_with_adapter("interface:\n  default_prompt: >-\n    line\n")
+        problems = validate_skill_dir(skill)
+        self.assertTrue(any(p.startswith("agents/openai.yaml:") for p in problems), problems)
+
+    def test_non_mapping_adapter_is_reported(self):
+        skill = self._skill_with_adapter("- just\n- a\n- list\n", filename="codex.yml")
+        problems = validate_skill_dir(skill)
+        self.assertIn("agents/codex.yml: top level must be a mapping", problems)
+
+    def test_non_yaml_files_in_agents_are_ignored(self):
+        skill = self._skill_with_adapter("interface:\n  display_name: X\n")
+        (skill / "agents" / "notes.md").write_text("# adapter notes\n", encoding="utf-8")
+        self.assertEqual(validate_skill_dir(skill), [])
 
 
 class TestFrontmatterFields(TempDirTestCase):

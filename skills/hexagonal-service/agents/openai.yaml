@@ -1,0 +1,7 @@
+# Vendor-specific adapter for OpenAI harnesses (Codex).
+# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
+# Note: the in-house YAML subset has no multiline scalars, so default_prompt is one line.
+interface:
+  display_name: Hexagonal Service
+  short_description: Language- and framework-agnostic ports-and-adapters architecture standard with a single sanctioned error flow.
+  default_prompt: "Apply the hexagonal-service skill: a language- and framework-agnostic ports-and-adapters architecture standard. Activate it when structuring a module, port, use case, or adapter, when deciding which layer code belongs to, or when reviewing layer boundaries and error flow. Enforce dependency-inward layering (domain, application, infrastructure, composition root), one use case per input port, thin adapters, and the single error path: typed domain errors from one root, a foreign error wrapped exactly once at the driven adapter with its cause, bubbling untouched, logged with the stack and mapped to transport exactly once in the boundary filter. Do not prescribe language or framework mechanics (those live in typescript-coding and typescript-nestjs), and do not force the skill onto requests unrelated to service architecture. Project instructions always take precedence over the skill."

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skill-library"
-version = "0.0.5"
+version = "1.0.0"
 description = "Self-contained, vendor-neutral Agent Skills library with a management CLI (skillctl)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,11 +25,16 @@ dev = [
     "mutmut>=3.6.0",
 ]
 
-# skills/ scripts are executed by tests via subprocess and are not measured
-# by the coverage hook, so source lists only the importable library code.
+# The skill analyzers are imported in-process by their dedicated tests
+# (__test__/skills/), so they are measured alongside the library code;
+# subprocess CLI runs additionally pin the exit-code contract unmeasured.
 [tool.coverage.run]
 branch = true
-source = ["src/skill_library"]
+source = [
+    "src/skill_library",
+    "skills/typescript-coding/scripts",
+    "skills/typescript-nestjs/scripts",
+]
 
 [tool.coverage.report]
 fail_under = 80
@@ -37,13 +42,19 @@ show_missing = true
 skip_covered = true
 
 [tool.mutmut]
-source_paths = ["src/skill_library"]
+source_paths = [
+    "src/skill_library",
+    "skills/typescript-coding/scripts",
+    "skills/typescript-nestjs/scripts",
+]
 only_mutate = [
     "src/skill_library/security.py",
     "src/skill_library/lockfile.py",
     "src/skill_library/installer.py",
     "src/skill_library/yamlio.py",
     "src/skill_library/validator.py",
+    "skills/typescript-coding/scripts/check_conventions.py",
+    "skills/typescript-nestjs/scripts/check_nest_conventions.py",
 ]
 also_copy = ["__test__", "skills", "scripts", "skills.yaml", "pyproject.toml"]
 pytest_add_cli_args = ["-q"]
@@ -55,5 +66,7 @@ pytest_add_cli_args_test_selection = [
     "__test__/test_validator.py",
     "__test__/test_layers.py",
     "__test__/test_observations.py",
+    "__test__/skills/test_typescript_coding.py",
+    "__test__/skills/test_typescript_nestjs.py",
 ]
 mutate_only_covered_lines = true

@@ -264,7 +264,7 @@ class DumpTests(unittest.TestCase):
                 self.assertEqual(loads(dumps({"k": value})), {"k": value})
 
     def test_roundtrip_of_unicode_keys_and_values(self):
-        data = {"ключ": "значение"}
+        data = {"ключ": "значение"}  # non-english-ok: Unicode round-trip sample
         self.assertEqual(loads(dumps(data)), data)
 
 
@@ -272,9 +272,9 @@ class FileIoTests(TempDirTestCase):
     def test_file_roundtrip_uses_utf8(self):
         # dump_file/load_file must be locale-independent (explicit UTF-8).
         path = self.tmp / "data.yaml"
-        data = {"название": "проверка", "items": ["a", "б"]}
+        data = {"название": "проверка", "items": ["a", "б"]}  # non-english-ok: UTF-8 file round-trip sample
         dump_file(path, data)
-        self.assertIn("проверка", path.read_text(encoding="utf-8"))
+        self.assertIn("проверка", path.read_text(encoding="utf-8"))  # non-english-ok: UTF-8 file round-trip sample
         self.assertEqual(load_file(path), data)
 
     def test_load_file_reports_non_utf8_as_yamlerror(self):

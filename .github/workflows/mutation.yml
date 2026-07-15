@@ -25,13 +25,14 @@ jobs:
           python -m pip install uv==0.11.28
           uv sync --locked
 
-      - name: Mutate security, lockfile, installer, yamlio, and validator
+      - name: Mutate security, lockfile, installer, yamlio, validator, and the skill analyzers
         run: uv run mutmut run
 
-      # The threshold is set from a full reference run of the extended scope
-      # (2034 mutants, score 78.6%) with a ~3.6 pp margin for equivalent-mutant
-      # noise; the survivor-triage discipline lives in __test__/README.md
-      # ("Coverage и критерии эффективности").
+      # The threshold is backed by full reference runs of both scope halves:
+      # the library modules (2034 mutants, score 78.6%) and the skill
+      # analyzers (1647 mutants, score ~82%), each with a >=3 pp margin for
+      # equivalent-mutant noise; the survivor-triage discipline lives in the
+      # coverage/mutation section of __test__/README.md.
       - name: Enforce mutation score
         run: |
           uv run mutmut export-cicd-stats

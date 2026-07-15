@@ -154,7 +154,7 @@ class TestYamlSubset(TempDirTestCase):
             "timestamp": "2026-07-12T12:00:00+00:00",
             "needs_quotes": "value: with colon",
             "hash": "contains # hash",
-            "unicode": "русский текст",
+            "unicode": "русский текст",  # non-english-ok: Unicode round-trip sample
             "list": ["a", 1, None, True],
             "nested": {"empty_list": [], "n": None},
         }

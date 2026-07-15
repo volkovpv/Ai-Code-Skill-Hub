@@ -19,3 +19,48 @@ skills:
       pii_allowed: false
       secrets_allowed: false
       observation_review_required: true
+  # The three skills below passed the eval-gate
+  # (scripts/run_skill_evals.py over __test__/evals/<skill>/cases.json,
+  # executed against a real harness) and are promoted to stable.
+  - name: typescript-coding
+    path: skills/typescript-coding
+    version: 1.0.0
+    status: stable
+    summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
+    capabilities:
+      knowledge: true
+      data: true
+      observations: true
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true
+  - name: hexagonal-service
+    path: skills/hexagonal-service
+    version: 1.0.0
+    status: stable
+    summary: Language- and framework-agnostic ports-and-adapters architecture standard with a single sanctioned error flow.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true
+  - name: typescript-nestjs
+    path: skills/typescript-nestjs
+    version: 1.0.0
+    status: stable
+    summary: NestJS-specific rules for hexagonal services - DI tokens, providers, HTTP boundary, config, testing - with a layer-aware checker.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
+    capabilities:
+      data: true
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true
