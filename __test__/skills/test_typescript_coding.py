@@ -123,6 +123,15 @@ class TestFixtureContract(TempDirMixin):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(result.stdout.strip(), "")
 
+    def test_justified_rule_disable_fixture_is_clean(self):
+        # A line-scoped eslint disable naming exactly one rule and carrying a
+        # written justification is the sanctioned workaround for a documented
+        # upstream lint-rule limitation (observation OBS-20260715-001) — the
+        # checker must stay silent on it.
+        result = run_checker(str(FIXTURES / "justified_rule_disable.ts"))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "")
+
     def test_example_pair_matches_expected(self):
         source = (EXAMPLES / "checked_input.ts").read_text(encoding="utf-8")
         expected = (EXAMPLES / "checked_input.expected").read_text(encoding="utf-8")
@@ -296,6 +305,29 @@ class TestSuppressionContract(TempDirMixin):
         self.assertIn("malformed", result.stderr)
         # Findings are still reported so nothing is silently hidden.
         self.assertIn("TS-CONSOLE", result.stdout)
+
+
+class TestTsSuppressScope(unittest.TestCase):
+    """TS-SUPPRESS targets suppression smells, not the sanctioned narrow disable.
+
+    Regression for observation OBS-20260715-001: a line-scoped eslint disable
+    naming exactly one rule with a non-empty `--` justification is the correct
+    way to hold a documented upstream lint-rule limitation and must not be
+    reported. Everything wider, blanket, or unjustified stays a finding.
+    """
+
+    def test_justified_single_rule_next_line_disable_is_not_flagged(self):
+        codes, errors = check(
+            "// eslint-disable-next-line @typescript-eslint/promise-function-async -- upstream rule limitation: unknown return is not a Promise\n"
+            "const passthrough = (value: unknown): unknown => value;\n"
+        )
+        self.assertEqual((codes, errors), ([], []))
+
+    def test_justified_single_rule_same_line_disable_is_not_flagged(self):
+        codes, errors = check(
+            "for (const t of tasks) { await run(t); } // eslint-disable-line no-await-in-loop -- sequential on purpose: rate-limited API\n"
+        )
+        self.assertEqual((codes, errors), ([], []))
 
 
 class TestPathContexts(TempDirMixin):
