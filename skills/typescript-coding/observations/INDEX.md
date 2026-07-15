@@ -23,14 +23,14 @@ Reading rules for agents:
 
 ## Accepted observations
 
-None yet — every observation below awaits human review.
+- [OBS-20260715-001](accepted/OBS-20260715-001.md) — `TS-SUPPRESS` leaves no
+  green path for a justified single-rule line-scoped `eslint-disable` working
+  around a documented upstream lint-rule limitation (transferred from the
+  news-intel consumer; deterministic fixture attached; reviewed by the
+  operator, 2026-07-15).
 
 ## Candidates awaiting review
 
 - [OBS-20260713-001](candidates/OBS-20260713-001.md) — the convention checker
   over-reports `process.env` access when it has no file path for context
   (reproducible evidence attached; not yet reviewed, not promoted anywhere).
-- [OBS-20260715-001](candidates/OBS-20260715-001.md) — `TS-SUPPRESS` leaves no
-  green path for a justified single-rule line-scoped `eslint-disable` working
-  around a documented upstream lint-rule limitation (transferred from the
-  news-intel consumer; deterministic fixture attached).
