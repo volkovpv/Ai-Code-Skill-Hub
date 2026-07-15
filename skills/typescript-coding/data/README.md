@@ -32,7 +32,11 @@ Layout convention:
     (pins the lexical-masking behaviour);
   - `settings.config.ts` — a config-layer file (env access is legitimate
     here); evidence for the checker's path-context limitation
-    (candidate observation OBS-20260713-001).
+    (candidate observation OBS-20260713-001);
+  - `justified_rule_disable.ts` — a single-rule, line-scoped, justified
+    `eslint-disable-next-line` working around a documented upstream lint-rule
+    limitation; evidence for the `TS-SUPPRESS` false positive
+    (observation OBS-20260715-001).
 - `examples/` — minimal input/output pairs shipped to consumers:
   - `checked_input.ts` + `checked_input.expected` — a calibrated run of the
     checker over stdin (label `<stdin>`). Note: the `throw new Error(...)`
