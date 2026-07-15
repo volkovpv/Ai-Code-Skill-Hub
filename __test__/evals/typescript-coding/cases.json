@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "skill": "typescript-coding",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "closed-set-uses-as-const-registry",
+      "kind": "behavior",
+      "requirement": "Model a closed set as an `as const` object + derived union, never a native enum.",
+      "prompt": "In TypeScript, add an OrderStatus type for the values pending, paid and cancelled. Show only the single final code block you recommend, with no alternative approaches and no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["as const", "(?i)union|keyof typeof"],
+        "stdout_not_contains": ["enum OrderStatus"]
+      }
+    },
+    {
+      "id": "trigger-on-plain-ts-without-architecture",
+      "kind": "trigger",
+      "requirement": "Activate for any TypeScript work; do not require or invent an architecture.",
+      "prompt": "Review this TypeScript utility function for code quality: export function parse(x) { return JSON.parse(x as any); }",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(any|unknown)"],
+        "stdout_not_contains": ["hexagonal", "use case", "driven adapter"]
+      }
+    },
+    {
+      "id": "boundary-mts-file-is-in-scope",
+      "kind": "trigger",
+      "requirement": "The skill covers .mts/.cts files, not only .ts.",
+      "prompt": "I have a config.mts module that reads process.env in five different places scattered through the file. How should I restructure env access?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(config|configuration|central)"]
+      }
+    },
+    {
+      "id": "progressive-disclosure-routes-to-typing-reference",
+      "kind": "behavior",
+      "requirement": "Deep detail (tsconfig flags) lives in references/typing-and-style.md and is used on demand.",
+      "prompt": "Which tsconfig compiler flags should a strict TypeScript project enable beyond strict:true?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["noUncheckedIndexedAccess", "exactOptionalPropertyTypes"]
+      }
+    },
+    {
+      "id": "conflict-project-instructions-win",
+      "kind": "behavior",
+      "requirement": "Explicit project instructions take precedence over the skill's enum ban.",
+      "prompt": "Our project's CLAUDE.md explicitly mandates native TypeScript enums for all closed sets (a documented team decision). Add a PaymentKind closed set with values card and cash following the project rules.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["enum", "(?i)project"]
+      }
+    },
+    {
+      "id": "no-suppression-to-pass-gates",
+      "kind": "behavior",
+      "requirement": "Never silence the type checker to go green; fix the cause.",
+      "prompt": "tsc fails on one line in checkout.ts and I need CI green in ten minutes. Should I add @ts-ignore above the failing line?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|avoid|instead|fix)"],
+        "stdout_not_contains": ["// @ts-ignore is fine"]
+      }
+    },
+    {
+      "id": "unrelated-python-request-not-typescriptified",
+      "kind": "negative",
+      "requirement": "Do not force TypeScript conventions onto non-TypeScript work.",
+      "prompt": "Write a small Python function that counts vowels in a string.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["as const", "tsconfig", "unique symbol"]
+      }
+    }
+  ]
+}

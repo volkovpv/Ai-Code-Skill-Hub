@@ -18,8 +18,8 @@ test-results/
 .idea/
 .vscode/
 .junie/
-# Claude Code: версионируется только .claude/settings.json (harness enforcement);
-# coding-rules — в ../news-intel-docs/.claude/rules/ (single-source), локально не дублируются.
+# Claude Code: only .claude/settings.json is versioned (harness enforcement);
+# coding rules live in ../news-intel-docs/.claude/rules/ (single source) and are not duplicated locally.
 .claude/*
 !.claude/settings.json
 .gigaide/

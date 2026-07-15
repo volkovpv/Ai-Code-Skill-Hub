@@ -1,4 +1,4 @@
-# Provenance of this skill. See "Импорт стороннего skill" in the root README.md.
+# Provenance of this skill. See the root README.md section on importing third-party skills.
 type: original          # original | vendored
 source: null            # for vendored: repository URL or path
 source_commit: null     # for vendored: upstream commit

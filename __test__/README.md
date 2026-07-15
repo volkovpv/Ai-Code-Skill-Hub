@@ -453,8 +453,12 @@ PR-описании:
 ### Code coverage
 
 CI измеряет line и branch coverage одним и тем же полным unittest-набором.
-Минимальный merge-gate — 80% общего покрытия (`fail_under = 80`). Это baseline,
-а не целевой потолок:
+Минимальный merge-gate — 80% общего покрытия (`fail_under = 80`). В источники
+coverage входят не только `src/skill_library`, но и анализаторы skills
+(`skills/*/scripts/`): их dedicated-тесты импортируют скрипты in-process
+(см. `load_checker()` в `__test__/skills/test_typescript_coding.py`), поэтому
+mutation testing покрывает их тоже — модуль импортируется под точечным именем
+пути, которое ожидает mutmut. Это baseline, а не целевой потолок:
 
 - для нового/изменённого детерминированного кода покрывайте все новые ветви;
 - для security, path validation, lockfile и rollback стремитесь к 95–100%;

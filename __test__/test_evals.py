@@ -9,7 +9,8 @@ import sys
 from .helpers import ROOT, TempDirTestCase, sandboxed_env
 
 RUNNER = ROOT / "scripts" / "run_skill_evals.py"
-EXAMPLE_CASES = ROOT / "__test__" / "evals" / "example-skill" / "cases.json"
+EVALS_DIR = ROOT / "__test__" / "evals"
+EXAMPLE_CASES = EVALS_DIR / "example-skill" / "cases.json"
 
 
 class TestEvalRunner(TempDirTestCase):
@@ -28,6 +29,27 @@ class TestEvalRunner(TempDirTestCase):
         result = self.run_eval("--validate-only", str(EXAMPLE_CASES))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("3 case(s)", result.stdout)
+
+    def test_every_catalog_eval_manifest_is_valid(self):
+        manifests = sorted(EVALS_DIR.glob("*/cases.json"))
+        self.assertGreaterEqual(len(manifests), 4, manifests)
+        result = self.run_eval("--validate-only", *(str(m) for m in manifests))
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_eval_manifests_exist_for_every_draft_skill_awaiting_the_gate(self):
+        # The three split skills stay draft until the eval-gate passes; the
+        # gate needs a manifest, so its absence would make "draft until evals
+        # pass" unfalsifiable.
+        for skill in ("typescript-coding", "hexagonal-service", "typescript-nestjs"):
+            manifest = EVALS_DIR / skill / "cases.json"
+            self.assertTrue(manifest.is_file(), manifest)
+            kinds = {
+                case["kind"]
+                for case in json.loads(manifest.read_text(encoding="utf-8"))["cases"]
+            }
+            # positive/boundary cases are 'trigger'/'behavior'; conflicts are
+            # behavior cases; 'negative' pins non-activation.
+            self.assertEqual(kinds, {"trigger", "behavior", "negative"}, skill)
 
     def test_duplicate_case_ids_are_rejected(self):
         manifest = self.tmp / "duplicate.json"

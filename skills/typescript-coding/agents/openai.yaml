@@ -1,0 +1,7 @@
+# Vendor-specific adapter for OpenAI harnesses (Codex).
+# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
+# Note: the in-house YAML subset has no multiline scalars, so default_prompt is one line.
+interface:
+  display_name: TypeScript Coding (universal)
+  short_description: Universal strictly-typed TypeScript coding standard, free of framework and architecture assumptions.
+  default_prompt: "Apply the typescript-coding skill: a universal TypeScript coding standard with no framework, architecture, or library assumptions. Activate it when writing, reviewing, or refactoring any .ts/.mts/.cts code. Enforce strict compiler flags, as-const registries instead of native enums, branded ids, readonly-by-default, unknown in catch with narrowing, no type or lint suppressions, centralized process.env access, and tests shipped in the same change. Do not apply architecture- or NestJS-specific rules (they live in the hexagonal-service and typescript-nestjs skills), and do not force the skill onto non-TypeScript requests. Project instructions always take precedence over the skill."

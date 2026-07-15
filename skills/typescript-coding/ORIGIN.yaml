@@ -1,0 +1,8 @@
+# Provenance of this skill. See the root README.md section on importing third-party skills.
+type: original          # original | vendored
+source: null            # for vendored: repository URL or path
+source_commit: null     # for vendored: upstream commit
+license: MIT            # license of the skill content
+imported_at: null       # for vendored: ISO date of import (created 2026-07-13)
+update_policy: manual   # manual | follow-upstream | frozen
+changes: []             # notable local changes relative to upstream

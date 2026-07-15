@@ -1,0 +1,3 @@
+<stdin>:2: TS-CONSOLE console.* call in shipped code; route output through the project's logging seam
+<stdin>:3: TS-ANY explicit any defeats strict typing; type the value or use unknown + narrowing
+<stdin>:3: TS-ENV process.env outside the config layer; centralize env reads in configuration code

@@ -24,7 +24,7 @@ class TestSkillNames(TempDirTestCase):
             validate_skill_name(name)
 
     def test_invalid_names(self):
-        bad = ["", "UPPER", "under_score", "-lead", "trail-", "a b", "a/b", "../x", "x" * 65, "тест"]
+        bad = ["", "UPPER", "under_score", "-lead", "trail-", "a b", "a/b", "../x", "x" * 65, "тест"]  # non-english-ok: non-ASCII name rejection sample
         for name in bad:
             with self.assertRaises(SecurityError, msg=name):
                 validate_skill_name(name)

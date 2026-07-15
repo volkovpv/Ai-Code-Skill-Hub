@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "skill": "hexagonal-service",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "trigger-on-layer-placement-question",
+      "kind": "trigger",
+      "requirement": "Activate when the user asks where code belongs in a ports-and-adapters service.",
+      "prompt": "Our service follows hexagonal architecture. Where should the retry and timeout logic for calls to the external payments API live?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)driven adapter", "(?i)(resilience|retry|timeout)"]
+      }
+    },
+    {
+      "id": "error-wrapped-once-at-driven-adapter-with-cause",
+      "kind": "behavior",
+      "requirement": "A foreign error is wrapped into a typed domain error exactly once, at the driven adapter, preserving the cause.",
+      "prompt": "In our hexagonal service the database driver throws its own connection error inside the repository. Where do I convert it into our domain error, and what must the conversion preserve?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(driven adapter|repository)", "(?i)cause", "(?i)(once|single)"]
+      }
+    },
+    {
+      "id": "no-rewrap-in-use-case",
+      "kind": "behavior",
+      "requirement": "Intermediate layers let a wrapped domain error bubble; catch-and-rethrow wrapping there is forbidden.",
+      "prompt": "Should my use case catch the StorageUnavailableError coming from the repository and re-wrap it with extra context before rethrowing it to the controller?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|not|avoid|don't)", "(?i)(bubble|untouched|boundary|filter)"]
+      }
+    },
+    {
+      "id": "raw-throw-in-application-rejected",
+      "kind": "behavior",
+      "requirement": "Raw untyped throws are forbidden in domain/application; use the typed domain error registry.",
+      "prompt": "Inside a use case I want to write: throw new Error('user not found'). Is that acceptable in our hexagonal service?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(typed|domain) (domain )?error"],
+        "stdout_not_contains": ["perfectly acceptable"]
+      }
+    },
+    {
+      "id": "language-agnostic-boundary-python",
+      "kind": "trigger",
+      "requirement": "The skill is language-agnostic and applies to non-TypeScript services too.",
+      "prompt": "We are building a Python FastAPI service with hexagonal architecture. Which layer may import the Postgres driver?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(infrastructure|driven)"],
+        "stdout_not_contains": ["tsconfig", "unique symbol"]
+      }
+    },
+    {
+      "id": "conflict-project-logging-convention-wins",
+      "kind": "behavior",
+      "requirement": "Documented project conventions take precedence over the skill's log-once rule.",
+      "prompt": "Our project's contributing guide explicitly requires logging caught errors at WARN in every layer before rethrowing (a documented team decision we cannot change now). Add error handling to this use case following the project rules.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)project"]
+      }
+    },
+    {
+      "id": "unrelated-frontend-request-not-hexagonified",
+      "kind": "negative",
+      "requirement": "Do not force ports-and-adapters onto unrelated work.",
+      "prompt": "Center a div horizontally and vertically with CSS.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["driven adapter", "input port", "composition root"]
+      }
+    }
+  ]
+}

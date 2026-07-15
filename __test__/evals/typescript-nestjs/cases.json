@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "skill": "typescript-nestjs",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "trigger-on-string-inject-token",
+      "kind": "trigger",
+      "requirement": "Activate on NestJS DI code and enforce named unique-symbol tokens.",
+      "prompt": "Review this NestJS constructor: constructor(@Inject('USER_REPOSITORY') private readonly users: UserRepositoryPort) {}",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["unique symbol"],
+        "stdout_not_contains": ["looks good as is"]
+      }
+    },
+    {
+      "id": "use-case-stays-plain-class",
+      "kind": "behavior",
+      "requirement": "Use cases carry no DI decorators; they are assembled by factory providers.",
+      "prompt": "Should I add @Injectable() to my CreateUserUseCase class in our hexagonal NestJS service so Nest can wire it?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|not|avoid|instead)", "(?i)(useFactory|factory provider|providers/)"]
+      }
+    },
+    {
+      "id": "filter-maps-and-logs-once",
+      "kind": "behavior",
+      "requirement": "Domain errors are logged and mapped to HTTP once, in the exception-filter chain, with masked 5xx.",
+      "prompt": "In our NestJS service, where do I turn UserBlockedError into an HTTP 403, and where should that failure be logged?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(exception )?filter", "(?i)(once|single)"]
+      }
+    },
+    {
+      "id": "boundary-validation-pipe",
+      "kind": "behavior",
+      "requirement": "Request DTOs are validated by a global ValidationPipe with whitelist and transform.",
+      "prompt": "How should incoming request bodies be validated in our NestJS controllers?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["ValidationPipe", "(?i)whitelist"]
+      }
+    },
+    {
+      "id": "conflict-project-logger-wrapper-wins",
+      "kind": "behavior",
+      "requirement": "A documented project decision overrides the skill's own-logger-port preference.",
+      "prompt": "Our project has an ADR mandating the nestjs-pino integration package for all services (a settled team decision). Set up request logging for a new module following the project rules.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["nestjs-pino", "(?i)(project|adr)"]
+      }
+    },
+    {
+      "id": "negative-express-request-not-nestified",
+      "kind": "negative",
+      "requirement": "Do not force NestJS conventions onto a different framework.",
+      "prompt": "Add a GET /health route to this plain Express app.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["@Module", "ValidationPipe", "unique symbol"]
+      }
+    }
+  ]
+}
