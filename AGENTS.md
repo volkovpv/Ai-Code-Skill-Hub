@@ -57,6 +57,18 @@
   is the equivalent zero-tooling fallback used by CI.)
 - Never declare work complete without real command output; both commands must
   exit with code 0.
+- When you change a source file that is under mutation scope
+  (`[tool.mutmut].only_mutate`: `security.py`, `lockfile.py`, `installer.py`,
+  `yamlio.py`, `validator.py`, and the two skill analyzer scripts), run mutation
+  testing **scoped to just that file**, never the whole scope:
+  ```bash
+  python scripts/mutation.py <path-or-short-name>   # e.g. security  OR  src/skill_library/security.py
+  ```
+  The wrapper caps parallelism (CPU − 2) and derives the mutant glob from the
+  file, so it re-tests only that module's mutants. Editing a file outside the
+  scope is a no-op (the wrapper exits 0 and says so) — nothing to run. The full
+  cross-file run stays in CI (`.github/workflows/mutation.yml`, weekly/manual);
+  do not run it locally by hand.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
   features that do not exist. Only the root `README.md` and
   `__test__/README.md` are written in Russian; every other document is in

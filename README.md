@@ -75,6 +75,7 @@ Skill здесь — не одна инструкция, а **версионир
 │   ├── check_version_drift.py # гейт: pyproject = __init__.py = CHANGELOG
 │   ├── check_release_gate.py  # гейт: изменение кода ⇔ поднятие версии
 │   ├── check_mutation_score.py# гейт: mutation score не ниже порога
+│   ├── mutation.py            # локальный запуск мутаций по одному файлу (CPU−2, без полного прогона)
 │   ├── check_language.py      # гейт: без русского текста вне README/_audit (языковая политика)
 │   └── run_skill_evals.py     # валидация и запуск eval-manifests (offline/opt-in)
 │
@@ -522,7 +523,18 @@ uv run python -m unittest __test__.test_installer.TestInstall.test_install_copie
 uv run coverage run -m unittest discover -s __test__ -t . -v
 uv run coverage report
 
-# Mutation testing: критичные модули, гейт score >= 75
+# Mutation testing: критичные модули, гейт score >= 75.
+# Полный `mutmut run` — задача CI (mutation.yml, weekly/manual); mutmut форкает
+# воркеров по числу всех ядер (грузит машину) и на холодную идёт часами. Локально
+# не запускайте его целиком — прогоняйте мутации по одному изменённому файлу:
+uv run python scripts/mutation.py security               # только security.py, воркеров = CPU−2
+uv run python scripts/mutation.py -j 8 validator          # ещё щадящее по CPU
+uv run python scripts/mutation.py src/skill_library/installer.py  # можно и путём к файлу
+uv run python scripts/mutation.py --list                  # какие модули можно скоупить
+# Файл вне mutation-scope — no-op (exit 0). Каталог `mutants/` не удаляйте: кэш
+# инкрементальный, повторные прогоны не переделывают всё заново.
+#
+# Полный прогон и гейт (как в CI):
 uv run mutmut run
 uv run mutmut export-cicd-stats
 uv run python scripts/check_mutation_score.py mutants/mutmut-cicd-stats.json --minimum 75
