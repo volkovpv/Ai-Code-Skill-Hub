@@ -31,8 +31,13 @@ the project's compiler; run scripts with a modern TS runner, not a legacy one.
 - In `catch`, the binding is **`unknown`**; narrow before use. Never type a
   caught error as `any`.
 - Do not silence the type checker or linter (`@ts-ignore`, `@ts-nocheck`,
-  `eslint-disable`) to pass a gate; fix the cause. Format with a single
-  formatter and do not fight it with a second one.
+  `eslint-disable`) to pass a gate; fix the cause. The one sanctioned
+  exception: a documented upstream limitation of a single lint rule may be
+  held by a line-scoped `eslint-disable-next-line <rule> -- <written reason>`
+  (or `eslint-disable-line`) naming exactly one rule — never file-wide, never
+  multi-rule, never without the justification. Type-level suppressions have
+  no such exception. Format with a single formatter and do not fight it with
+  a second one.
 
 ## Zero magic — constants registries
 
