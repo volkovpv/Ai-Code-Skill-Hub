@@ -16,6 +16,7 @@ from skill_library.validator import (
 from .helpers import (
     ORIGIN_TEMPLATE,
     ROOT,
+    ignore_mutants_size_artifact,
     TempDirTestCase,
     add_layers,
     copy_fixture,
@@ -84,7 +85,9 @@ class TestValidateLibrary(TempDirTestCase):
         self.assertEqual(validate_library(library), [])
 
     def test_real_library_passes(self):
-        self.assertEqual(validate_library(ROOT), [])
+        # ignore_mutants_size_artifact: see helpers — under mutation testing
+        # this runs from the mutants copy with trampoline-rewritten analyzers.
+        self.assertEqual(ignore_mutants_size_artifact(validate_library(ROOT)), [])
 
     def test_duplicate_names_fail(self):
         library = make_library(self.tmp, names=("alpha-skill",))

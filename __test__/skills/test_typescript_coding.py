@@ -123,6 +123,15 @@ class TestFixtureContract(TempDirMixin):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(result.stdout.strip(), "")
 
+    def test_justified_rule_disable_fixture_is_clean(self):
+        # A line-scoped eslint disable naming exactly one rule and carrying a
+        # written justification is the sanctioned workaround for a documented
+        # upstream lint-rule limitation (observation OBS-20260715-001) — the
+        # checker must stay silent on it.
+        result = run_checker(str(FIXTURES / "justified_rule_disable.ts"))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "")
+
     def test_example_pair_matches_expected(self):
         source = (EXAMPLES / "checked_input.ts").read_text(encoding="utf-8")
         expected = (EXAMPLES / "checked_input.expected").read_text(encoding="utf-8")
@@ -296,6 +305,87 @@ class TestSuppressionContract(TempDirMixin):
         self.assertIn("malformed", result.stderr)
         # Findings are still reported so nothing is silently hidden.
         self.assertIn("TS-CONSOLE", result.stdout)
+
+
+class TestTsSuppressScope(unittest.TestCase):
+    """TS-SUPPRESS targets suppression smells, not the sanctioned narrow disable.
+
+    Regression for observation OBS-20260715-001: a line-scoped eslint disable
+    naming exactly one rule with a non-empty `--` justification is the correct
+    way to hold a documented upstream lint-rule limitation and must not be
+    reported. Everything wider, blanket, or unjustified stays a finding.
+    """
+
+    def test_justified_single_rule_next_line_disable_is_not_flagged(self):
+        codes, errors = check(
+            "// eslint-disable-next-line @typescript-eslint/promise-function-async -- upstream rule limitation: unknown return is not a Promise\n"
+            "const passthrough = (value: unknown): unknown => value;\n"
+        )
+        self.assertEqual((codes, errors), ([], []))
+
+    def test_justified_single_rule_same_line_disable_is_not_flagged(self):
+        codes, errors = check(
+            "for (const t of tasks) { await run(t); } // eslint-disable-line no-await-in-loop -- sequential on purpose: rate-limited API\n"
+        )
+        self.assertEqual((codes, errors), ([], []))
+
+    # --- negative guard: every wider/unjustified form is still a finding ----
+
+    def test_bare_file_scoped_disable_still_flagged(self):
+        codes, _ = check("/* eslint-disable */\nconst a = 1;\n")
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_file_scoped_disable_with_rule_and_reason_still_flagged(self):
+        # Only the LINE-scoped directives qualify; a justified file/block
+        # disable silences the whole file and stays a finding.
+        codes, _ = check(
+            "/* eslint-disable @typescript-eslint/no-explicit-any -- legacy module */\nconst a = 1;\n"
+        )
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_multi_rule_line_disable_still_flagged(self):
+        codes, _ = check(
+            "// eslint-disable-next-line no-console, no-alert -- demo hook\nconsoleLike();\n"
+        )
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_line_disable_without_justification_still_flagged(self):
+        codes, _ = check("// eslint-disable-next-line no-console\nconsoleLike();\n")
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_line_disable_with_empty_justification_still_flagged(self):
+        for tail in ("--", "-- ", "--\t"):
+            with self.subTest(tail=tail):
+                codes, _ = check(f"// eslint-disable-next-line no-console {tail}\nconsoleLike();\n")
+                self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_line_disable_without_any_rule_still_flagged(self):
+        codes, _ = check("// eslint-disable-next-line -- because\nconsoleLike();\n")
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_ts_ignore_with_reason_still_flagged(self):
+        codes, _ = check("// @ts-ignore -- reviewed: vendor typing bug\nconst a = b;\n")
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_ts_nocheck_still_flagged(self):
+        codes, _ = check("// @ts-nocheck\nconst a = 1;\n")
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_type_suppression_next_to_justified_disable_still_flagged(self):
+        # The justified directive is cut out; the remaining @ts-ignore on the
+        # same line must survive as a finding.
+        codes, _ = check(
+            "// @ts-ignore eslint-disable-next-line no-console -- reason text\nconst a = b;\n"
+        )
+        self.assertEqual(codes, ["TS-SUPPRESS"])
+
+    def test_justified_disable_inside_string_is_still_data(self):
+        # Masking contract unchanged: directive text inside a string neither
+        # fires nor exempts anything.
+        codes, errors = check(
+            "const doc = 'eslint-disable-next-line no-console -- how-to example';\n"
+        )
+        self.assertEqual((codes, errors), ([], []))
 
 
 class TestPathContexts(TempDirMixin):

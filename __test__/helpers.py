@@ -8,6 +8,22 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def ignore_mutants_size_artifact(problems: list[str]) -> list[str]:
+    """Filter the known real-tree validation artifact under mutation testing.
+
+    Tests that validate the REAL library also run from mutmut's copied tree
+    (``mutants/``), where the skill analyzer scripts are trampoline-rewritten
+    and legitimately exceed ``max_tracked_file_bytes``. Ignore only that
+    artifact, and only inside the mutants copy, so those tests keep asserting
+    a clean real library everywhere else — and keep killing mutants; the size
+    policy itself is pinned by the dedicated content-policy tests against the
+    pristine tree.
+    """
+    if "mutants" in Path(__file__).parts:
+        return [p for p in problems if "exceeds max_tracked_file_bytes" not in p]
+    return problems
 FIXTURES = ROOT / "__test__" / "fixtures"
 
 NETWORK_BLOCKER = ROOT / "__test__" / "network_blocker"

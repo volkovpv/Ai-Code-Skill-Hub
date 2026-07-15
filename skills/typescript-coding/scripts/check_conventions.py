@@ -28,6 +28,11 @@ rule runs:
 * code inside template-literal interpolations (``${...}``) IS scanned;
 * ``TS-SUPPRESS`` looks only at comment text, because ``@ts-ignore`` /
   ``eslint-disable`` live in comments; the same text inside a string is data.
+  A line-scoped ``eslint-disable-next-line`` / ``eslint-disable-line`` naming
+  exactly one rule with a non-empty ``--`` justification is not reported —
+  that is the sanctioned way to hold a documented upstream limitation of a
+  lint rule (OBS-20260715-001); every wider, multi-rule, or unjustified form
+  and every type-level suppression is still a finding.
 
 The scanner is still line-oriented lexical analysis, not a TypeScript AST:
 a multi-line construct is seen line by line, and the project's compiler in
@@ -141,6 +146,18 @@ _CHECKS: list[tuple[str, str, re.Pattern, frozenset]] = [
 ]
 
 KNOWN_CODES = frozenset(code for code, _, _, _ in _CHECKS)
+
+# A justified, single-rule, line-scoped eslint disable is the sanctioned way
+# to hold a documented upstream limitation of one lint rule and is NOT a
+# TS-SUPPRESS finding (OBS-20260715-001): the directive must be
+# `eslint-disable-next-line`/`eslint-disable-line` (file/block-scoped
+# `eslint-disable` never qualifies), must name exactly one rule (a comma —
+# the multi-rule form — breaks the match), and everything after the mandatory
+# ` -- ` is its non-empty written justification, consumed to end of line.
+# Type-level suppressions (`@ts-ignore`, `@ts-nocheck`) have no such escape.
+_JUSTIFIED_LINE_DISABLE = re.compile(
+    r"eslint-disable-(?:next-)?line[ \t]+[@A-Za-z0-9_/-]+[ \t]+--[ \t]+\S.*"
+)
 
 # --- Lexical masking ---------------------------------------------------------
 
@@ -445,7 +462,13 @@ def check_text(text: str, label: str) -> tuple[list[tuple[str, int, str, str]], 
                 continue
             # @ts-ignore/eslint-disable live in comments, so TS-SUPPRESS scans
             # the comment view; every other rule scans only executable code.
-            target = comment_line if code == "TS-SUPPRESS" else code_line
+            # Justified single-rule line disables are cut out first — what
+            # remains (a blanket/multi-rule/unjustified form, or a type-level
+            # suppression on the same line) is still a finding.
+            if code == "TS-SUPPRESS":
+                target = _JUSTIFIED_LINE_DISABLE.sub("", comment_line)
+            else:
+                target = code_line
             if not pattern.search(target):
                 continue
             if code in suppressed:

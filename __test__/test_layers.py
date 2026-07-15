@@ -14,6 +14,7 @@ from skill_library.validator import (
 
 from .helpers import (
     ROOT,
+    ignore_mutants_size_artifact,
     TempDirTestCase,
     add_layers,
     make_layered_library,
@@ -41,7 +42,9 @@ class TestLayeredSkillValidation(TempDirTestCase):
         self.assertEqual(validate_library(library), [])
 
     def test_real_example_skill_passes_with_layers(self):
-        self.assertEqual(validate_library(ROOT), [])
+        # ignore_mutants_size_artifact: see helpers — under mutation testing
+        # this runs from the mutants copy with trampoline-rewritten analyzers.
+        self.assertEqual(ignore_mutants_size_artifact(validate_library(ROOT)), [])
 
     def test_knowledge_requires_index(self):
         (self.skill / "knowledge" / "INDEX.md").unlink()

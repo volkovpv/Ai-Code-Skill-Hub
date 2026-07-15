@@ -80,7 +80,10 @@ has been promoted into `knowledge/` or this workflow.
   provides.
 - A code change without its tests is incomplete; do not suppress the type
   checker or linter (`@ts-ignore`, `@ts-nocheck`, `eslint-disable`) to go
-  green.
+  green. Sole exception: a documented upstream limitation of a single lint
+  rule, held by a justified line-scoped
+  `eslint-disable-next-line <rule> -- <reason>` — see
+  [references/typing-and-style.md](references/typing-and-style.md).
 - Keep this skill universal: framework, architecture, and project-specific
   choices belong to the host project or to the dedicated skills
   (`hexagonal-service`, `typescript-nestjs`) — never here. Project
