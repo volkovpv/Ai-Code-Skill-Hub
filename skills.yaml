@@ -24,7 +24,7 @@ skills:
   # executed against a real harness) and are promoted to stable.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.0.1
+    version: 1.1.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
