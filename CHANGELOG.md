@@ -5,6 +5,27 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.1.0] — 2026-07-17
+
+### `python-coding` 0.2.0 (minor: the rules of an existing skill changed)
+
+The skill is strengthened into a **secure-by-default, modern (3.12–3.14) Python standard** — still framework-, architecture- and library-neutral by contract.
+
+- Four new `references/`: **security** (parameterized SQL and argument-list subprocess, no `eval`/`exec` on data, no pickle/`yaml.load` on untrusted input, path containment via `resolve()` + `is_relative_to`, `mkstemp`-family temp files, tarfile `filter=`, `secrets` + `hmac.compare_digest`, memory-hard password hashing, TLS verification never disabled, ReDoS awareness, secrets hygiene); **concurrency** (structured concurrency with `asyncio.TaskGroup` and `asyncio.timeout`, no fire-and-forget, `CancelledError` propagation, no blocking calls on the loop, thread locking that never leans on the GIL, model choice incl. 3.14 subinterpreters and free-threading); **runtime-correctness** (aware-UTC datetimes, monotonic clocks for durations, `Decimal` money, context-managed resources with `__del__` banned, `lru_cache`-on-method leak, join-over-`+=`); **modern-python** (version-gated adoption for 3.12/3.13/3.14: PEP 695 generics and `type` aliases, `TypeIs`, `ReadOnly`, `@override`, native lazy annotations, t-strings, plus an explicit banned-legacy table).
+- Existing references upgraded: exception groups/`except*` and `add_note`, retry/timeout discipline, library-logging rules (`NullHandler`, log-once-per-failure, constant message templates) in errors-config-logging; `TypeIs`-over-`TypeGuard` and `NotRequired`/`ReadOnly` in type-design; PEP 696 defaults in generics; async section of lint-clean routed to concurrency; property-based/async-test/exception-assert rules in testing. The superseded `gather`-by-default guidance is replaced by `TaskGroup`-first.
+- `scripts/check_py_conventions.py` gains seven high-signal security rules — `PY-EVAL`, `PY-SHELL`, `PY-PICKLE`, `PY-YAML-LOAD`, `PY-MKTEMP`, `PY-UTCNOW`, `PY-TLS-NOVERIFY` — with no test-file relaxation; fixtures, the calibrated example pair, per-rule tests and eval cases updated accordingly.
+
+## [2.0.0] — 2026-07-17
+
+### New skill: `python-coding` 0.1.0 (major: a skill was created)
+
+A **universal, strictly-typed Python coding standard**: framework-, architecture- and library-neutral by contract; catalogued as `status: draft` until the eval-gate is run against a real harness (`__test__/evals/python-coding/cases.json` ships with trigger/behavior/negative cases).
+
+- The rule surface: a strict type checker (mypy `--strict`/pyright strict) whose configuration is never weakened; no `Any` and no unproven `cast()`; closed sets as `enum.StrEnum`/`Literal` unions; `NewType`-branded ids with a validating constructor at the boundary; tagged unions with `match` closed by `assert_never`; frozen dataclasses, `Final`, `Sequence`/`Mapping` parameters (immutable by default); explicit booleans and `x if x is not None else d` over `x or d`; supervised coroutines with `gather` for independent awaits; narrowest `except` with `raise ... from` once at the source; centralized `os.environ`; no `print`; docstrings describing intent without restating types; a single formatter (Black/Ruff); mutable default arguments banned; `assert` banned as shipped-code validation (stripped under `-O`); no `breakpoint()`/`set_trace()` left behind; parse-don't-cast boundary validation with one source of truth per shape; tests in the same change.
+- Six `references/` (typing-and-style, type-design, generics-and-protocols, lint-clean, errors-config-logging, testing), `knowledge/` patterns + pitfalls with evidence links, calibrated `data/` fixtures/examples, and an `agents/openai.yaml` adapter — the library's standard layered anatomy.
+- New analyzer `scripts/check_py_conventions.py`: a Python-source lexical masking scanner (comments, string literals incl. triple-quoted; f-string interpolation code is still scanned) with the same strict fail-closed `skill-check-ignore: <CODE> -- <reason>` suppression contract as the library's other analyzers. Rules: `PY-PRINT`, `PY-ENV`, `PY-ANY`, `PY-SUPPRESS` (a single-rule, line-scoped, justified `# noqa: <RULE> -- <reason>` is the one sanctioned escape; `type: ignore` has none), `PY-BARE-EXCEPT`, `PY-ASSERT`, `PY-DEBUG`; test/config path contexts relax exactly the rules the references relax. Named `check_py_conventions.py` (not `check_conventions.py`) so every mutation-scope module keeps a unique short name for `scripts/mutation.py`.
+- Test suite `__test__/skills/test_python_coding.py` (fixture contract, exact scanner views, masking, suppression bypass battery, path contexts, determinism, IO edge cases, in-process driver); the analyzer joins the coverage sources and the mutmut `only_mutate` scope in `pyproject.toml`; root `README.md`, `AGENTS.md` and `CLAUDE.md` updated.
+
 ## [1.5.0] — 2026-07-17
 
 ### `typescript-coding` 1.1.1 → 1.2.0 — type-design and generics rules from the source literature

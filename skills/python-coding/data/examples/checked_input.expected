@@ -1,0 +1,5 @@
+<stdin>:2: PY-PRINT print() call in shipped code; route output through the project's logging seam
+<stdin>:3: PY-ANY Any defeats strict typing; type the value or take object and narrow
+<stdin>:3: PY-ENV environment read outside the config layer; centralize os.environ in configuration code
+<stdin>:4: PY-UTCNOW naive-UTC datetime (deprecated since 3.12); use datetime.now(timezone.utc) / fromtimestamp(..., tz=...)
+<stdin>:5: PY-SHELL command line goes through a shell; pass an argument list to subprocess without shell=True

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skill-library"
-version = "1.5.0"
+version = "2.1.0"
 description = "Self-contained, vendor-neutral Agent Skills library with a management CLI (skillctl)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -34,6 +34,7 @@ source = [
     "src/skill_library",
     "skills/typescript-coding/scripts",
     "skills/typescript-nestjs/scripts",
+    "skills/python-coding/scripts",
 ]
 
 [tool.coverage.report]
@@ -46,6 +47,7 @@ source_paths = [
     "src/skill_library",
     "skills/typescript-coding/scripts",
     "skills/typescript-nestjs/scripts",
+    "skills/python-coding/scripts",
 ]
 only_mutate = [
     "src/skill_library/security.py",
@@ -55,6 +57,7 @@ only_mutate = [
     "src/skill_library/validator.py",
     "skills/typescript-coding/scripts/check_conventions.py",
     "skills/typescript-nestjs/scripts/check_nest_conventions.py",
+    "skills/python-coding/scripts/check_py_conventions.py",
 ]
 also_copy = ["__test__", "skills", "scripts", "skills.yaml", "pyproject.toml"]
 pytest_add_cli_args = ["-q"]
@@ -68,5 +71,6 @@ pytest_add_cli_args_test_selection = [
     "__test__/test_observations.py",
     "__test__/skills/test_typescript_coding.py",
     "__test__/skills/test_typescript_nestjs.py",
+    "__test__/skills/test_python_coding.py",
 ]
 mutate_only_covered_lines = true

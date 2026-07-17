@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "skill": "python-coding",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "closed-set-uses-enum-or-literal",
+      "kind": "behavior",
+      "requirement": "Model a closed set as an enum (StrEnum) or a Literal union, never loose strings compared by value.",
+      "prompt": "In Python, add an OrderStatus type for the values pending, paid and cancelled. Show only the single final code block you recommend, with no alternative approaches and no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(StrEnum|Enum|Literal)"],
+        "stdout_not_contains": ["ORDER_STATUSES = [\"pending\", \"paid\", \"cancelled\"]"]
+      }
+    },
+    {
+      "id": "trigger-on-plain-python-without-architecture",
+      "kind": "trigger",
+      "requirement": "Activate for any Python work; do not require or invent an architecture.",
+      "prompt": "Review this Python utility function for code quality: def parse(x): return json.loads(x)",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(annotat|typed|validat)"],
+        "stdout_not_contains": ["hexagonal", "use case", "driven adapter"]
+      }
+    },
+    {
+      "id": "boundary-env-access-routed-to-config",
+      "kind": "trigger",
+      "requirement": "Scattered os.environ reads are centralized in the configuration layer.",
+      "prompt": "My worker.py module reads os.environ in five different places scattered through the file. How should I restructure env access?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(config|configuration|central)"]
+      }
+    },
+    {
+      "id": "progressive-disclosure-routes-to-typing-reference",
+      "kind": "behavior",
+      "requirement": "Deep detail (strict checker configuration) lives in references/typing-and-style.md and is used on demand.",
+      "prompt": "How should the static type checker be configured for a strict production Python project, and what does that mode imply?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)strict", "(?i)(mypy|pyright)"]
+      }
+    },
+    {
+      "id": "conflict-project-instructions-win",
+      "kind": "behavior",
+      "requirement": "Explicit project instructions take precedence over the skill's explicit-boolean rule.",
+      "prompt": "Our project's CLAUDE.md explicitly mandates idiomatic PEP 8 truthiness for collection emptiness checks (a documented team decision). Write a small function that returns the first element of a list of ints or None when the list is empty, following the project rules.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(if\\s+\\w+:|not\\s+\\w+|project)"]
+      }
+    },
+    {
+      "id": "no-suppression-to-pass-gates",
+      "kind": "behavior",
+      "requirement": "Never silence the type checker to go green; fix the cause.",
+      "prompt": "mypy fails on one line in checkout.py and I need CI green in ten minutes. Should I add # type: ignore above the failing line?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|avoid|instead|fix)"],
+        "stdout_not_contains": ["# type: ignore is fine"]
+      }
+    },
+    {
+      "id": "subprocess-never-shell-true",
+      "kind": "behavior",
+      "requirement": "Untrusted input never reaches a shell; subprocess takes an argument list.",
+      "prompt": "In Python, run the `convert` CLI tool on a filename provided by the user and capture its output. Show only the single final code block you recommend, with no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)subprocess"],
+        "stdout_not_contains": ["shell=True", "os.system"]
+      }
+    },
+    {
+      "id": "yaml-config-uses-safe-load",
+      "kind": "behavior",
+      "requirement": "YAML is parsed with yaml.safe_load, never yaml.load.",
+      "prompt": "Write a small Python function that reads a settings.yaml file and returns the parsed mapping. Show only the single final code block you recommend.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["safe_load"],
+        "stdout_not_contains": ["yaml.load("]
+      }
+    },
+    {
+      "id": "concurrent-fanout-uses-taskgroup",
+      "kind": "behavior",
+      "requirement": "Concurrent fan-out defaults to structured concurrency (asyncio.TaskGroup).",
+      "prompt": "In Python, fetch three URLs concurrently with an async HTTP client and return the three response bodies. Show only the single final code block you recommend.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(TaskGroup|task_group)"]
+      }
+    },
+    {
+      "id": "unrelated-go-request-not-pythonized",
+      "kind": "negative",
+      "requirement": "Do not force Python conventions onto non-Python work.",
+      "prompt": "Write a small Go function that counts vowels in a string.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["mypy", "dataclass", "def count_vowels"]
+      }
+    }
+  ]
+}
