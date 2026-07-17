@@ -17,6 +17,9 @@ The core discipline it enforces:
   never weakened to make a build pass;
 - `as const` registries instead of native `enum`s, branded identifiers,
   `readonly` by default, explicit return types on exports;
+- type design: discriminated unions with exhaustive `switch`es, invalid
+  states unrepresentable, `satisfies` for registries, parse-don't-assert at
+  runtime boundaries, generics only where they relate types;
 - `unknown` in `catch` with narrowing, errors never swallowed, wrapping with
   `cause` at most once at the source;
 - lint-clean-first-time code aimed at a strict stack (typescript-eslint
@@ -36,10 +39,10 @@ The core discipline it enforces:
   heuristic checker the agent runs over changed files before handing off;
   suppressions require a rule code and a written reason
   (`// skill-check-ignore: TS-ENV -- <reason>`).
-- **Layered knowledge.** Beyond `references/` (typing & style, lint-clean,
-  errors/config/logging, testing) the skill ships verified `knowledge/`
-  patterns and pitfalls, calibrated `data/` samples for the checker, and
-  reviewed `observations/`.
+- **Layered knowledge.** Beyond `references/` (typing & style, type design,
+  generics & type-level programming, lint-clean, errors/config/logging,
+  testing) the skill ships verified `knowledge/` patterns and pitfalls,
+  calibrated `data/` samples for the checker, and reviewed `observations/`.
 
 ## How to install
 

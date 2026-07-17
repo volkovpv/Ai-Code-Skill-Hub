@@ -24,7 +24,14 @@ the project's compiler; run scripts with a modern TS runner, not a legacy one.
 - **Member ordering:** fields → constructor → static factories → accessors →
   methods. Declare explicit access modifiers.
 - **Explicit return types on every exported function/method.** Let inference
-  work inside a function body, but pin the public surface.
+  work inside a function body, but pin the public surface. Inside bodies, do
+  **not** annotate what inference already knows: a redundant local annotation
+  is noise, and annotating a literal binding (`const axis: string = 'y'`)
+  *widens* a precise inferred type. Annotate a local object literal only to
+  pin it against a named type and get excess-property checking.
+- **Parameter defaults live in the signature** (`function f(limit = 10)`),
+  not as fallback assignments in the body — the default types the parameter
+  and makes its optionality visible.
 - **`import type`** for type-only imports; **`readonly` fields and
   `ReadonlyArray`/`readonly T[]` by default** — reach for mutability
   deliberately.
@@ -36,8 +43,10 @@ the project's compiler; run scripts with a modern TS runner, not a legacy one.
   held by a line-scoped `eslint-disable-next-line <rule> -- <written reason>`
   (or `eslint-disable-line`) naming exactly one rule — never file-wide, never
   multi-rule, never without the justification. Type-level suppressions have
-  no such exception. Format with a single formatter and do not fight it with
-  a second one.
+  no such exception in shipped code (`@ts-expect-error` included; its one
+  sanctioned home is negative type-level tests — see
+  [testing.md](testing.md)). Format with a single formatter and do not fight
+  it with a second one.
 
 ## Zero magic — constants registries
 
@@ -69,7 +78,10 @@ the project's compiler; run scripts with a modern TS runner, not a legacy one.
   ```
 
 - Identifiers and code are written in English; a name says what the value is,
-  not how it is produced.
+  not how it is produced. Use the domain's established vocabulary — never
+  vacuous names (`data`, `info`, `item`) — and encode units in the name when
+  the type cannot (`timeoutMs`, `temperatureC`). Express "does not mutate" as
+  a `readonly` parameter, never as a comment.
 
 ## Self-check
 

@@ -21,6 +21,28 @@ ports-and-adapters service, DI seams) live in the `hexagonal-service` and
 - Prefer factories/builders over copy-pasted fixture blobs. Use
   property-based tests for pure functions whose invariants you can state.
 
+## Types and tests divide the work
+
+Types and unit tests are complementary verification: the checker eliminates
+whole classes of invalid inputs; tests demonstrate behaviour on valid ones.
+
+- **Do not test inputs the type checker already forbids** (calling with
+  `null` or a wrong-type argument) — there is no expected behaviour to
+  demonstrate, and such tests fight the compiler.
+- **Exception — harmful bypasses:** when a type-level restriction guards
+  against data corruption or a security breach, enforce it at runtime too,
+  and test that enforcement with a line-scoped `@ts-expect-error` carrying a
+  justification. This is the one sanctioned use of a type suppression, and
+  it lives only in test files.
+- **Every user-defined type guard and assertion function gets unit tests**,
+  including near-miss values — the compiler never checks that a guard's body
+  matches its predicate, and a wrong guard poisons every downstream branch.
+- **Nontrivial type utilities get type-level tests** pinned next to them
+  (equality-style assertions, negative cases via `@ts-expect-error`); plain
+  assignability checks silently accept dropped parameters and extra
+  properties — see
+  [generics-and-type-level.md](generics-and-type-level.md).
+
 ## Hygiene (non-negotiable)
 
 - No focused or skipped tests committed (`.only` / `.skip`), no conditional
