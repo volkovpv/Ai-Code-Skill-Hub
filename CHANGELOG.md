@@ -7,7 +7,31 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
 ## [1.4.1] — 2026-07-17
 
-- Every published skill now ships a skill-root `README.md` — English, user-facing documentation for library consumers (what the skill does, key features, how to install it, how to combine it with the host project's rules such as `.claude/rules`): `example-skill` **0.2.0 → 0.2.1**, `typescript-coding` **1.1.0 → 1.1.1**, `hexagonal-service` **2.1.0 → 2.1.1**, `typescript-nestjs` **1.1.0 → 1.1.1** (patch each: documentation only, no rule changes). The validator's auxiliary-document rule gains a second exception: a skill-root `README.md` is allowed alongside `data/README.md` (everything else, e.g. `CHANGELOG.md`, stays forbidden). The installer excludes the skill-root `README.md` from `runtime`-mode installs (the agent reads `SKILL.md`; `full` mode still ships it). Root `README.md` links the new per-skill docs in a dedicated section; AGENTS.md/CLAUDE.md updated to the new policy; tests pin the allowance, the still-forbidden `CHANGELOG.md`, and the runtime-mode exclusion.
+This release rebuilds the `hexagonal-service` skill from the source literature and adds user-facing documentation to every skill in the library. It aggregates the unpublished versions 1.3.0 and 1.4.0 (their full entries are below); the previous published release was 1.2.0.
+
+### `hexagonal-service` 1.0.0 → 2.1.1 — from a hardwired layout to a neutral canon
+
+**2.0.0 — neutral ports-and-adapters canon** (derived from Cockburn & Garrido de Paz, *Hexagonal Architecture Explained*). The skill no longer mandates one directory layout. It is now **neutral by contract on three axes** — languages/frameworks, approaches, and projects: the concrete adoption strategy must be declared in the host project's rules, which always take precedence.
+
+- `references/architecture.md` rewritten as the pattern canon: the invariant core (ports as the app boundary, no source dependencies on actors, runtime-swappable driven actors, technology-neutral contracts, the test wall), the configurator's wiring styles, port design and granularity.
+- New `references/approaches.md`: ways to structure the inside (two-layer, layered, onion/clean) and relations to use cases, DDD, CQRS.
+- New `references/strategies.md`: a catalog of adoption strategies (module-first / layer-first / domain-first / ports-first layouts; walking-skeleton and strangler rollouts; migration paths) plus the exact list of what project rules must declare.
+
+**2.1.0 — rules strengthened** (derived from Vieira, *Designing Hexagonal Architecture with Java*, 2nd ed., folded in as a complement to the Cockburn/Garrido canon).
+
+- New `references/domain-modeling.md`: rich entities, value objects, aggregates with one repository-port per root, specifications, policies, domain services, and the business-knowledge practices (ubiquitous language, subdomains, Event Storming, written-first use cases).
+- Architecture canon extended: Vieira ↔ Cockburn terminology table, extended actor catalog, many-adapters-per-port, "output port is not a repository".
+- Approaches extended: the Domain/Application/Framework three-hexagon dialect, SOLID-to-hexagon mapping, adapter categories, a sharper "when not to use it".
+- Strategies extended: staged hexagon build, layered → hexagonal migration recipe, and new project-declared knobs (DTO policy, DI annotations in the application layer).
+
+### Per-skill documentation (1.4.1)
+
+Every published skill now ships a skill-root `README.md` — English, user-facing docs: what the skill does, key features, how to install it, and how to combine it with the host project's rules (e.g. `.claude/rules`). Linked from the root `README.md`.
+
+- Skill versions: `example-skill` **0.2.0 → 0.2.1**, `typescript-coding` **1.1.0 → 1.1.1**, `hexagonal-service` **2.1.0 → 2.1.1**, `typescript-nestjs` **1.1.0 → 1.1.1** (patch each: documentation only, no rule changes).
+- The validator now allows a skill-root `README.md` (alongside `data/README.md`; other auxiliary docs such as `CHANGELOG.md` stay forbidden); the installer excludes it from `runtime`-mode installs — the agent reads `SKILL.md`, `full` mode still ships it. Tests pin the allowance, the still-forbidden `CHANGELOG.md`, and the runtime-mode exclusion; AGENTS.md/CLAUDE.md updated to the new policy.
+
+**Full Changelog**: https://github.com/volkovpv/Ai-Code-Skill-Hub/compare/v1.2.0...v1.4.1
 
 ## [1.4.0] — 2026-07-17
 
