@@ -1,6 +1,6 @@
 ---
 name: typescript-coding
-description: Universal coding standard and workflow for production TypeScript, deliberately free of any framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no type/lint suppressions, centralized env access, and test-in-the-same-change discipline. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) in any project — application code, a library, a script, or their tests. For ports-and-adapters layering rules combine with the hexagonal-service skill; for NestJS specifics combine with the typescript-nestjs skill.
+description: Universal coding standard and workflow for production TypeScript, deliberately free of any framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, explicit boolean expressions, `??`/optional-chaining, no floating promises, immutable data, no type/lint suppressions, centralized env access, and test-in-the-same-change discipline. Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) in any project — application code, a library, a script, or their tests. For ports-and-adapters layering rules combine with the hexagonal-service skill; for NestJS specifics combine with the typescript-nestjs skill.
 ---
 
 # TypeScript coding (universal)
@@ -22,10 +22,16 @@ uses them, apply those skills on top of this one.
    never swallow an error, wrap with `cause` at most once at the source,
    centralize `process.env` access — see
    [references/errors-config-logging.md](references/errors-config-logging.md).
-3. **Test in the same change.** A code change without its tests is
+3. **Write it lint-clean the first time.** A strict lint stack rejects far more
+   than the compiler and counts warnings too — explicit boolean expressions,
+   `??` over `||`, no floating promises, immutable data, named literals, small
+   shallow functions, JSDoc on the public surface. Follow
+   [references/lint-clean.md](references/lint-clean.md) so the project's `lint`
+   comes back with zero errors and zero warnings.
+4. **Test in the same change.** A code change without its tests is
    incomplete; every bug fix ships a regression test that fails before the
    fix. See [references/testing.md](references/testing.md).
-4. **Self-check before handing off.** Run the convention checker over the
+5. **Self-check before handing off.** Run the convention checker over the
    files you touched:
 
    ```bash
@@ -51,6 +57,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Situation | Read |
 |-----------|------|
 | Choosing types, tsconfig flags, constants, or style | [references/typing-and-style.md](references/typing-and-style.md) |
+| Making code pass a strict linter with zero warnings (booleans, promises, immutability, complexity, JSDoc) | [references/lint-clean.md](references/lint-clean.md) |
 | Errors, `catch` blocks, env access, logging hygiene | [references/errors-config-logging.md](references/errors-config-logging.md) |
 | Writing or reviewing tests | [references/testing.md](references/testing.md) |
 | Applying a verified pattern | [knowledge/patterns.md](knowledge/patterns.md) |
@@ -78,6 +85,13 @@ has been promoted into `knowledge/` or this workflow.
   hardcode a secret or log one.
 - No `console.*` in shipped code — use whatever logging seam the project
   provides.
+- Write to a strict lint stack by default so `lint` returns zero errors **and
+  zero warnings**: explicit boolean expressions (no truthiness on
+  strings/numbers/nullables), `??` over `||`, optional chaining, no floating
+  promises, immutable data (no in-place mutation, no parameter reassignment),
+  named literals over magic values, small shallow functions, and JSDoc with a
+  description on the exported surface — see
+  [references/lint-clean.md](references/lint-clean.md).
 - A code change without its tests is incomplete; do not suppress the type
   checker or linter (`@ts-ignore`, `@ts-nocheck`, `eslint-disable`) to go
   green. Sole exception: a documented upstream limitation of a single lint

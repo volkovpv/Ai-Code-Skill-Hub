@@ -16,6 +16,18 @@ linter are authoritative. Evidence: the masking tests in
 `__test__/skills/test_typescript_coding.py` and the calibrated fixture
 [../data/fixtures/masked_literals.ts](../data/fixtures/masked_literals.ts).
 
+## Truthy checks and `||` defaults fail a strict lint stack
+
+**Applies when** the project runs a type-aware lint stack (typescript-eslint
+`strictTypeChecked` and friends). The compiler accepts `if (str)` and
+`x || fallback`, but the linter does not: `strict-boolean-expressions` rejects
+truthiness on a string, number, or nullable, and `prefer-nullish-coalescing`
+rejects `||` for a default. Write the explicit form (`if (str !== '')`,
+`x ?? fallback`) from the start — these two rules, plus `no-floating-promises`
+and `functional/immutable-data`, produce the bulk of surprise findings on
+otherwise type-correct code. Evidence:
+[../references/lint-clean.md](../references/lint-clean.md).
+
 ## `noUncheckedIndexedAccess` makes indexing return `T | undefined`
 
 **Applies when** you index an array or record. With this flag, `arr[i]` is
