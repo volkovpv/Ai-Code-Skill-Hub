@@ -202,6 +202,73 @@ class TestRules(unittest.TestCase):
         self.assertEqual(codes, [])
 
 
+class TestHttpStatusLiteralRule(unittest.TestCase):
+    """OBS-20260717-001: raw numeric HTTP-status literals go unflagged.
+
+    Regression fixture: data/fixtures/raw_http_status_literal.ts.
+    """
+
+    FIXTURE = SKILL / "data" / "fixtures" / "raw_http_status_literal.ts"
+
+    def test_fixture_flags_exactly_the_three_dirty_positions(self):
+        result = run_checker(str(self.FIXTURE))
+        self.assertEqual(
+            codes_in(result.stdout),
+            ["NEST-HTTP-STATUS-LITERAL"] * 3,
+            result.stdout + result.stderr,
+        )
+
+    def test_http_exception_raw_status_argument_is_flagged(self):
+        codes, _ = check('throw new HttpException("x", 404);', "a.ts")
+        self.assertEqual(codes, ["NEST-HTTP-STATUS-LITERAL"])
+
+    def test_http_code_decorator_raw_argument_is_flagged(self):
+        codes, _ = check("@HttpCode(204) noContent() {}", "a.controller.ts")
+        self.assertEqual(codes, ["NEST-HTTP-STATUS-LITERAL"])
+
+    def test_status_map_entry_raw_key_is_flagged(self):
+        codes, _ = check("const M = new Map([[404, ProblemCode.notFound]]);", "a.ts")
+        self.assertEqual(codes, ["NEST-HTTP-STATUS-LITERAL"])
+
+    def test_test_assertion_raw_status_is_flagged_in_spec_files_only(self):
+        codes, _ = check("expect(res.status).toBe(404);", "a.spec.ts")
+        self.assertEqual(codes, ["NEST-HTTP-STATUS-LITERAL"])
+        # Same literal outside a test-path context: the assertion sub-rule
+        # (toBe/toEqual) is test-file-scoped by design (SKILL suggested fix).
+        codes, _ = check("expect(res.status).toBe(404);", "a.ts")
+        self.assertEqual(codes, [])
+
+    def test_http_status_registry_forms_are_clean(self):
+        for line in (
+            'throw new HttpException("x", HttpStatus.NOT_FOUND);',
+            "@HttpCode(HttpStatus.NO_CONTENT) noContent() {}",
+            "const M = new Map([[HttpStatus.NOT_FOUND, ProblemCode.notFound]]);",
+        ):
+            with self.subTest(line=line):
+                self.assertEqual(check(line, "a.ts")[0], [])
+        codes, _ = check("expect(res.status).toBe(HttpStatus.NOT_FOUND);", "a.spec.ts")
+        self.assertEqual(codes, [])
+
+    def test_non_status_three_digit_number_is_clean(self):
+        # 999 is not a registered HTTP status code.
+        codes, _ = check("const M = new Map([[999, X.thing]]);", "a.ts")
+        self.assertEqual(codes, [])
+        codes, _ = check("expect(count).toBe(999);", "a.spec.ts")
+        self.assertEqual(codes, [])
+
+    def test_number_number_pair_is_not_a_status_map_entry(self):
+        # Two numeric literals paired together (e.g. coordinates) are not a
+        # status-map entry: the value slot must look like an identifier.
+        codes, _ = check("const P = [[404, 200]];", "a.ts")
+        self.assertEqual(codes, [])
+
+    def test_literal_inside_comment_or_string_is_not_flagged(self):
+        codes, _ = check("// use HttpException(body, 404) here", "a.ts")
+        self.assertEqual(codes, [])
+        codes, _ = check('const doc = "@HttpCode(204)";', "a.ts")
+        self.assertEqual(codes, [])
+
+
 class TestScannerConformance(ScannerConformanceMixin, unittest.TestCase):
     """The shared scanner battery, run against this skill's checker copy."""
 

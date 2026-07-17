@@ -30,3 +30,12 @@ runtime mode):
 - `infrastructure/user.repository.ts` — `NEST-DI-TOKEN` (inline `Symbol()`)
   exactly once; its raw `throw` is deliberately NOT flagged — the layer rule
   does not apply to infrastructure, pinning the layer-difference behaviour.
+
+Standalone fixture (not part of `sample-module/`, referenced directly by its
+own tests):
+
+- `raw_http_status_literal.ts` — a raw numeric HTTP-status literal used as an
+  `HttpException` status argument, an `@HttpCode(...)` decorator argument,
+  and a status-map entry key, each paired with the equivalent
+  `HttpStatus.*`-based clean form; evidence for the `NEST-HTTP-STATUS-LITERAL`
+  gap (observation OBS-20260717-001).
