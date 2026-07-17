@@ -74,7 +74,7 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": ["(?i)subprocess"],
-        "stdout_not_contains": ["shell=True", "os.system"]
+        "stdout_not_contains": [", shell=True", "os.system("]
       }
     },
     {

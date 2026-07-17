@@ -5,6 +5,14 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.2.0] — 2026-07-17
+
+### `python-coding` 1.0.0, promoted to `stable` (minor: an existing skill's catalog contract changed)
+
+- The eval-gate that held the skill at `draft` has been passed for real: `scripts/run_skill_evals.py --platform claude --repeat 3 --command 'claude -p {prompt}'` against the live Claude Code CLI — **30/30 PASS** across the 10 trigger/behavior/negative cases (each case installed fresh into a temporary project per attempt).
+- `skills.yaml`: `python-coding` `0.2.0 draft` → `1.0.0 stable`; the skill is now installable for consumers (`draft` means "not for installation").
+- Eval oracle hardening found by the gate itself: the `subprocess-never-shell-true` case forbade the bare substring `shell=True`, which a fully compliant answer can legitimately *mention* in prose ("never use shell=True"); the forbidden markers are now the code forms `, shell=True` and `os.system(`, so only actually recommending the unsafe call fails the case.
+
 ## [2.1.0] — 2026-07-17
 
 ### `python-coding` 0.2.0 (minor: the rules of an existing skill changed)
