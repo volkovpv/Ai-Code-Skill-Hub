@@ -1,6 +1,6 @@
 ---
 name: hexagonal-service
-description: Canonical Hexagonal Architecture (ports and adapters) standard — language- and framework-agnostic and project-neutral. Covers the invariant core of the pattern (ports as the app boundary, driving/driven actors, thin adapters, the configurator/composition root, the dependency-inward rule, technology-neutral port contracts, test doubles at every port, a single-root typed domain error flow) and the major approaches to applying it (strict two-layer, layered domain → application → infrastructure, onion/clean refinements, DDD, CQRS). It never picks an adoption strategy — the host project's rules must declare one (module-first, domain-first, layer-first, ports-first, walking skeleton, strangler, …) and always take precedence. Use when structuring a module, port, use case, or adapter, when deciding where code belongs, or when reviewing boundaries and error flow — in any language, under any framework.
+description: Canonical Hexagonal Architecture (ports and adapters) standard — language- and framework-agnostic and project-neutral. Covers the invariant core (ports as the app boundary, driving/driven actors, thin adapters, the configurator, the dependency-inward rule, technology-neutral contracts, test doubles at every port, single-root typed error flow), the major approaches (two-layer, layered incl. the Domain/Application/Framework three-hexagon dialect, onion/clean, DDD, CQRS, SOLID mapping), and domain modeling (entities, value objects, aggregates, specifications). It never picks an adoption strategy — the host project's rules must declare one (module-first, domain-first, layer-first, ports-first, walking skeleton, staged hexagon build, strangler, layered→hexagonal migration, …) and always take precedence. Use when structuring a module, port, use case, or adapter, deciding where code belongs, or reviewing boundaries and error flow — in any language, under any framework.
 ---
 
 # Hexagonal service (ports and adapters)
@@ -39,7 +39,9 @@ contract** on three axes:
 3. **Build inside-out.** For a new feature follow the recipe in
    [references/checklist.md](references/checklist.md): domain error → input
    port → application DTO → use case → transport DTO → adapters → error
-   mapping → wiring → integration test.
+   mapping → wiring → integration test. When shaping the domain core itself
+   (entities, value objects, aggregates, specifications), see
+   [references/domain-modeling.md](references/domain-modeling.md).
 4. **Route every error along the one sanctioned path.** Typed domain errors
    from a single root; foreign errors wrapped exactly once at the driven
    adapter with their cause; mapped to transport exactly once at the boundary
@@ -56,8 +58,9 @@ Do not preload the whole skill; open a file only when its trigger fires.
 
 | Situation | Read |
 |-----------|------|
-| Pattern canon: ports, actors, adapters, configurator, boundary placement, dependency rule | [references/architecture.md](references/architecture.md) |
-| Comparing or choosing an approach: two-layer vs layered, onion/clean, DDD, CQRS, use cases, nesting | [references/approaches.md](references/approaches.md) |
+| Pattern canon: ports, actors, adapters, configurator, boundary placement, dependency rule, terminology across the literature | [references/architecture.md](references/architecture.md) |
+| Comparing or choosing an approach: two-layer vs layered, three-hexagon dialect, onion/clean, DDD, CQRS, SOLID, adapter categories, use cases, nesting, when not to use the pattern | [references/approaches.md](references/approaches.md) |
+| Modeling the domain core: entities, value objects, aggregates, specifications, policies, domain services, ubiquitous language, subdomains, written-first use cases | [references/domain-modeling.md](references/domain-modeling.md) |
 | Adopting the pattern in a project: layout/rollout/migration strategies; what project rules must declare | [references/strategies.md](references/strategies.md) |
 | Anything about errors: throwing, catching, wrapping, mapping | [references/error-flow.md](references/error-flow.md) |
 | Validation, config, secrets, logging, correlation ids, external calls | [references/boundaries-and-io.md](references/boundaries-and-io.md) |

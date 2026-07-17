@@ -30,6 +30,21 @@ framework and no other layer; `application` imports `domain` but never
 cases, output ports phrased in domain terms). This approach adds discipline
 useful in medium-to-large codebases at the cost of more indirection.
 
+A widely read dialect of this approach is Vieira's **three-hexagon model**
+(Domain / Application / Framework "hexagons"), where "hexagon" names a
+layer: the Domain hexagon holds entities, value objects, specifications and
+domain services and depends on nothing; the Application hexagon holds
+use-case contracts and their implementations plus output-port declarations
+and controls only data flow — no business rule lives there; the Framework
+hexagon holds all adapters and every technology decision. Its dependency
+chain (Framework → Application → Domain) is this skill's inward rule, and
+its maintainability claim is the selling point of the whole approach: a
+business-rule change touches only the domain, a new technology touches only
+the framework layer. Mind the vocabulary clash — Vieira also swaps the
+names *use case* and *input port*; see the terminology table in
+[architecture.md](architecture.md). Domain building blocks for this and any
+layered approach are cataloged in [domain-modeling.md](domain-modeling.md).
+
 ### Onion / clean refinements
 
 Onion architecture and clean architecture prescribe concentric rings inside
@@ -48,6 +63,19 @@ the database is not "at the bottom" but **outside**, exactly like the UI —
 the core has zero compile-time dependencies on either. If a diagram shows
 the domain importing a repository implementation, it is n-tier with extra
 hexagons drawn on it.
+
+Layered is the *accidental default*: model/repository/service/controller
+packages with downward dependencies emerge without anyone choosing an
+architecture. Its decoupling is partial — the service layer depends
+directly on the data layer, so a persistence change (a database swap, a
+lost ORM feature) ripples into business rules. The observable differences
+land on two spots: the **driven side** (layered has no output-port
+abstraction, so a new data source disturbs core logic; hexagonal adds an
+adapter) and **testability** (a rule that needed a running database becomes
+a pure unit test on a domain entity). The driving side barely changes — an
+input adapter looks much like a REST layer — so judge any "we're hexagonal"
+claim by the driven side. Migration from layered is a cataloged strategy:
+see "Layered → hexagonal" in [strategies.md](strategies.md).
 
 ## Relations to neighboring concepts
 
@@ -84,6 +112,42 @@ nothing in CQRS forces that, and a CQRS system as a whole (with its UIs and
 repositories) is not itself a hexagon. Treat CQRS as a way to use hexagons
 in a larger system, not as an instance of the pattern.
 
+### SOLID
+
+SOLID and the hexagon pursue the same goal at two scales: the pattern
+governs the boundary, SOLID governs the code on both sides of it. The
+mapping:
+
+- **SRP** — one actor per changeable unit: a class serving two stakeholders
+  means fixing one silently breaks the other. Inside the hexagon this
+  motivates per-actor behavior implementations; at module scale it *is* the
+  bounded context ([domain-modeling.md](domain-modeling.md)). Premature
+  abstraction ("a base class for all future implementations") is itself an
+  SRP hazard.
+- **OCP** — extend the domain by adding implementations of an existing
+  abstraction (a new subtype, a new specification), not by editing logic
+  that already serves existing features.
+- **LSP** — subtypes honoring the supertype contract are what make
+  domain-typed port signatures safe: a use case accepts the abstract domain
+  type and works with any subtype.
+- **ISP** — a driving port carries only the operations its clients actually
+  need; a fat interface forcing dummy implementations is split per client.
+- **DIP** — the SOLID name for the binding rule: adapters and the
+  composition root depend on the port *interface* (the stable contract),
+  never on the implementation; the configurator supplies the concrete class.
+
+### Adapter categories
+
+An adapter *category* is the group of adapters enabling one technology (the
+REST category, the gRPC category, one per database). Multiple **driving**
+categories are cheap — they share the same input ports. Multiple **driven**
+categories are the maintainability hazard: each needs its own domain-model
+translation, and those multiply per capability. The classic anti-pattern is
+the unfinished migration where two driven adapters (old store, new
+subsystem) serve the *same* purpose indefinitely, doubling translation
+maintenance. Weigh the translation tax consciously before adding a driven
+category.
+
 ### Component + Strategy and nested hexagons
 
 Ports-and-adapters is a special case of the general Component + Strategy
@@ -108,8 +172,23 @@ hexagon.
 | Many subsystems owned by many teams | One hexagon per subsystem at each team's authority edge |
 
 The costs are real: extra interfaces and indirection, a configurator to
-design, a steeper learning curve, slower project start. They pay off through
-the test wall (fast in-memory tests, leak detection), swappable technology,
-and delayed technology decisions. A one-off script does not need a hexagon;
-a long-running system almost always does. Whatever is chosen must be written
-into the host project's rules — this skill never decides for the project.
+design, a steeper learning curve, slower project start, and onboarding —
+layered is what most developers already know, the hexagon needs ramp-up
+time. They pay off through the test wall (fast in-memory tests, leak
+detection), swappable technology, and **postponed technology decisions** —
+the design does not have to pick REST vs gRPC or one database vendor before
+the core exists, and frameworks stay ordinary libraries instead of the
+center of the design. A further payoff at organization scale:
+the pattern is a standardization blueprint — services that share the
+structure give a developer switching projects a shallow learning curve.
+
+When *not* to use it: a one-off script or a small app doing one or two
+things (a hexagon there is a gun brought to kill an ant); a purely
+technological problem domain (a framework, a driver) where there is no
+business core to protect. A medium-to-large, long-lived, frequently
+changing system — especially one expecting infrastructure-level change —
+almost always repays the ceremony. And it is not a silver bullet: it cannot
+fix debt caused by a team's tolerance for complexity; it only helps teams
+already committed to keeping things simple. Whatever is chosen must be
+written into the host project's rules — this skill never decides for the
+project.

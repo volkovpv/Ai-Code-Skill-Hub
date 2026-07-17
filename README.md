@@ -528,7 +528,7 @@ uv run coverage report
 # воркеров по числу всех ядер (грузит машину) и на холодную идёт часами. Локально
 # не запускайте его целиком — прогоняйте мутации по одному изменённому файлу:
 uv run python scripts/mutation.py security               # только security.py, воркеров = CPU−2
-uv run python scripts/mutation.py -j 8 validator          # ещё щадящее по CPU
+uv run python scripts/mutation.py -j 1 validator          # ещё щадящее по CPU
 uv run python scripts/mutation.py src/skill_library/installer.py  # можно и путём к файлу
 uv run python scripts/mutation.py --list                  # какие модули можно скоупить
 # Файл вне mutation-scope — no-op (exit 0). Каталог `mutants/` не удаляйте: кэш

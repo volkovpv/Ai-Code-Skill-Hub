@@ -48,7 +48,12 @@ pattern.
   (primary)** actor initiates a conversation with the app; a **driven
   (secondary)** actor is called by the app. The same party can be driving in
   one conversation and driven in another; tests are a driving actor, test
-  doubles are driven actors.
+  doubles are driven actors. Less obvious members of the catalog: health
+  probes and monitoring agents are driving actors; another hexagonal system
+  is a driving actor when its driven adapter calls your driving adapter over
+  the network; a **message broker is a driven actor even when messages flow
+  inbound** — the app initiates the conversation by subscribing, so the
+  broker sits behind a driven port whether the app produces or consumes.
 - **Adapters** — the translation code between an actor's technology and a
   port's contract. A driving adapter (controller, CLI, message consumer,
   GUI) converts technology input into port calls; a driven adapter
@@ -89,6 +94,43 @@ pattern.
   never reused.
 - Signatures are expressed in domain terms (entities, value objects, ids) —
   never transport DTOs, ORM models, or vendor types.
+- **Ports fan out; adapters multiply, ports don't.** Any number of driving
+  adapters (REST, CLI, message consumer) may attach to the same input port,
+  and any number of driven adapters (relational DB, file, broker — reactive
+  or imperative) may implement the same output port. Adding or removing an
+  adapter never touches the core; taken together, the driving adapters *are*
+  the system's API.
+- **An output port is not a repository.** It expresses the app's need to
+  deal with external data or effects of any kind — storage, messaging,
+  filesystem, another service — without implying where they come from.
+  Extending a framework's repository base type as a "port" is a leaking
+  abstraction: inherited technology methods enter the contract uninvited.
+- **The input-port contract hides its data needs.** Output ports appear only
+  in the use case's implementation, never in the input-port interface — what
+  the app offers to driving actors is independent of what it must fetch to
+  deliver it.
+
+## Terminology in the literature
+
+Two vocabularies circulate for the same structure. This skill uses the
+Cockburn/Garrido convention; Vieira ("Designing Hexagonal Architecture with
+Java") swaps two of the names. When reading or citing, translate:
+
+| This skill (Cockburn) | Vieira |
+|-----------------------|--------|
+| driving/primary actor, driven/secondary actor | driver actor, driven actor |
+| driving adapter / driven adapter | input adapter / output adapter |
+| **input port** (the interface) | **use case** (the interface) |
+| **use case** (the implementation) | **input port** (the implementation) |
+| output port (required interface) | output port — same |
+| application/request DTO | command |
+| domain core + application ring (the inside) | Domain hexagon + Application hexagon |
+| adapters/infrastructure (the outside) | Framework hexagon |
+
+Vieira's "three hexagons" name layers, not nested components — his
+dependency direction (Framework → Application → Domain) is exactly this
+skill's inward rule, and the no-nesting rule of
+[approaches.md](approaches.md) is untouched.
 
 ## Symmetry and asymmetry
 
@@ -120,7 +162,14 @@ once the project's approach introduces application/domain structure (see
   never a concrete adapter. It throws only typed domain errors.
   Infrastructure limits (timeouts, retries, page sizes) arrive as parameters
   from configuration via the composition root; a use case never reads config
-  itself.
+  itself. Orchestration is its whole job: it sets the execution order,
+  coordinates domain objects and output ports, and holds no business rule
+  itself — rules live in the domain. Use cases may call other use cases.
+  *Default vs project choice:* the **domain is framework-free under every
+  strategy — non-negotiable**; whether the application layer may carry DI
+  container annotations (as some schools allow) is a wiring-strategy choice
+  the project rules must declare explicitly ([strategies.md](strategies.md));
+  undeclared means the strict default: plain classes, wired externally.
 - Assemble use cases in the composition root with the declared type being
   the **port** (interface), not the concrete class; bind each output port to
   its implementation once.
@@ -128,7 +177,15 @@ once the project's approach introduces application/domain structure (see
   port → response DTO, with validation at the boundary. Driven: implements
   an output port, returns domain objects via a mapper, and translates
   infrastructure errors into domain errors (see
-  [error-flow.md](error-flow.md)). Business logic in an adapter is a defect.
+  [error-flow.md](error-flow.md)). Business logic in an adapter is a defect —
+  so is choreography: a driving adapter calls one input port; chaining
+  several ports or enforcing a rule before the call is use-case work that
+  has leaked out.
+  *Default vs project choice:* the invariants are that the domain never sees
+  transport shapes and port signatures stay domain-typed; whether separate
+  application/response DTO types are mandatory or domain objects may cross
+  the port directly is a DTO policy the project rules must declare;
+  undeclared means the strict default: the full DTO chain above.
 - **A mapper is the only domain ↔ persistence-model bridge.** A stateless
   `toDomain()` / `toPersistence()` pair is the single translation point;
   passing a domain object straight into an ORM model, or leaking a model out

@@ -40,9 +40,9 @@ skills:
       observation_review_required: true
   - name: hexagonal-service
     path: skills/hexagonal-service
-    version: 2.0.0
+    version: 2.1.0
     status: stable
-    summary: Language-, framework- and project-neutral ports-and-adapters canon - invariant core, major approaches, and a catalog of adoption strategies declared per project.
+    summary: Language-, framework- and project-neutral ports-and-adapters canon - invariant core, major approaches, domain modeling, and a catalog of adoption strategies declared per project.
     platforms: [universal, codex, opencode, claude, hermes]
     license: MIT
     content_policy:

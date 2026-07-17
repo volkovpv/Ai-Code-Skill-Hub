@@ -56,6 +56,20 @@ Simple to explain and fine for services with one dominant business area;
 degrades as areas multiply, because one feature's code is scattered across
 all layers and module boundaries have no directory expression.
 
+The Vieira variant of this layout names the layers `domain/`,
+`application/`, `framework/` and makes **each layer a separate module of
+the language's build/module system**, which upgrades the layer boundary
+from convention to enforcement: default-deny visibility across module
+lines, dependency declarations mirroring the inward rule (framework
+requires application + domain; application requires domain; domain requires
+nothing), and each module exporting only what the next layer out
+legitimately consumes (domain types, port interfaces). In this variant all
+ports live in the application module, and a small separate
+**bootstrap/aggregator module** — not any hexagon layer — owns framework
+startup, wiring, and platform packaging concerns. Where the language offers
+such modules, prefer them; the import-graph linter remains the fallback and
+the CI backstop either way.
+
 ### Domain-first (feature slices)
 
 Top-level directories are business capabilities; each slice carries its own
@@ -103,6 +117,21 @@ technology stacks. The per-feature recipe in
 [checklist.md](checklist.md) is the inside-out order applied at feature
 scale.
 
+### Staged hexagon build (domain → application → framework)
+
+Vieira's disciplined form of inside-out for the layered approach: build and
+**green-test one layer completely before starting the next**. Domain first
+(value objects → entities → specifications → domain services;
+[domain-modeling.md](domain-modeling.md)), each stage's passing suite being
+the ticket to the next. Then the application layer: write use cases as
+scenarios first, derive the input-port contracts from them, and declare the
+output-port interfaces now, before any implementation exists — deferring
+every technology decision. Last the framework layer, implementing **driven
+adapters before driving adapters** (driving-side wiring refers to the
+driven side). The test tiers stack accordingly: pure domain unit tests;
+scenario tests driving input ports with doubles at the output ports;
+boundary tests driving the adapters, which exercise the whole stack.
+
 ## Migration strategies (existing systems)
 
 - **Test-wall-first:** before restructuring anything, put characterization
@@ -117,6 +146,17 @@ scale.
   the legacy one, route one capability at a time through the new hexagon,
   retire legacy paths as they empty. Combine with an ACL-style driven
   adapter to talk to the legacy system during the transition.
+- **Layered → hexagonal refactoring** (for the accidental n-tier default —
+  model/repository/service/controller): (1) turn each ORM entity into a
+  behavior-rich plain domain entity; the ORM entity survives *outside*,
+  behind a mapper; (2) push service-layer business logic into the domain
+  entities — the anti-anemic move; (3) turn each repository into an output
+  port: state the need for external data without implying a database;
+  (4) split each service class into a use-case contract plus its
+  implementation orchestrating domain logic through the output ports;
+  (5) keep the API layer almost as is — it becomes the driving adapter. The
+  driving side barely changes; the driven side is where the architecture
+  actually changes.
 
 ## What the project rules must declare
 
@@ -127,7 +167,13 @@ A project adopting this skill records, in its own rules:
 - **port granularity** (per actor intention vs per use case) and naming
   conventions for ports and bindings;
 - **wiring mechanics**: constructor/setter injection or lookup, the DI
-  container if any, and where composition roots live;
+  container if any, and where composition roots live — including whether DI
+  container annotations are permitted in the application layer (the domain
+  is framework-free under every strategy; undeclared means they are not);
+- the **DTO policy**: whether separate application/response DTO types are
+  mandatory at the ports or domain objects may cross them directly
+  (undeclared means the full DTO chain of
+  [architecture.md](architecture.md) is mandatory);
 - where the **error-mapping table** and boundary filter live
   ([error-flow.md](error-flow.md) defines the flow, the project fixes the
   place);

@@ -13,9 +13,15 @@ discipline, not the paths.
    follow the de-facto layout of the existing code.
 1. **Domain error** — add the typed error (single root, machine `code`) for
    the new failure mode.
-2. **Input port** — declare the input-port interface (one `execute()`-style
-   entry, domain-typed signature) and its binding token.
-3. **Application DTO** — plain immutable Input/Result types.
+2. **Input port** — declare the input-port interface and its binding token.
+   Shape per the project's declared granularity: one `execute()`-style entry
+   per use case (use-case-level), or one intention-named interface bundling
+   related operations (intention-level). Signature is domain-typed either
+   way. Writing the use case down first (a scenario that later becomes the
+   port's test — [domain-modeling.md](domain-modeling.md)) is the cheapest
+   way to get the contract right.
+3. **Application DTO** — plain immutable Input/Result types (skip only if
+   the project's declared DTO policy passes domain objects through ports).
 4. **Use case** — implement the input port; constructor takes only output
    ports and application services; throws only domain errors.
 5. **Output ports** — if new outbound capability is needed, declare the
@@ -42,8 +48,13 @@ discipline, not the paths.
       granularity, wiring) — no private layout invented.
 - [ ] Dependencies point inward; the domain core is framework-free; no
       cross-module import bypasses a module's public surface.
-- [ ] One use case = one input port = one entry point; the constructor takes
-      only ports/services.
+- [ ] Port granularity matches the project's declaration (one use case = one
+      input port, or intention-level bundles) — not mixed ad hoc; the use
+      case's constructor takes only ports/services.
+- [ ] A driving adapter calls exactly one input port — no multi-port
+      choreography or rule-checking before the call.
+- [ ] Writes to an aggregate go through its root's port; no sub-entity grew
+      its own persistence operation.
 - [ ] Only typed domain errors are thrown in `domain`/`application`; the one
       wrap lives in the driven adapter and preserves the cause; no
       catch-and-rethrow in intermediate layers; no empty catch.
