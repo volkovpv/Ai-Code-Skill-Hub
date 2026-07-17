@@ -38,6 +38,17 @@ class TestStructure(unittest.TestCase):
         description = fm["description"]
         self.assertIn("language- and framework-agnostic", description)
         self.assertIn("ports and adapters", description)
+        # The skill is neutral to projects too: the adoption strategy is
+        # declared in the host project's rules, never by the skill.
+        self.assertIn("project-neutral", description)
+        self.assertIn("host project's rules", description)
+        for strategy in ("module-first", "domain-first", "layer-first"):
+            self.assertIn(strategy, description)
+
+    def test_skill_md_routes_to_approaches_and_strategies(self):
+        body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("references/approaches.md", body)
+        self.assertIn("references/strategies.md", body)
 
     def test_no_optional_layers_created_for_structure(self):
         # The skill is references-only; empty layer dirs would violate AGENTS.md.
@@ -56,6 +67,35 @@ class TestNeutrality(unittest.TestCase):
                 continue  # the adapter may name sibling skills
             for token in self.FORBIDDEN:
                 self.assertNotIn(token, text, f"{rel} mentions {token!r}")
+
+
+class TestStrategyCatalog(unittest.TestCase):
+    """The skill catalogs strategies but defers the choice to project rules."""
+
+    def setUp(self) -> None:
+        self.strategies = (SKILL / "references" / "strategies.md").read_text(encoding="utf-8")
+        self.approaches = (SKILL / "references" / "approaches.md").read_text(encoding="utf-8")
+
+    def test_layout_strategies_are_cataloged(self):
+        for strategy in ("Module-first", "Layer-first", "Domain-first", "Ports-first"):
+            self.assertIn(strategy, self.strategies)
+
+    def test_rollout_and_migration_strategies_are_cataloged(self):
+        for strategy in ("Walking skeleton", "Inside-out", "Strangler", "Seam"):
+            self.assertIn(strategy, self.strategies)
+
+    def test_choice_is_deferred_to_project_rules(self):
+        self.assertIn("declared by the project, never by this skill", self.strategies)
+        self.assertIn("What the project rules must declare", self.strategies)
+
+    def test_approaches_cover_the_canonical_spectrum(self):
+        for approach in ("two-layer", "Layered hexagonal", "Onion", "clean",
+                         "Domain-driven design", "CQRS", "Component + Strategy"):
+            self.assertIn(approach, self.approaches)
+
+    def test_pattern_does_not_nest(self):
+        normalized = " ".join(self.approaches.replace("**", "").split())
+        self.assertIn("does not nest", normalized)
 
 
 class TestErrorFlowInvariants(unittest.TestCase):

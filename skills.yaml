@@ -40,9 +40,9 @@ skills:
       observation_review_required: true
   - name: hexagonal-service
     path: skills/hexagonal-service
-    version: 1.0.0
+    version: 2.0.0
     status: stable
-    summary: Language- and framework-agnostic ports-and-adapters architecture standard with a single sanctioned error flow.
+    summary: Language-, framework- and project-neutral ports-and-adapters canon - invariant core, major approaches, and a catalog of adoption strategies declared per project.
     platforms: [universal, codex, opencode, claude, hermes]
     license: MIT
     content_policy:
