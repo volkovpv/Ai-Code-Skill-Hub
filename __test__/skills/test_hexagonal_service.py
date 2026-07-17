@@ -38,6 +38,17 @@ class TestStructure(unittest.TestCase):
         description = fm["description"]
         self.assertIn("language- and framework-agnostic", description)
         self.assertIn("ports and adapters", description)
+        # The skill is neutral to projects too: the adoption strategy is
+        # declared in the host project's rules, never by the skill.
+        self.assertIn("project-neutral", description)
+        self.assertIn("host project's rules", description)
+        for strategy in ("module-first", "domain-first", "layer-first"):
+            self.assertIn(strategy, description)
+
+    def test_skill_md_routes_to_approaches_and_strategies(self):
+        body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("references/approaches.md", body)
+        self.assertIn("references/strategies.md", body)
 
     def test_no_optional_layers_created_for_structure(self):
         # The skill is references-only; empty layer dirs would violate AGENTS.md.
@@ -56,6 +67,86 @@ class TestNeutrality(unittest.TestCase):
                 continue  # the adapter may name sibling skills
             for token in self.FORBIDDEN:
                 self.assertNotIn(token, text, f"{rel} mentions {token!r}")
+
+
+class TestStrategyCatalog(unittest.TestCase):
+    """The skill catalogs strategies but defers the choice to project rules."""
+
+    def setUp(self) -> None:
+        self.strategies = (SKILL / "references" / "strategies.md").read_text(encoding="utf-8")
+        self.approaches = (SKILL / "references" / "approaches.md").read_text(encoding="utf-8")
+
+    def test_layout_strategies_are_cataloged(self):
+        for strategy in ("Module-first", "Layer-first", "Domain-first", "Ports-first"):
+            self.assertIn(strategy, self.strategies)
+
+    def test_rollout_and_migration_strategies_are_cataloged(self):
+        for strategy in ("Walking skeleton", "Inside-out", "Strangler", "Seam"):
+            self.assertIn(strategy, self.strategies)
+
+    def test_choice_is_deferred_to_project_rules(self):
+        self.assertIn("declared by the project, never by this skill", self.strategies)
+        self.assertIn("What the project rules must declare", self.strategies)
+
+    def test_approaches_cover_the_canonical_spectrum(self):
+        for approach in ("two-layer", "Layered hexagonal", "Onion", "clean",
+                         "Domain-driven design", "CQRS", "Component + Strategy"):
+            self.assertIn(approach, self.approaches)
+
+    def test_pattern_does_not_nest(self):
+        normalized = " ".join(self.approaches.replace("**", "").split())
+        self.assertIn("does not nest", normalized)
+
+    def test_three_hexagon_dialect_and_solid_are_cataloged(self):
+        # Additions sourced from Vieira, "Designing Hexagonal Architecture
+        # with Java" (2nd ed.), folded in as approach-level material.
+        self.assertIn("three-hexagon model", self.approaches)
+        self.assertIn("SOLID", self.approaches)
+        self.assertIn("Adapter categories", self.approaches)
+
+    def test_staged_build_and_layered_migration_are_cataloged(self):
+        for strategy in ("Staged hexagon build", "Layered → hexagonal"):
+            self.assertIn(strategy, self.strategies)
+
+    def test_di_and_dto_policies_are_project_declared(self):
+        # The conflicts with Vieira are resolved as project-declared choices
+        # with strict defaults; the declaration list must carry both knobs.
+        declares = self.strategies.split("What the project rules must declare")[1]
+        self.assertIn("DTO policy", declares)
+        self.assertIn("container annotations", declares)
+
+
+class TestDomainModeling(unittest.TestCase):
+    """Domain building blocks live in their own routed reference file."""
+
+    def setUp(self) -> None:
+        self.doc = (SKILL / "references" / "domain-modeling.md").read_text(encoding="utf-8")
+
+    def test_building_blocks_are_covered(self):
+        for block in ("anemic", "Value objects", "Aggregates", "Specifications",
+                      "Policies", "Domain services"):
+            self.assertIn(block, self.doc)
+
+    def test_ddd_practices_are_covered(self):
+        for practice in ("Ubiquitous language", "Subdomains", "Bounded contexts",
+                         "Event Storming"):
+            self.assertIn(practice, self.doc)
+
+    def test_skill_md_routes_to_domain_modeling(self):
+        body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("references/domain-modeling.md", body)
+
+
+class TestTerminologyBridge(unittest.TestCase):
+    """The skill keeps the Cockburn vocabulary and maps Vieira's onto it."""
+
+    def test_architecture_carries_the_mapping_table(self):
+        doc = (SKILL / "references" / "architecture.md").read_text(encoding="utf-8")
+        self.assertIn("Terminology in the literature", doc)
+        self.assertIn("Vieira", doc)
+        # The load-bearing inversion both vocabularies must agree on:
+        self.assertIn("**input port** (the interface)", doc)
+        self.assertIn("**use case** (the implementation)", doc)
 
 
 class TestErrorFlowInvariants(unittest.TestCase):

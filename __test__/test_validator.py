@@ -248,6 +248,20 @@ class TestLayoutRules(TempDirTestCase):
         problems = "\n".join(validate_skill_dir(skill))
         self.assertIn("references/README.md: auxiliary documents are not allowed", problems)
 
+    def test_skill_root_readme_is_allowed(self):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "documented-skill")
+        (skill / "README.md").write_text("# Documented skill\n\nUser docs.\n", encoding="utf-8")
+        problems = validate_skill_dir(skill)
+        self.assertFalse(any("README.md" in p for p in problems), problems)
+
+    def test_skill_root_changelog_stays_forbidden(self):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "logged-skill")
+        (skill / "CHANGELOG.md").write_text("# nope\n", encoding="utf-8")
+        problems = "\n".join(validate_skill_dir(skill))
+        self.assertIn("CHANGELOG.md: auxiliary documents are not allowed", problems)
+
     def test_executable_suffixes_belong_in_scripts_only(self):
         skills_dir = self.make_dir("skills")
         skill = write_skill(skills_dir, "exec-skill")

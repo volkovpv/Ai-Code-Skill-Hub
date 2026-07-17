@@ -1,86 +1,195 @@
-# Architecture: hexagonal, module-first
+# The pattern canon: ports and adapters
 
-A service is a set of bounded-context **modules**. Inside a module, code is
-laid out by layers and assembled at a single composition root. The shape does
-not drift between modules. Everything below is language-neutral; file-name
-suffixes and DI mechanics are defined by the language/framework skill of the
-host project.
+The official pattern name is **Ports & Adapters**; "Hexagonal Architecture"
+is its nickname (the number six means nothing — a system has as many ports
+as it needs). Everything here is language-, framework-, and project-neutral;
+concrete layouts and mechanics come from the host project's declared
+strategy (see [strategies.md](strategies.md)).
 
-## Module shape
+## What the pattern requires — the invariant core
 
-```text
-modules/<module>/
-├── domain/                     # PURE core — no frameworks at all
-│   ├── entities/  value-objects/  events/  errors/  constants/  policies/
-│   └── ports/
-│       ├── in/                 # input ports (use-case contracts) + binding tokens
-│       └── out/                # output ports (repositories, clients, publishers)
-├── application/
-│   ├── dto/                    # plain immutable Input/Result types
-│   ├── use-cases/              # input-port implementations
-│   └── services/               # orchestration reused by 2+ use cases
-├── infrastructure/
-│   ├── adapters/
-│   │   ├── driving/            # controllers, message handlers, auth gates, error mappers
-│   │   └── driven/             # repositories, clients, producers, storage
-│   └── persistence/            # ORM models, mappers, persistence constants
-├── providers/                  # composition root: factory/binding registrations
-├── <module entry>              # DI registration (wires providers)
-└── <public barrel/index>       # public surface: input-port tokens + domain types
-```
+These hold in every approach and every strategy; violating any of them means
+the system is not ports-and-adapters, whatever the diagrams say:
 
-One concept lives in one file; a module exposes a single public entry point
-(barrel/`__init__`/index) through which all cross-module imports go.
+- The app defines a **provided or required interface for every external
+  interaction**: driving ports (provided interfaces, called by driving
+  actors) and driven ports (required interfaces, implemented by driven
+  actors). The ports define the true boundary of the app and belong to it.
+- The app has **no source dependency on any actor or adapter** — all
+  compile-time dependencies point inward to the app.
+- **Driven actors are configurable at runtime**: the app can be wired to
+  production technology, a test double, or an in-memory fake without
+  recompiling.
+- External actors interact **only through the ports** — nothing reaches
+  inside the hexagon directly.
+- Port contracts are **technology-neutral**: they use business terms only,
+  never transport, storage, or vendor vocabulary.
 
-## The dependency rule — inward only
+What is explicitly **outside the pattern**: how you structure the inside of
+the app (layers, DDD, use cases, a ball of mud — your choice; see
+[approaches.md](approaches.md)), how you organize adapters and folders, and
+how you implement the configurator. Those are approach and strategy
+decisions — deliberate, recorded in the project rules, but not part of the
+pattern.
 
-- `domain` imports **no** framework (web, ORM, DB drivers, brokers, HTTP
-  clients, crypto/JWT, loggers, schema validators, cloud SDKs) and no other
-  layer.
-- `application` does not import `infrastructure` or the composition root;
-  where the language allows it, framework base types may appear as
-  **type-only** references, never as runtime imports.
-- `infrastructure` talks to `application` only through ports; driving and
-  driven adapters are siblings and never import each other. The composition
-  root is imported only by the module entry.
-- **Single boundary exception:** an input port may reference **types** from
-  `application/dto` (types only, never use-case implementations).
-- Cross-module import goes only through the target module's public barrel,
-  which exports input-port tokens and domain types — never use-case classes,
-  repositories, DI factories, or the module entry itself.
-- Cyclic dependencies are forbidden. Enforce the boundaries with a machine
-  import-graph check (dependency-cruiser, import-linter, or equivalent) that
-  blocks CI. Never relax a boundary rule to get a green run.
+## The elements
 
-## Ports and binding
+- **App (hexagon, core)** — all the business logic, written only in business
+  terms, with no reference to any technology. Anything the team cannot
+  change the interface of (database, UI, third-party API, another team's
+  subsystem) is outside.
+- **Ports** — interaction points grouped by *intention* of the conversation.
+  Name each port for its purpose: "for placing orders", "for getting tax
+  rates", "for notifying shipment". Common driving kinds: for using the
+  system, for administering it, for configuring it. Common driven kinds: for
+  getting data from a repository, for notifying a recipient, for controlling
+  a device.
+- **Actors** — anything with behavior outside the app. A **driving
+  (primary)** actor initiates a conversation with the app; a **driven
+  (secondary)** actor is called by the app. The same party can be driving in
+  one conversation and driven in another; tests are a driving actor, test
+  doubles are driven actors. Less obvious members of the catalog: health
+  probes and monitoring agents are driving actors; another hexagonal system
+  is a driving actor when its driven adapter calls your driving adapter over
+  the network; a **message broker is a driven actor even when messages flow
+  inbound** — the app initiates the conversation by subscribing, so the
+  broker sits behind a driven port whether the app produces or consumes.
+- **Adapters** — the translation code between an actor's technology and a
+  port's contract. A driving adapter (controller, CLI, message consumer,
+  GUI) converts technology input into port calls; a driven adapter
+  (repository, API client, producer) implements a required interface on top
+  of a technology. When an actor already speaks the port's language (a test,
+  a matching microservice), no adapter is needed — "interactor" covers both.
+- **Configurator (composition root)** — the fifth element, outside the
+  pattern but always present: the only code that knows all the players. It
+  instantiates the driven interactors, instantiates the app and hands the
+  driven interactors to it, then instantiates the driving interactors and
+  hands them the app. In tests, the test case is the configurator; in
+  production it is `main`, a DI container, or the framework bootstrap.
+  Recognized wiring styles: **constructor injection**, **setter injection**
+  (swappable at any time), and **dependency lookup** (service locator /
+  broker). Which one to use is a strategy choice.
 
-- A **port is an interface plus an explicit binding point** (a token, a named
-  registration — whatever the stack provides), so there is exactly one
+## Port design
+
+- **Boundary placement:** put a port wherever the app meets an external
+  system — one whose interface your team can't change — or where your team's
+  decision-making authority ends. Make a driven port for the **external
+  system, not for a domain concept**: a port represents a conversation with
+  the outside, and translating the outside model into the domain model is
+  the adapter's job.
+- **How many ports:** start with one port per driving actor role and one per
+  driven external system; each port carries one intention and one permission
+  scope (a sales clerk and a sales manager get different ports). Splitting
+  further is allowed but adds complexity fast. Typical systems end with a
+  few driving ports and up to a handful of driven ports.
+- **Granularity is an approach choice:** intention-level ports bundle
+  related operations behind one interface (the book's default); use-case
+  level ports give each use case its own single-entry input port (common in
+  layered practice). The project rules declare which applies — apply it
+  consistently, do not mix ad hoc.
+- A **port is an interface plus an explicit binding point** (a token, a
+  named registration — whatever the stack provides), so there is exactly one
   obvious place where an implementation is attached. Binding identifiers are
   never reused.
-- One use case = **one input port with a single `execute()`-style entry**.
-  Signatures are expressed in domain types (entities, value objects, branded
-  ids), not in transport DTOs or ORM models. An **output port** is phrased in
-  domain terms and holds no business logic.
+- Signatures are expressed in domain terms (entities, value objects, ids) —
+  never transport DTOs, ORM models, or vendor types.
+- **Ports fan out; adapters multiply, ports don't.** Any number of driving
+  adapters (REST, CLI, message consumer) may attach to the same input port,
+  and any number of driven adapters (relational DB, file, broker — reactive
+  or imperative) may implement the same output port. Adding or removing an
+  adapter never touches the core; taken together, the driving adapters *are*
+  the system's API.
+- **An output port is not a repository.** It expresses the app's need to
+  deal with external data or effects of any kind — storage, messaging,
+  filesystem, another service — without implying where they come from.
+  Extending a framework's repository base type as a "port" is a leaking
+  abstraction: inherited technology methods enter the contract uninvited.
+- **The input-port contract hides its data needs.** Output ports appear only
+  in the use case's implementation, never in the input-port interface — what
+  the app offers to driving actors is independent of what it must fetch to
+  deliver it.
 
-## Use cases and adapters
+## Terminology in the literature
 
-- A **use case** is a plain class/function with no framework coupling. Its
+Two vocabularies circulate for the same structure. This skill uses the
+Cockburn/Garrido convention; Vieira ("Designing Hexagonal Architecture with
+Java") swaps two of the names. When reading or citing, translate:
+
+| This skill (Cockburn) | Vieira |
+|-----------------------|--------|
+| driving/primary actor, driven/secondary actor | driver actor, driven actor |
+| driving adapter / driven adapter | input adapter / output adapter |
+| **input port** (the interface) | **use case** (the interface) |
+| **use case** (the implementation) | **input port** (the implementation) |
+| output port (required interface) | output port — same |
+| application/request DTO | command |
+| domain core + application ring (the inside) | Domain hexagon + Application hexagon |
+| adapters/infrastructure (the outside) | Framework hexagon |
+
+Vieira's "three hexagons" name layers, not nested components — his
+dependency direction (Framework → Application → Domain) is exactly this
+skill's inward rule, and the no-nesting rule of
+[approaches.md](approaches.md) is untouched.
+
+## Symmetry and asymmetry
+
+The pattern is symmetric: inside vs outside, with ports as the boundary —
+the database is not "below" the app any more than the UI is "above" it; both
+are outside. The implementation is asymmetric: driving actors know the app
+to call it; the app knows only the *interfaces* of its driven actors and is
+handed the implementations by the configurator. Hence provided interfaces on
+the driving side, required interfaces on the driven side.
+
+## The test wall
+
+Every port gets a test driver (driving side) or a test double (driven side).
+This is not optional ceremony — the tests are what make the boundary real: a
+line on a diagram protects nothing, while a test suite that runs the app
+with no production technology attached instantly detects business logic
+leaking into adapters or technology details leaking into the core. If the
+app cannot be tested without its technologies, it is not a component and the
+boundary does not exist.
+
+## Inside the hexagon: use cases and layers
+
+The pattern says nothing about the inside; the following discipline applies
+once the project's approach introduces application/domain structure (see
+[approaches.md](approaches.md) for the options):
+
+- A **use case** is a plain function/class with no framework coupling. Its
   constructor (or closure) takes only output ports and application services —
-  never a concrete adapter. It throws only domain errors. Infrastructure
-  limits (timeouts, retries, page sizes) arrive as parameters from
-  configuration via the composition root; a use case never reads config
-  itself.
-- Assemble use cases in the composition root with a factory whose declared
-  type is the **port** (interface), not the concrete class. Bind an output
-  port to its implementation once, in the composition root of the owning
-  module.
+  never a concrete adapter. It throws only typed domain errors.
+  Infrastructure limits (timeouts, retries, page sizes) arrive as parameters
+  from configuration via the composition root; a use case never reads config
+  itself. Orchestration is its whole job: it sets the execution order,
+  coordinates domain objects and output ports, and holds no business rule
+  itself — rules live in the domain. Use cases may call other use cases.
+  *Default vs project choice:* the **domain is framework-free under every
+  strategy — non-negotiable**; whether the application layer may carry DI
+  container annotations (as some schools allow) is a wiring-strategy choice
+  the project rules must declare explicitly ([strategies.md](strategies.md));
+  undeclared means the strict default: plain classes, wired externally.
+- Assemble use cases in the composition root with the declared type being
+  the **port** (interface), not the concrete class; bind each output port to
+  its implementation once.
 - **Adapters stay thin.** Driving: transport DTO → application DTO → input
-  port → response DTO, with validation at the boundary. Driven: implements an
-  output port, returns entities/value objects via a mapper, and translates
+  port → response DTO, with validation at the boundary. Driven: implements
+  an output port, returns domain objects via a mapper, and translates
   infrastructure errors into domain errors (see
-  [error-flow.md](error-flow.md)). Business logic in an adapter is a defect.
-- **A mapper is the only entity ↔ persistence-model bridge.** A stateless
+  [error-flow.md](error-flow.md)). Business logic in an adapter is a defect —
+  so is choreography: a driving adapter calls one input port; chaining
+  several ports or enforcing a rule before the call is use-case work that
+  has leaked out.
+  *Default vs project choice:* the invariants are that the domain never sees
+  transport shapes and port signatures stay domain-typed; whether separate
+  application/response DTO types are mandatory or domain objects may cross
+  the port directly is a DTO policy the project rules must declare;
+  undeclared means the strict default: the full DTO chain above.
+- **A mapper is the only domain ↔ persistence-model bridge.** A stateless
   `toDomain()` / `toPersistence()` pair is the single translation point;
-  passing an entity straight into an ORM model, or leaking a model out of a
-  repository, bypasses the boundary.
+  passing a domain object straight into an ORM model, or leaking a model out
+  of a repository, bypasses the boundary.
+- Cyclic dependencies are forbidden. Enforce all boundaries with a machine
+  import-graph check (dependency-cruiser, import-linter, or equivalent) that
+  blocks CI. Never relax a boundary rule to get a green run.

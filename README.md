@@ -106,12 +106,33 @@ Skill здесь — не одна инструкция, а **версионир
     └── mutation.yml           # weekly/manual mutation testing критичных модулей
 ```
 
+## Документация skills
+
+У каждого опубликованного skill есть собственный `README.md` — описание на
+английском для пользователей библиотеки: что делает skill, его особенности,
+как установить и как эффективнее сочетать его с правилами целевого проекта
+(например, `.claude/rules` или `CLAUDE.md`):
+
+- [example-skill](skills/example-skill/README.md) — эталонный skill и
+  генератор Conventional Commits сообщений из diff;
+- [typescript-coding](skills/typescript-coding/README.md) — универсальный
+  строго типизированный стандарт TypeScript;
+- [hexagonal-service](skills/hexagonal-service/README.md) — канон
+  ports-and-adapters, нейтральный к языку, фреймворку и проекту;
+- [typescript-nestjs](skills/typescript-nestjs/README.md) — NestJS-механика
+  hexagonal-сервиса поверх двух предыдущих.
+
+Эти README живут в библиотеке (и в `full`-установках); в runtime-режиме они
+не устанавливаются — агенту достаточно `SKILL.md`.
+
 ## Анатомия skill (полная модель)
 
 ```text
 skills/<имя>/
 ├── SKILL.md                   # ОБЯЗАТЕЛЬНЫЙ: frontmatter (name, description) + workflow + routing
 ├── ORIGIN.yaml                # ОБЯЗАТЕЛЬНЫЙ: происхождение (original/vendored, лицензия, upstream)
+├── README.md                  # опциональный: документация для пользователей библиотеки (по-английски);
+│                              #   агенту НЕ нужен и в runtime-режиме НЕ устанавливается
 │
 ├── agents/                    # vendor-адаптеры; канонический SKILL.md остаётся нейтральным
 │   └── openai.yaml            #   метаданные интерфейса для OpenAI harness (Codex)
@@ -140,8 +161,9 @@ skills/<имя>/
 
 - имя папки = `name` во frontmatter: строчные латинские буквы, цифры, дефисы
   (≤ 64 символов); рекомендуемый стиль — короткая глагольная фраза;
-- внутри skill запрещены `README.md`, `CHANGELOG.md` и прочие вспомогательные
-  документы; единственное исключение — `data/README.md` (контракт данных);
+- внутри skill запрещены `CHANGELOG.md` и прочие вспомогательные документы;
+  исключения — `README.md` в корне skill (документация для пользователей
+  библиотеки, см. «Документация skills») и `data/README.md` (контракт данных);
 - разрешены только перечисленные каталоги — неизвестная папка (в т.ч.
   `history/`) не пройдёт валидацию;
 - пустые слои не создаются «для галочки»: слой существует, только когда в нём
@@ -230,8 +252,9 @@ python scripts/skillctl.py knowledge list example-skill   # файлы knowledge
 - **`--mode runtime`** (по умолчанию) — то, что нужно агенту в работе:
   `SKILL.md`, `agents/`, `references/`, `scripts/`, `assets/`, `knowledge/`,
   `data/` (без `fixtures/`) и `observations/accepted/` + `INDEX.md`.
-  **Не** устанавливаются: `data/fixtures/` (test-only),
-  `observations/candidates/` и `observations/rejected/`.
+  **Не** устанавливаются: корневой `README.md` skill (документация для
+  людей), `data/fixtures/` (test-only), `observations/candidates/` и
+  `observations/rejected/`.
 - **`--mode full`** — полный модуль skill для разработки и тестирования,
   включая candidates и fixtures. `--link` всегда означает full (symlink
   открывает весь исходный каталог).
@@ -528,7 +551,7 @@ uv run coverage report
 # воркеров по числу всех ядер (грузит машину) и на холодную идёт часами. Локально
 # не запускайте его целиком — прогоняйте мутации по одному изменённому файлу:
 uv run python scripts/mutation.py security               # только security.py, воркеров = CPU−2
-uv run python scripts/mutation.py -j 8 validator          # ещё щадящее по CPU
+uv run python scripts/mutation.py -j 1 validator          # ещё щадящее по CPU
 uv run python scripts/mutation.py src/skill_library/installer.py  # можно и путём к файлу
 uv run python scripts/mutation.py --list                  # какие модули можно скоупить
 # Файл вне mutation-scope — no-op (exit 0). Каталог `mutants/` не удаляйте: кэш
