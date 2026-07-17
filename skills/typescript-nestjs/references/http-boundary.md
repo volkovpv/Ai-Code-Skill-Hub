@@ -13,6 +13,14 @@ driving edge of the hexagon. They translate; they never decide.
 - `@HttpCode` is explicit for every non-default status; route paths, API
   summaries, and status codes come from constant registries, not string
   literals scattered through decorators.
+- The canonical status-code registry is `HttpStatus` from `@nestjs/common` —
+  a raw numeric literal (`404`, `204`, …) never stands in for it, in any
+  position: a thrown `HttpException`'s status argument, an `@HttpCode(...)`
+  argument, a `Map`/object-literal status-map key (`[HttpStatus.NOT_FOUND,
+  ProblemCode.notFound]`, not `[404, ProblemCode.notFound]`), or a test
+  assertion (`expect(res.status).toBe(HttpStatus.NOT_FOUND)`, not
+  `.toBe(404)`). `check_nest_conventions.py`'s `NEST-HTTP-STATUS-LITERAL`
+  flags the numeric form in each of these positions.
 
 ## Validation
 
