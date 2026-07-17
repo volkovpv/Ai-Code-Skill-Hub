@@ -13,8 +13,10 @@
 - Do not duplicate content between `SKILL.md` and `references/`: `SKILL.md`
   stays short and imperative, details live in `references/` and are loaded on
   demand.
-- Do not add `README.md`/`CHANGELOG.md` and similar documents inside a skill.
-  The single exception is `data/README.md` — the dataset contract.
+- Do not add `CHANGELOG.md` and similar auxiliary documents inside a skill.
+  The only exceptions are the skill-root `README.md` (English, user-facing
+  docs for library consumers; excluded from runtime installs — the agent
+  reads `SKILL.md`) and `data/README.md` — the dataset contract.
 - Optional layers `knowledge/`, `data/`, `observations/` are capabilities, not
   requirements: a skill with only `SKILL.md` + `references/` + `scripts/` +
   `assets/` stays valid. Do not create empty layers "for structure".

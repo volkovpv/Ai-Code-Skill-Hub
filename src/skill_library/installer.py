@@ -36,6 +36,7 @@ __all__ = [
     "AGENT_TARGET_DIRS",
     "INSTALL_MODES",
     "RUNTIME_EXCLUDED_PREFIXES",
+    "RUNTIME_EXCLUDED_FILES",
     "resolve_skills_root",
     "snapshot",
     "aggregate_checksum",
@@ -70,9 +71,14 @@ RUNTIME_EXCLUDED_PREFIXES = (
     "observations/rejected/",    # kept in the library for audit only
     "data/fixtures/",            # test-only fixtures
 )
+RUNTIME_EXCLUDED_FILES = (
+    "README.md",  # library-user documentation; the agent reads SKILL.md
+)
 
 
 def _runtime_excluded(rel_posix: str) -> bool:
+    if rel_posix in RUNTIME_EXCLUDED_FILES:
+        return True
     return any(rel_posix.startswith(prefix) for prefix in RUNTIME_EXCLUDED_PREFIXES)
 
 

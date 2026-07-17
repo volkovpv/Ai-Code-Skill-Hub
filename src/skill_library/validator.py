@@ -63,9 +63,11 @@ DATA_DIRNAME = "data"
 LAYER_DIRS = (KNOWLEDGE_DIRNAME, DATA_DIRNAME, OBS_DIRNAME)
 KNOWN_SKILL_DIRS = {"agents", "references", "scripts", "assets", *LAYER_DIRS}
 
-# Auxiliary documents are forbidden inside a skill (the root README.md covers
-# the library). The single exception is data/README.md — the dataset contract.
+# Auxiliary documents are forbidden inside a skill. Two exceptions: the
+# skill-root README.md (human-facing docs for library users; runtime installs
+# leave it behind) and data/README.md — the dataset contract.
 _FORBIDDEN_DOC_NAMES = {"readme.md", "changelog.md", "installation_guide.md", "contributing.md"}
+_ALLOWED_DOC_PATHS = ("README.md", "data/README.md")
 
 # Markdown links: [text](target) — external URLs and pure anchors are skipped.
 _MD_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
@@ -222,10 +224,11 @@ def _check_layout(skill_dir: Path, problems: list[str]) -> None:
             continue
         rel = path.relative_to(skill_dir)
         rel_posix = rel.as_posix()
-        if rel.name.lower() in _FORBIDDEN_DOC_NAMES and rel_posix != "data/README.md":
+        if rel.name.lower() in _FORBIDDEN_DOC_NAMES and rel_posix not in _ALLOWED_DOC_PATHS:
             problems.append(
                 f"{rel_posix}: auxiliary documents are not allowed inside a skill "
-                "(the only exception is data/README.md — the dataset contract)"
+                "(the only exceptions are the skill-root README.md — user-facing "
+                "docs — and data/README.md — the dataset contract)"
             )
         outside_scripts = rel.parts[0] != "scripts"
         if outside_scripts and rel.suffix in (".sh", ".bash", ".exe", ".bat", ".cmd"):

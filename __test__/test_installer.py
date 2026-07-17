@@ -616,6 +616,16 @@ class TestInstallModes(LayeredInstallerTestCase):
         self.install()
         self.assertIn("already installed and up to date", self.install())
 
+    def test_skill_root_readme_ships_in_full_mode_only(self):
+        source_readme = self.library / "skills" / SKILL / "README.md"
+        source_readme.write_text("# User docs\n\nLibrary-user documentation.\n", encoding="utf-8")
+        self.install()
+        self.assertFalse((self.dest / "README.md").exists())
+        # data/README.md (the dataset contract) still ships in runtime mode
+        self.assertTrue((self.dest / "data" / "README.md").is_file())
+        self.install(install_mode="full", force=True)
+        self.assertTrue((self.dest / "README.md").is_file())
+
     def test_diff_and_update_track_knowledge_changes(self):
         self.install()
         knowledge = self.library / "skills" / SKILL / "knowledge" / "patterns.md"

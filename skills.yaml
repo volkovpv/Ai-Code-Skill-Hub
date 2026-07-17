@@ -5,7 +5,7 @@ version: 1
 skills:
   - name: example-skill
     path: skills/example-skill
-    version: 0.2.0
+    version: 0.2.1
     status: stable
     summary: Reference skill; drafts a Conventional Commits message from a git diff.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -24,7 +24,7 @@ skills:
   # executed against a real harness) and are promoted to stable.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.1.0
+    version: 1.1.1
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -40,7 +40,7 @@ skills:
       observation_review_required: true
   - name: hexagonal-service
     path: skills/hexagonal-service
-    version: 2.1.0
+    version: 2.1.1
     status: stable
     summary: Language-, framework- and project-neutral ports-and-adapters canon - invariant core, major approaches, domain modeling, and a catalog of adoption strategies declared per project.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -52,7 +52,7 @@ skills:
       observation_review_required: true
   - name: typescript-nestjs
     path: skills/typescript-nestjs
-    version: 1.1.0
+    version: 1.1.1
     status: stable
     summary: NestJS-specific rules for hexagonal services - DI tokens, providers, HTTP boundary, config, testing - with a layer-aware checker.
     platforms: [universal, codex, opencode, claude, hermes]

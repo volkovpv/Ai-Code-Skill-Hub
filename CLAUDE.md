@@ -43,7 +43,7 @@ Zero-tooling fallback (no uv, no venv — the library has no dependencies): `pyt
 
 - `discovery.py` — scans `skills/`, parses SKILL.md frontmatter, loads `skills.yaml` into `models.py` dataclasses (`SkillMeta`, `CatalogEntry`).
 - `validator.py` — structure, metadata, local-link resolution, layer rules, capabilities↔directories consistency, file-size limits and heuristic secret scan. **Fail-closed**: anything suspicious blocks validation.
-- `installer.py` — install/diff/update/remove/status against a target project. Two distribution modes: `runtime` (default; excludes `observations/candidates/`, `observations/rejected/`, `data/fixtures/`) and `full`. Agent → target dir mapping in `AGENT_TARGET_DIRS` (`claude` → `.claude/skills`, most others → `.agents/skills`, `hermes` requires `--target-skills-dir`).
+- `installer.py` — install/diff/update/remove/status against a target project. Two distribution modes: `runtime` (default; excludes `observations/candidates/`, `observations/rejected/`, `data/fixtures/` and the skill-root `README.md`) and `full`. Agent → target dir mapping in `AGENT_TARGET_DIRS` (`claude` → `.claude/skills`, most others → `.agents/skills`, `hermes` requires `--target-skills-dir`).
 - `lockfile.py` — `.agent-skills.lock.yaml` in the target project: per-file sha256 lets the installer distinguish managed files from foreign ones and detect local edits (update/remove refuse without `--force`).
 - `observations.py` — lifecycle `candidate → approve/reject`; approve requires non-empty `evidence` and `--reviewed-by`.
 - `security.py` — `safe_join`/`validate_relative_path`/`ensure_no_symlinks`; every mutating path goes through it. Symlinks inside skills are forbidden everywhere.
@@ -51,7 +51,7 @@ Zero-tooling fallback (no uv, no venv — the library has no dependencies): `pyt
 
 ### Skill anatomy (enforced by validator)
 
-`skills/<name>/` requires `SKILL.md` (frontmatter `name` must equal the directory name) and `ORIGIN.yaml` (provenance: `original`/`vendored`). Optional directories — only these are allowed: `agents/`, `references/`, `scripts/`, `assets/`, and the layers `knowledge/`, `data/`, `observations/`. A non-empty layer requires its `knowledge/INDEX.md` / `data/README.md` / `observations/INDEX.md`. No `README.md`/`CHANGELOG.md`/`history/` inside a skill (sole exception: `data/README.md`); executables only in `scripts/`. Layer flags in `skills.yaml` `capabilities:` must match the actual directories. Progressive disclosure: `SKILL.md` stays short and routes to deeper files; never duplicate `references/` content into it.
+`skills/<name>/` requires `SKILL.md` (frontmatter `name` must equal the directory name) and `ORIGIN.yaml` (provenance: `original`/`vendored`). Optional directories — only these are allowed: `agents/`, `references/`, `scripts/`, `assets/`, and the layers `knowledge/`, `data/`, `observations/`. A non-empty layer requires its `knowledge/INDEX.md` / `data/README.md` / `observations/INDEX.md`. No `CHANGELOG.md`/`history/` or other auxiliary docs inside a skill (sole exceptions: the skill-root `README.md` — user-facing docs, excluded from runtime installs — and `data/README.md`); executables only in `scripts/`. Layer flags in `skills.yaml` `capabilities:` must match the actual directories. Progressive disclosure: `SKILL.md` stays short and routes to deeper files; never duplicate `references/` content into it.
 
 ## Two independent version systems — do not mix them up
 
