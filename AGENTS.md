@@ -36,7 +36,16 @@
 - `knowledge/` holds only verified, generalizable statements with an explicit
   applicability scope, each linked to its evidence.
 - Agents must not edit `observations/accepted/` or auto-modify `SKILL.md`
-  based on observations.
+  based on observations **on `main`**. The one sanctioned automated path is
+  a consumer-side feedback agent: it MAY author the observation candidate,
+  its promotion, the tests-first regression + delta and the version bump
+  **on a non-`main` branch and open a PR**, provided the observation carries
+  a reviewer verdict from the consuming project and reproducible evidence.
+  Nothing on that branch is accepted or released until a human reviews and
+  merges the PR; `--reviewed-by` names the human merger — the merge confers
+  the approval. Agents never push to `main`, never tag and never publish
+  releases (release publication stays the `main`-push automation triggered by
+  the human merge).
 
 ## Change discipline (layers)
 
@@ -125,7 +134,7 @@
   production logs — in any layer, including `data/` and `observations/`.
   The validator's secret scan is a heuristic backstop, not permission to rely
   on it. Test markers must be obviously fake (e.g. AWS's documented
-  `AKIAIOSFODNN7EXAMPLE`).
+   example key A...EXAMPLE).
 - Mutating CLI operations must stay fail-closed: validate paths via
   `skill_library.security`, touch only lock-managed files, require `--force`
   for anything that overwrites local changes.
