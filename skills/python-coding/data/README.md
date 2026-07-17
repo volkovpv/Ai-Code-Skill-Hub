@@ -26,7 +26,9 @@ Layout convention:
 - `fixtures/` — test-only inputs; **not** installed in runtime mode. Contents:
   - `clean_sample.py` — strictly-typed, framework-free code; the checker
     finds nothing;
-  - `violations.py` — exactly one violation per checker rule;
+  - `violations.py` — exactly one violation per checker rule, including the
+    security rules (eval/exec, shell=True, pickle, yaml.load, mktemp,
+    utcnow, disabled TLS verification);
   - `masked_literals.py` — every rule quoted inside strings, f-string
     literal parts, triple-quoted strings and comments; the checker must stay
     silent (pins the lexical-masking behaviour);

@@ -37,7 +37,10 @@ source of truth, and where to stop. Framework- and architecture-neutral.
   instantiate `T` with a subtype your object is not.
 - Use PEP 695 syntax (`def f[T](...)`, `class Box[T]: ...`) where the
   project's toolchain supports it; otherwise module-level `TypeVar`s. The
-  discipline is identical either way.
+  discipline is identical either way. A type parameter with an
+  overwhelmingly common instantiation may carry a default
+  (`class Stack[T = int]`, 3.13+) instead of forcing every caller to spell
+  it.
 
 ## Bounds, constraints, naming
 

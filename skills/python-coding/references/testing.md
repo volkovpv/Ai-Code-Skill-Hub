@@ -22,8 +22,16 @@ to fake in a ports-and-adapters service, DI seams) live in the
   `monkeypatch`/`unittest.mock.patch` of module attributes is a last
   resort, used only when no seam exists, with a justifying comment.
 - Prefer factories/builders over copy-pasted fixture blobs. Use
-  property-based tests (Hypothesis-style) for pure functions whose
-  invariants you can state.
+  property-based tests (Hypothesis-style) for parsers, serializers, and
+  pure functions whose invariants you can state (round-trip, idempotence,
+  ordering); keep the failures it finds as pinned regression cases.
+- **Assert the exception and its condition, not just "it raised"**: the
+  expected exception type plus the relevant attribute or message fragment
+  — a test that passes for the wrong error is not a test.
+- **Async tests run a real event loop** and every awaited assertion has a
+  deadline; never "the task probably finished by now" via `sleep`. No
+  waiting on wall-clock in any test — poll with a deadline or inject the
+  clock/event.
 
 ## Types and tests divide the work
 

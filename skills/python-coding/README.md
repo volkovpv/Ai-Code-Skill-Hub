@@ -22,12 +22,28 @@ The core discipline it enforces:
   `assert_never`, invalid states unrepresentable, parse-don't-cast at
   runtime boundaries, `TypeVar`s only where they relate types, `Protocol`s
   as structural test seams;
+- secure-by-default code: untrusted input never becomes code
+  (parameterized SQL, argument-list subprocess without `shell=True`, no
+  `eval`/`exec`, no pickle or `yaml.load` on untrusted data), path
+  containment checks, `tempfile.mkstemp`-family, `secrets` +
+  `hmac.compare_digest`, TLS verification never disabled;
 - narrow `except` clauses, errors never swallowed, wrapping with
-  `raise ... from` at most once at the source;
+  `raise ... from` at most once at the source, exception groups handled
+  with `except*`, every external call under a timeout;
+- structured concurrency: `asyncio.TaskGroup` by default, no
+  fire-and-forget tasks, no blocking calls on the event loop,
+  `CancelledError` propagates, thread-shared state locked or
+  message-passed — never "the GIL makes it atomic";
+- runtime correctness: timezone-aware UTC datetimes (no `utcnow()`),
+  monotonic clocks for durations, `Decimal` money, every resource behind a
+  context manager, no `lru_cache` on instance methods;
 - lint-clean-first-time code: explicit boolean expressions,
-  `x if x is not None else d` over `x or d`, no un-awaited coroutines and
-  `gather` for independent awaits, no mutation of parameters, no mutable
-  default arguments, no type/lint suppressions;
+  `x if x is not None else d` over `x or d`, no mutation of parameters, no
+  mutable default arguments, no type/lint suppressions;
+- modern, version-gated language use: PEP 695 generics and `type` aliases,
+  `TypeIs`, `ReadOnly`, t-strings and native lazy annotations on 3.14 —
+  with an explicit ban list for legacy forms (`Optional`, `typing.List`,
+  `pytz`, `get_event_loop`, …);
 - centralized `os.environ` access, no `print()` in shipped code, no
   `assert` as runtime validation;
 - tests land in the same change as the code; every bug fix ships a
@@ -39,13 +55,16 @@ The core discipline it enforces:
   framework or architecture is assumed. Architecture rules live in the
   companion `hexagonal-service` skill instead.
 - **Self-check script.** `scripts/check_py_conventions.py` is an offline
-  heuristic checker the agent runs over changed files before handing off;
+  heuristic checker the agent runs over changed files before handing off —
+  including high-signal security rules (`eval`/`exec`, `shell=True`,
+  pickle, `yaml.load`, `mktemp`, `utcnow`, disabled TLS verification);
   suppressions require a rule code and a written reason
   (`# skill-check-ignore: PY-ENV -- <reason>`).
 - **Layered knowledge.** Beyond `references/` (typing & style, type design,
-  generics & protocols, lint-clean, errors/config/logging, testing) the
-  skill ships verified `knowledge/` patterns and pitfalls, and calibrated
-  `data/` samples for the checker.
+  generics & protocols, security, concurrency, runtime correctness,
+  modern-python version gates, lint-clean, errors/config/logging, testing)
+  the skill ships verified `knowledge/` patterns and pitfalls, and
+  calibrated `data/` samples for the checker.
 
 ## How to install
 

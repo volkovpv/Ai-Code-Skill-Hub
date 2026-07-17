@@ -143,6 +143,56 @@ _CHECKS: list[tuple[str, str, re.Pattern, frozenset]] = [
         re.compile(r"\bbreakpoint\s*\(|\bset_trace\s*\("),
         frozenset(),
     ),
+    (
+        "PY-EVAL",
+        "eval()/exec() executes dynamic code; restructure so data is never executable "
+        "(ast.literal_eval for literals)",
+        re.compile(r"(?<![\w.])(?:eval|exec)\s*\("),
+        frozenset(),
+    ),
+    (
+        "PY-SHELL",
+        "command line goes through a shell; pass an argument list to subprocess "
+        "without shell=True",
+        re.compile(r"\bshell\s*=\s*True\b|\bos\.(?:system|popen)\s*\("),
+        frozenset(),
+    ),
+    (
+        "PY-PICKLE",
+        "pickle deserialization executes arbitrary code on untrusted input; "
+        "use a data-only format or justify the trusted source",
+        re.compile(r"\bpickle\.(?:loads?\s*\(|Unpickler\b)"),
+        frozenset(),
+    ),
+    (
+        "PY-YAML-LOAD",
+        "yaml.load can instantiate arbitrary objects; use yaml.safe_load",
+        re.compile(r"\byaml\.(?:unsafe_|full_)?load(?:_all)?\s*\("),
+        frozenset(),
+    ),
+    (
+        "PY-MKTEMP",
+        "tempfile.mktemp is a create-after-name race; use mkstemp / "
+        "NamedTemporaryFile / TemporaryDirectory",
+        re.compile(r"\bmktemp\s*\("),
+        frozenset(),
+    ),
+    (
+        "PY-UTCNOW",
+        "naive-UTC datetime (deprecated since 3.12); use "
+        "datetime.now(timezone.utc) / fromtimestamp(..., tz=...)",
+        re.compile(r"\butc(?:now|fromtimestamp)\s*\("),
+        frozenset(),
+    ),
+    (
+        "PY-TLS-NOVERIFY",
+        "TLS certificate verification disabled; keep verification on and fix "
+        "the trust store instead",
+        re.compile(
+            r"\bverify\s*=\s*False\b|\bcheck_hostname\s*=\s*False\b|_create_unverified_context"
+        ),
+        frozenset(),
+    ),
 ]
 
 KNOWN_CODES = frozenset(code for code, _, _, _ in _CHECKS)

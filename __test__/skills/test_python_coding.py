@@ -41,6 +41,13 @@ ALL_CODES = {
     "PY-BARE-EXCEPT",
     "PY-ASSERT",
     "PY-DEBUG",
+    "PY-EVAL",
+    "PY-SHELL",
+    "PY-PICKLE",
+    "PY-YAML-LOAD",
+    "PY-MKTEMP",
+    "PY-UTCNOW",
+    "PY-TLS-NOVERIFY",
 }
 
 
@@ -539,6 +546,89 @@ class TestPySuppressScope(unittest.TestCase):
 
     def test_justified_noqa_inside_string_is_still_data(self):
         codes, errors = check("doc = '# noqa: E501 -- how-to example'\n")
+        self.assertEqual((codes, errors), ([], []))
+
+
+class TestSecurityRules(unittest.TestCase):
+    """Positive and near-miss pins for the security-focused rules."""
+
+    def test_eval_and_exec_calls_are_flagged(self):
+        self.assertEqual(check("v = eval(expr)\n")[0], ["PY-EVAL"])
+        self.assertEqual(check("exec(code)\n")[0], ["PY-EVAL"])
+
+    def test_literal_eval_and_attribute_eval_are_clean(self):
+        # ast.literal_eval, method calls (model.eval()), and identifiers that
+        # merely contain the substring must not fire.
+        self.assertEqual(check("v = ast.literal_eval(raw)\n")[0], [])
+        self.assertEqual(check("model.eval()\n")[0], [])
+        self.assertEqual(check("executor.submit(fn)\n")[0], [])
+
+    def test_shell_true_and_os_system_are_flagged(self):
+        self.assertEqual(check("subprocess.run(cmd, shell=True)\n")[0], ["PY-SHELL"])
+        self.assertEqual(check("os.system(cmd)\n")[0], ["PY-SHELL"])
+        self.assertEqual(check("os.popen(cmd)\n")[0], ["PY-SHELL"])
+
+    def test_argument_list_subprocess_is_clean(self):
+        self.assertEqual(check("subprocess.run([exe, arg], shell=False)\n")[0], [])
+        self.assertEqual(check("subprocess.run([exe, arg], check=True)\n")[0], [])
+
+    def test_pickle_deserialization_is_flagged(self):
+        self.assertEqual(check("obj = pickle.load(fh)\n")[0], ["PY-PICKLE"])
+        self.assertEqual(check("obj = pickle.loads(blob)\n")[0], ["PY-PICKLE"])
+        self.assertEqual(check("u = pickle.Unpickler(fh)\n")[0], ["PY-PICKLE"])
+
+    def test_pickle_serialization_is_clean(self):
+        self.assertEqual(check("blob = pickle.dumps(obj)\n")[0], [])
+        self.assertEqual(check("pickle.dump(obj, fh)\n")[0], [])
+
+    def test_yaml_unsafe_loaders_are_flagged(self):
+        for call in (
+            "yaml.load(doc)",
+            "yaml.load_all(doc)",
+            "yaml.unsafe_load(doc)",
+            "yaml.full_load(doc)",
+        ):
+            with self.subTest(call=call):
+                self.assertEqual(check(f"d = {call}\n")[0], ["PY-YAML-LOAD"])
+
+    def test_yaml_safe_load_is_clean(self):
+        self.assertEqual(check("d = yaml.safe_load(doc)\n")[0], [])
+        self.assertEqual(check("d = yaml.safe_load_all(doc)\n")[0], [])
+
+    def test_mktemp_flagged_safe_tempfile_apis_clean(self):
+        self.assertEqual(check("p = tempfile.mktemp()\n")[0], ["PY-MKTEMP"])
+        self.assertEqual(check("fd, p = tempfile.mkstemp()\n")[0], [])
+        self.assertEqual(check("d = tempfile.TemporaryDirectory()\n")[0], [])
+
+    def test_naive_utc_constructors_flagged_aware_forms_clean(self):
+        self.assertEqual(check("t = datetime.utcnow()\n")[0], ["PY-UTCNOW"])
+        self.assertEqual(check("t = datetime.utcfromtimestamp(ts)\n")[0], ["PY-UTCNOW"])
+        self.assertEqual(check("t = datetime.now(timezone.utc)\n")[0], [])
+        self.assertEqual(check("t = datetime.fromtimestamp(ts, tz=timezone.utc)\n")[0], [])
+
+    def test_disabled_tls_verification_is_flagged(self):
+        self.assertEqual(check("client.get(url, verify=False)\n")[0], ["PY-TLS-NOVERIFY"])
+        self.assertEqual(check("ctx.check_hostname = False\n")[0], ["PY-TLS-NOVERIFY"])
+        self.assertEqual(
+            check("ctx = ssl._create_unverified_context()\n")[0], ["PY-TLS-NOVERIFY"]
+        )
+
+    def test_enabled_tls_verification_forms_are_clean(self):
+        self.assertEqual(check("client.get(url, verify=True)\n")[0], [])
+        self.assertEqual(check("client.get(url, verify=ca_bundle)\n")[0], [])
+        self.assertEqual(check("ctx.check_hostname = True\n")[0], [])
+
+    def test_security_rules_apply_in_test_files_too(self):
+        # Unlike print/Any/assert, the security rules have no test-file
+        # relaxation: a shell=True in a test helper is still a finding.
+        codes, _ = check("subprocess.run(cmd, shell=True)\n", label="test_helpers.py")
+        self.assertEqual(codes, ["PY-SHELL"])
+
+    def test_security_rules_are_suppressible_with_justification(self):
+        codes, errors = check(
+            "obj = pickle.loads(blob)  "
+            "# skill-check-ignore: PY-PICKLE -- cache file written by this same process"
+        )
         self.assertEqual((codes, errors), ([], []))
 
 

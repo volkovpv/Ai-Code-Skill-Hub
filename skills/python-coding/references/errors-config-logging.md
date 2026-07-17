@@ -7,6 +7,13 @@ framework or an architecture; layering rules (where exactly errors are
 wrapped and mapped in a ports-and-adapters service) live in the
 `hexagonal-service` skill.
 
+## Contents
+
+- [Errors](#errors)
+- [Exception groups, notes, retries](#exception-groups-notes-retries)
+- [Environment and configuration](#environment-and-configuration)
+- [Logging](#logging)
+
 ## Errors
 
 - **Catch the narrowest exception type.** `except ValueError:` beats
@@ -43,7 +50,16 @@ wrapped and mapped in a ports-and-adapters service) live in the
   block, `raise NewError(...) from err` is mandatory (an unchained raise
   there silently replaces the real cause with an implicit context).
 - **Re-raise with `raise`, not `raise err`** — the bare form preserves the
-  original traceback.
+  original traceback. `raise ... from None` (deliberately severing the
+  chain) is reserved for hiding an implementation detail from a public
+  API, with a comment saying so — never a habit.
+- **Always parenthesize exception tuples** — `except (TimeoutError,
+  ConnectionError) as err:` — one consistent shape (3.14 permits an
+  unparenthesized form without `as`; don't mix styles).
+- **Exceptions are not cross-layer control flow** for expected outcomes —
+  model an expected alternative as a return type (a tagged union, `T |
+  None`). Locally, EAFP is fine and often required:
+  `try: ... except KeyError` beats a check-then-act that races.
 - **Report with the stack.** Wherever the program finally handles an error
   (top-level handler, CLI exit path), log the full chain — `__cause__`
   included — with the traceback (`logger.exception(...)`), not just
@@ -51,8 +67,30 @@ wrapped and mapped in a ports-and-adapters service) live in the
 - **`assert` is not error handling.** Assertions vanish under `python -O`;
   in shipped code raise a typed error. `assert` belongs in tests and in
   checker-visible narrowing of genuinely impossible states.
-- **`finally` never returns or raises on its own** — it silently eats the
-  in-flight exception; `finally` is for cleanup only (prefer `with`).
+- **`finally` never returns, breaks, continues, or raises on its own** —
+  it silently eats the in-flight exception (a `SyntaxWarning` since 3.14);
+  `finally` is for cleanup only (prefer `with`).
+
+## Exception groups, notes, retries
+
+- **`ExceptionGroup` / `except*` (3.11+) belong to genuinely concurrent
+  failures** — a `TaskGroup`, a fan-out — where several errors are true
+  peers. Do not convert ordinary single-error flows into groups, and know
+  that raising a group from an existing API is a breaking change for its
+  callers. Code that awaits a `TaskGroup` must be written for
+  `ExceptionGroup`: handle with `except*` (or split), not a bare
+  `except Exception` that misses it.
+- **Attach context with `err.add_note(...)` (3.11+)** — the item id, the
+  attempt number, the file being processed — before re-raising, instead of
+  string-munging the message or wrapping in a shallow custom exception
+  that adds no meaning.
+- **Retry discipline**: retry only idempotent operations, only on error
+  types that are actually transient (never on a `ValueError`-class bug),
+  with capped attempts, exponential backoff with jitter, and a total
+  deadline. **Every external call carries an explicit timeout** — an
+  unbounded wait is a defect, not a default. In async code the timeout is
+  `asyncio.timeout` around the block — see
+  [concurrency.md](concurrency.md).
 
 ## Environment and configuration
 
@@ -77,9 +115,26 @@ wrapped and mapped in a ports-and-adapters service) live in the
   route.
 - Tests and one-off local scripts may use `print` freely — the checker
   relaxes this rule for test files.
+- **Libraries never configure logging**: a library module does
+  `logger = logging.getLogger(__name__)` and emits; handler, level, and
+  format configuration (`basicConfig`, `dictConfig`) belongs solely to the
+  application entry point. A library that must silence "no handler"
+  warnings attaches `NullHandler` and nothing else.
+- **Log the exception where it is finally handled — once.** Use
+  `logger.exception(...)` inside the `except` block (or `exc_info=True`);
+  `logger.error(str(err))` discards the type and traceback. No
+  log-and-re-raise at every layer: one failure produces one error record
+  at the boundary, not a storm of duplicates.
+- **Levels have meaning**: DEBUG diagnostics, INFO state changes, WARNING
+  unexpected-but-handled, ERROR a failed operation, CRITICAL
+  service-unusable. Choose by what an operator should do, not by how the
+  author feels.
 - Log events, not payload dumps: operation, status, duration, counts — and
   never a secret or a whole request body. Keep secrets out of `repr` too
-  (`field(repr=False)` on dataclass secret fields).
-- Use lazy formatting (`logger.info("processed %d items", n)`) so
-  arguments are not rendered when the level is off, and never build log
-  messages by concatenating untrusted input into format strings.
+  (`field(repr=False)` on dataclass secret fields) — see
+  [security.md](security.md).
+- **Keep the message template constant and pass data as arguments**
+  (`logger.info("processed %d items", n)`): arguments are not rendered
+  when the level is off, aggregation tools can group by template, and
+  untrusted input never becomes part of a format string. In structured
+  logging the same rule reads: constant event name, values as fields.

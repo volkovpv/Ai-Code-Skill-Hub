@@ -11,5 +11,16 @@ def demo(config: object) -> None:
     breakpoint()
 
 
+def insecure(command: str, payload: bytes, doc: str, expr: str, url: str) -> None:
+    result = eval(expr)
+    subprocess.run(command, shell=True)
+    obj = pickle.loads(payload)
+    data = yaml.load(doc)
+    path = tempfile.mktemp()
+    stamp = datetime.utcnow()
+    client.get(url, verify=False)
+    handle(result, obj, data, path, stamp)
+
+
 # type: ignore
 broken = demo

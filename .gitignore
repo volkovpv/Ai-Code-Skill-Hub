@@ -70,5 +70,6 @@ docker-compose.override.yml
 
 _promts/*
 _audit/*
+_temp/*
 
 books/*

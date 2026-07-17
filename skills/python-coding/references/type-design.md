@@ -150,12 +150,15 @@ framework- and architecture-neutral.
   flow proves the type instead of asserting it: fetch once and test the
   result (`value = mapping.get(key)` then `if value is not None`).
 - Extract reusable narrowing into `TypeIs`/`TypeGuard` predicates
-  (`def is_shape(v: object) -> TypeIs[Shape]`). Both are **unchecked
-  claims**: the checker never verifies that the body establishes the
-  predicate (`return True` type-checks). Keep guard bodies minimal and
-  exhaustive over the claimed type, keep them next to the type they guard,
-  and unit-test them with near-miss values — a wrong guard poisons every
-  downstream branch.
+  (`def is_shape(v: object) -> TypeIs[Shape]`). Prefer **`TypeIs`**
+  (3.13+) for ordinary narrowing — it narrows in both branches and demands
+  the narrowed type be a subtype of the input; keep `TypeGuard` only for
+  reinterpretation narrowing (e.g. `list[object]` → `list[str]`). Both are
+  **unchecked claims**: the checker never verifies that the body
+  establishes the predicate (`return True` type-checks). Keep guard bodies
+  minimal and exhaustive over the claimed type, keep them next to the type
+  they guard, and unit-test them with near-miss values — a wrong guard
+  poisons every downstream branch.
 - Narrowing traps: a truthiness check (`if x:`) does not distinguish `''`
   and `0` from `None` — narrow optionals with `is not None`; narrowing on
   an attribute (`if obj.field is not None`) does not survive into a nested
@@ -195,7 +198,9 @@ framework- and architecture-neutral.
 - **TypedDict is structural and erased**: at runtime it is a plain `dict`,
   `isinstance` cannot check it, and extra keys may be present — validate
   where extra fields matter; never treat a passing type check as proof of
-  shape.
+  shape. Mark genuinely optional keys with `NotRequired[...]` per key
+  (never a blanket `total=False`), and keys consumers must not mutate with
+  `ReadOnly[...]` (3.13+).
 - Collections with dynamic, data-driven string keys are `dict[str, V]` with
   absence in mind (`.get`, `KeyError` handling); reserve `TypedDict` for
   closed key sets. With strict checking, indexing a `dict` raises on

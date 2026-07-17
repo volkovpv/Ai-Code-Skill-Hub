@@ -17,9 +17,12 @@ strict:
   `ignore_errors`, downgraded severities) to make a run pass — fix the code.
 
 Target a modern Python (≥ 3.12) so `match`, `typing.assert_never`,
-`Self`, and PEP 604 unions (`X | None`) are available. An un-annotated
-function is unchecked territory — the strict flags above ban it; annotate
-every public function fully, including `-> None`.
+`Self`, PEP 604 unions (`X | None`), PEP 695 generics and the `type`
+statement are available; which further features each of 3.13/3.14 unlocks
+(TypeIs, ReadOnly, native lazy annotations, t-strings) is version-gated in
+[modern-python.md](modern-python.md). An un-annotated function is
+unchecked territory — the strict flags above ban it; annotate every public
+function fully, including `-> None`.
 
 ## Style the checker cannot enforce
 
@@ -38,6 +41,12 @@ every public function fully, including `-> None`.
 - **Visibility is explicit by convention:** a leading underscore marks
   module- and class-private names; everything exported is deliberate —
   keep `__all__` in modules that form a package's public API.
+- **Overrides are marked** with `@typing.override` (3.12+) so a renamed or
+  removed base method breaks at the definition instead of silently forking
+  behaviour; public API being retired is marked with
+  `@warnings.deprecated` (3.13+) so checkers flag the call sites.
+- **Type aliases use the `type` statement** (`type UserMap = dict[UserId,
+  User]`), not bare assignment or the deprecated `typing.TypeAlias`.
 - In `except` the binding is the narrowest exception type; never a bare
   `except:` — see
   [errors-config-logging.md](errors-config-logging.md).

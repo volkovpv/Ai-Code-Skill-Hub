@@ -6,8 +6,8 @@ everything.
 
 | File | Read when |
 |------|-----------|
-| [patterns.md](patterns.md) | applying a recurring typing pattern (enum/Literal closed sets, NewType ids, frozen dataclasses, tagged unions + `assert_never`, cause-preserving `raise ... from`, Protocol test seams, boundary schemas) |
-| [pitfalls.md](pitfalls.md) | a checker finding looks wrong, or a typing/runtime edge case bites (`or`-defaults, mutable default arguments, un-awaited coroutines, `assert` under `-O`, `Any` leaks, unchained raise in `except`) |
+| [patterns.md](patterns.md) | applying a recurring pattern (enum/Literal closed sets, NewType ids, frozen dataclasses, tagged unions + `assert_never`, cause-preserving `raise ... from`, Protocol test seams, boundary schemas, TaskGroup fan-out, out-of-band untrusted values, path containment, injected clocks) |
+| [pitfalls.md](pitfalls.md) | a checker finding looks wrong, or a typing/runtime edge case bites (`or`-defaults, mutable default arguments, un-awaited coroutines, `assert` under `-O`, `Any` leaks, unchained raise in `except`, `except Exception` vs concurrency, `lru_cache` on methods, security rules in tests) |
 
 Rules for adding knowledge:
 

@@ -24,6 +24,13 @@ QUOTED_RULES: Final = {
     "except_ban": "a bare 'except:' clause traps SystemExit too",
     "assert_ban": "an 'assert payload' check vanishes under python -O",
     "debug_ban": "breakpoint() and pdb.set_trace() never ship",
+    "eval_ban": "never eval('2+2') or exec('code') on request data",
+    "shell_ban": "os.system('cmd') and shell=True invite injection",
+    "pickle_ban": "pickle.loads(blob) executes attacker-controlled code",
+    "yaml_ban": "yaml.load('doc') without SafeLoader builds arbitrary objects",
+    "mktemp_ban": "tempfile.mktemp() races between naming and creating",
+    "utcnow_ban": "datetime.utcnow() returns a naive timestamp",
+    "tls_ban": "passing verify=False disables certificate checks",
     "pragma_as_data": "skill-check-ignore: PY-ENV -- a pragma in a string is data",
 }
 
@@ -40,4 +47,11 @@ examples that must not fire:
     except: pass
     assert value
     breakpoint()
+    eval("2+2")
+    os.system("ls")
+    pickle.loads(b"")
+    yaml.load(stream)
+    tempfile.mktemp()
+    datetime.utcnow()
+    client.get(url, verify=False)
 """

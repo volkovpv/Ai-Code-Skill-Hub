@@ -42,24 +42,13 @@ The single biggest source of subtle bugs under truthiness.
 
 ## Async is supervised
 
-- **Every coroutine is awaited or handed to a task the code keeps.** A
-  bare `foo()` call on an async function creates a coroutine that never
-  runs (the un-awaited-coroutine warning is a defect, not noise); a bare
-  `asyncio.create_task(...)` whose result is dropped can be
-  garbage-collected mid-flight and its exception lost. Hold the task and
-  supervise it — a `TaskGroup` does both.
-- **Independent awaits run concurrently** — `asyncio.gather(*aws)` or a
-  task group; a sequential `await` inside a loop adds latencies instead of
-  taking their maximum. Deliberate rate-limited batching belongs in a
-  named helper carrying a justification.
-- **No blocking calls in async code** (`time.sleep`, blocking IO, heavy
-  CPU) — use the async equivalent or push the work to a thread
-  (`asyncio.to_thread`).
-- **Don't pass an async function where a sync callable is expected** — the
-  callback machinery will silently never run it.
-- **Shared state read before an `await` may be stale after it**: another
-  task can interleave at every suspension point — re-read after awaiting,
-  or guard the read-modify-write with a lock.
+The three async findings a strict stack raises most: an un-awaited
+coroutine (a defect, not noise — the call never runs), a dropped
+`create_task` handle (garbage-collected mid-flight, exception lost), and a
+blocking call inside a coroutine. Supervise every task — a
+`asyncio.TaskGroup` is the default — and run independent awaits
+concurrently. The full discipline (structured concurrency, timeouts,
+cancellation, threads and locks) lives in [concurrency.md](concurrency.md).
 
 ## Immutability by default
 
@@ -121,10 +110,16 @@ The single biggest source of subtle bugs under truthiness.
   factor the shared body out.
 - **Prefer the idiom the linter wants:** f-strings over `+`/`%`/
   `.format`; comprehensions over `map`/`filter`-with-lambda and
-  accumulate-in-a-loop; `enumerate`/`zip` over manual index bookkeeping;
-  unpacking over index access; `with` for every resource; early return
-  over `else` after `return`/`raise`; no lonely `if` inside `else` (use
-  `elif`); no nested ternary.
+  accumulate-in-a-loop; `enumerate`/`zip` over manual index bookkeeping
+  (`zip(..., strict=True)` when lengths must match); unpacking over index
+  access; `with` for every resource; early return over `else` after
+  `return`/`raise`; no lonely `if` inside `else` (use `elif`); no nested
+  ternary; `pathlib.Path` over `os.path` string plumbing.
+- Broad lint stacks also police security (`shell=True`, `eval`,
+  disabled TLS), naive datetimes, and leak-prone caching — the rules
+  behind those findings live in [security.md](security.md) and
+  [runtime-correctness.md](runtime-correctness.md); write to them and
+  those families stay silent too.
 
 ## Docstrings on the public surface
 
@@ -157,9 +152,11 @@ means the formatter has simply not run yet.
 ## Self-check
 
 The bundled `scripts/check_py_conventions.py` catches only the mechanical,
-lexical subset of the above (`Any`, `print`, raw env reads, bare `except`,
-`assert` in shipped code, suppressions, debugger calls). The type-aware
-rules — boolean strictness, un-awaited coroutines, mutation, dead
-conditions — are invisible to a lexical scanner. The project's real `lint`
-and `typecheck` are the authority; run them, and read every finding in
-context.
+lexical subset of this skill (`Any`, `print`, raw env reads, bare `except`,
+`assert` in shipped code, suppressions, debugger calls, and the
+high-signal security violations: `eval`/`exec`, `shell=True`, pickle
+loading, `yaml.load`, `mktemp`, `utcnow`, disabled TLS verification). The
+type-aware rules — boolean strictness, un-awaited coroutines, mutation,
+dead conditions — are invisible to a lexical scanner. The project's real
+`lint` and `typecheck` are the authority; run them, and read every finding
+in context.

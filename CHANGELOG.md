@@ -5,6 +5,16 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.1.0] — 2026-07-17
+
+### `python-coding` 0.2.0 (minor: the rules of an existing skill changed)
+
+The skill is strengthened into a **secure-by-default, modern (3.12–3.14) Python standard** — still framework-, architecture- and library-neutral by contract.
+
+- Four new `references/`: **security** (parameterized SQL and argument-list subprocess, no `eval`/`exec` on data, no pickle/`yaml.load` on untrusted input, path containment via `resolve()` + `is_relative_to`, `mkstemp`-family temp files, tarfile `filter=`, `secrets` + `hmac.compare_digest`, memory-hard password hashing, TLS verification never disabled, ReDoS awareness, secrets hygiene); **concurrency** (structured concurrency with `asyncio.TaskGroup` and `asyncio.timeout`, no fire-and-forget, `CancelledError` propagation, no blocking calls on the loop, thread locking that never leans on the GIL, model choice incl. 3.14 subinterpreters and free-threading); **runtime-correctness** (aware-UTC datetimes, monotonic clocks for durations, `Decimal` money, context-managed resources with `__del__` banned, `lru_cache`-on-method leak, join-over-`+=`); **modern-python** (version-gated adoption for 3.12/3.13/3.14: PEP 695 generics and `type` aliases, `TypeIs`, `ReadOnly`, `@override`, native lazy annotations, t-strings, plus an explicit banned-legacy table).
+- Existing references upgraded: exception groups/`except*` and `add_note`, retry/timeout discipline, library-logging rules (`NullHandler`, log-once-per-failure, constant message templates) in errors-config-logging; `TypeIs`-over-`TypeGuard` and `NotRequired`/`ReadOnly` in type-design; PEP 696 defaults in generics; async section of lint-clean routed to concurrency; property-based/async-test/exception-assert rules in testing. The superseded `gather`-by-default guidance is replaced by `TaskGroup`-first.
+- `scripts/check_py_conventions.py` gains seven high-signal security rules — `PY-EVAL`, `PY-SHELL`, `PY-PICKLE`, `PY-YAML-LOAD`, `PY-MKTEMP`, `PY-UTCNOW`, `PY-TLS-NOVERIFY` — with no test-file relaxation; fixtures, the calibrated example pair, per-rule tests and eval cases updated accordingly.
+
 ## [2.0.0] — 2026-07-17
 
 ### New skill: `python-coding` 0.1.0 (major: a skill was created)
