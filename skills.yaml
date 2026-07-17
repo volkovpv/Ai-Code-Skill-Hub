@@ -59,6 +59,7 @@ skills:
     license: MIT
     capabilities:
       data: true
+      observations: true
     content_policy:
       max_tracked_file_bytes: 262144
       pii_allowed: false

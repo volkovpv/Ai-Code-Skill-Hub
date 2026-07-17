@@ -301,6 +301,10 @@ _MESSAGES = {
     "NEST-RAW-THROW": "throw new Error in domain/application; throw a typed domain error from the registry",
     "NEST-DOMAIN-IMPORT": "framework import inside domain/; the domain core imports no framework",
     "NEST-APP-IMPORT": "runtime @nestjs import inside application/; use `import type` from the framework base only",
+    "NEST-HTTP-STATUS-LITERAL": (
+        "raw numeric HTTP-status literal; use `HttpStatus.*` from `@nestjs/common` "
+        "(exception args, @HttpCode, status maps and test assertions alike)"
+    ),
 }
 
 KNOWN_CODES = frozenset(_MESSAGES)
@@ -311,6 +315,25 @@ _RAW_THROW_RE = re.compile(r"\bthrow\s+new\s+Error\s*\(")
 _IMPORT_LINE_RE = re.compile(r"^\s*(?:import\b|export\s+(?:\*|\{).*\bfrom\b)|\brequire\s*\(")
 _IMPORT_TYPE_RE = re.compile(r"^\s*(?:import|export)\s+type\b")
 _MODULE_SPEC_RE = re.compile(r"(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)['\"]([^'\"]+)['\"]")
+
+# Standard HTTP status-code registry (RFC 9110 + widely used extensions) —
+# used to disambiguate a genuine status literal from an unrelated 3-digit
+# magic number (OBS-20260717-001).
+_HTTP_STATUS_CODES = frozenset(
+    {
+        100, 101, 102, 103,
+        200, 201, 202, 203, 204, 205, 206, 207, 208, 226,
+        300, 301, 302, 303, 304, 305, 306, 307, 308,
+        400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413,
+        414, 415, 416, 417, 418, 421, 422, 423, 424, 425, 426, 428, 429, 431,
+        451,
+        500, 501, 502, 503, 504, 505, 506, 507, 508, 510, 511,
+    }
+)
+_HTTP_CODE_DECORATOR_RE = re.compile(r"@HttpCode\s*\(\s*(\d{3})\s*\)")
+_HTTP_EXCEPTION_RE = re.compile(r"\bnew\s+HttpException\s*\([^()]*,\s*(\d{3})\s*\)")
+_HTTP_STATUS_MAP_ENTRY_RE = re.compile(r"\[\s*(\d{3})\s*,\s*[A-Za-z_$][\w$.]*\s*\]")
+_HTTP_TEST_ASSERTION_RE = re.compile(r"\.(?:toBe|toEqual)\s*\(\s*(\d{3})\s*\)")
 
 _DOMAIN_FORBIDDEN_PREFIXES = ("@nestjs/",)
 _DOMAIN_FORBIDDEN_MODULES = frozenset(
@@ -413,6 +436,15 @@ def check_text(text: str, label: str) -> tuple[list[tuple[str, int, str, str]], 
             if after_raw.startswith(("'", '"')) or _INLINE_SYMBOL_RE.match(code_line, m.end()):
                 hits.add("NEST-DI-TOKEN")
                 break
+
+        for pattern in (_HTTP_CODE_DECORATOR_RE, _HTTP_EXCEPTION_RE, _HTTP_STATUS_MAP_ENTRY_RE):
+            for m in pattern.finditer(code_line):
+                if int(m.group(1)) in _HTTP_STATUS_CODES:
+                    hits.add("NEST-HTTP-STATUS-LITERAL")
+        if test_ctx:
+            for m in _HTTP_TEST_ASSERTION_RE.finditer(code_line):
+                if int(m.group(1)) in _HTTP_STATUS_CODES:
+                    hits.add("NEST-HTTP-STATUS-LITERAL")
 
         if not test_ctx and layer in ("domain", "application"):
             if _RAW_THROW_RE.search(code_line):
