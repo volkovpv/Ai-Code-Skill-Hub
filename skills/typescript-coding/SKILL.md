@@ -1,6 +1,6 @@
 ---
 name: typescript-coding
-description: Universal coding standard and workflow for production TypeScript, deliberately free of any framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, explicit boolean expressions, `??`/optional-chaining, no floating promises, immutable data, no type/lint suppressions, centralized env access, and test-in-the-same-change discipline. Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) in any project — application code, a library, a script, or their tests. For ports-and-adapters layering rules combine with the hexagonal-service skill; for NestJS specifics combine with the typescript-nestjs skill.
+description: Universal coding standard and workflow for production TypeScript, free of framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no floating promises, immutable data, no type/lint suppressions, centralized env access, test-in-the-same-change discipline; type design (invalid states unrepresentable, discriminated unions with exhaustive switches, `satisfies`, parse-don't-assert boundaries) and generics/type-level discipline (golden rule of generics, type-level DRY, template literal types). Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) — app code, libraries, scripts, or tests. Combine with the hexagonal-service skill for ports-and-adapters layering and typescript-nestjs for NestJS.
 ---
 
 # TypeScript coding (universal)
@@ -18,20 +18,28 @@ uses them, apply those skills on top of this one.
    rules in [references/typing-and-style.md](references/typing-and-style.md):
    `as const` registries (never a native `enum`), branded ids, `readonly` by
    default, explicit return types on exports, `import type` for types.
-2. **Handle errors and the environment deliberately.** `unknown` in `catch`,
+2. **Design the types before the code.** Model states as discriminated
+   unions so invalid combinations cannot compile, close every switch with a
+   `never` check, keep inputs wide and outputs narrow, validate boundary
+   data instead of asserting it — see
+   [references/type-design.md](references/type-design.md). Reach for a
+   generic only when it relates two types, and derive related types from one
+   source of truth — see
+   [references/generics-and-type-level.md](references/generics-and-type-level.md).
+3. **Handle errors and the environment deliberately.** `unknown` in `catch`,
    never swallow an error, wrap with `cause` at most once at the source,
    centralize `process.env` access — see
    [references/errors-config-logging.md](references/errors-config-logging.md).
-3. **Write it lint-clean the first time.** A strict lint stack rejects far more
+4. **Write it lint-clean the first time.** A strict lint stack rejects far more
    than the compiler and counts warnings too — explicit boolean expressions,
    `??` over `||`, no floating promises, immutable data, named literals, small
    shallow functions, JSDoc on the public surface. Follow
    [references/lint-clean.md](references/lint-clean.md) so the project's `lint`
    comes back with zero errors and zero warnings.
-4. **Test in the same change.** A code change without its tests is
+5. **Test in the same change.** A code change without its tests is
    incomplete; every bug fix ships a regression test that fails before the
    fix. See [references/testing.md](references/testing.md).
-5. **Self-check before handing off.** Run the convention checker over the
+6. **Self-check before handing off.** Run the convention checker over the
    files you touched:
 
    ```bash
@@ -57,6 +65,8 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Situation | Read |
 |-----------|------|
 | Choosing types, tsconfig flags, constants, or style | [references/typing-and-style.md](references/typing-and-style.md) |
+| Modeling states, unions, narrowing, boundary validation, `satisfies`, structural-typing gotchas | [references/type-design.md](references/type-design.md) |
+| Writing a generic, deriving types from a source of truth, template literal types, overloads vs conditional types | [references/generics-and-type-level.md](references/generics-and-type-level.md) |
 | Making code pass a strict linter with zero warnings (booleans, promises, immutability, complexity, JSDoc) | [references/lint-clean.md](references/lint-clean.md) |
 | Errors, `catch` blocks, env access, logging hygiene | [references/errors-config-logging.md](references/errors-config-logging.md) |
 | Writing or reviewing tests | [references/testing.md](references/testing.md) |
@@ -76,6 +86,18 @@ has been promoted into `knowledge/` or this workflow.
 - Model closed sets as an `as const` object plus a derived union type; native
   `enum` is banned. No raw string ids — use branded types with a coercer at
   the point where untyped input enters.
+- Model variant state as a discriminated union so invalid combinations cannot
+  be represented; close every `switch` over a union with a `never`-typed
+  exhaustiveness check; no in-domain sentinel values (`-1`, `''`) for
+  "absent" — see [references/type-design.md](references/type-design.md).
+- Data crossing a runtime boundary (network, file, JSON, queue) is `unknown`
+  until validated; keep one source of truth per boundary shape (schema ↔
+  type), never a hand-maintained pair.
+- Check literal constants with `satisfies` (or an annotation) — never an
+  `as T` assertion on an object literal; a type parameter must relate two
+  types or it does not exist (no return-only generics); derive related types
+  (`keyof`, mapped, utility types) instead of duplicating them — see
+  [references/generics-and-type-level.md](references/generics-and-type-level.md).
 - `readonly` fields and `readonly` arrays by default; `import type` for
   type-only imports; explicit return types on every export.
 - In `catch` the binding is `unknown` — narrow before use; never swallow an

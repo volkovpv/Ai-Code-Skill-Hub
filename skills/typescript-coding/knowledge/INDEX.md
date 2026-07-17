@@ -6,8 +6,8 @@ everything.
 
 | File | Read when |
 |------|-----------|
-| [patterns.md](patterns.md) | applying a recurring typing pattern (registries, branded ids, readonly surfaces, cause-preserving wraps) |
-| [pitfalls.md](pitfalls.md) | a checker finding looks wrong, or a `strict`-mode edge case bites |
+| [patterns.md](patterns.md) | applying a recurring typing pattern (registries, branded ids, readonly surfaces, cause-preserving wraps, discriminated unions + `assertUnreachable`, `satisfies` registries, structural test seams, boundary schemas) |
+| [pitfalls.md](pitfalls.md) | a checker finding looks wrong, or a `strict`-mode / structural-typing edge case bites (excess-property freshness, `Object.keys`, `filter(Boolean)`, shallow utility types, runtime-visible `private`) |
 
 Rules for adding knowledge:
 

@@ -5,6 +5,21 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [1.5.0] — 2026-07-17
+
+### `typescript-coding` 1.1.1 → 1.2.0 — type-design and generics rules from the source literature
+
+The skill's rules are strengthened from two books — Dan Vanderkam, *Effective TypeScript* (2nd ed., 83 items) and Stefan Baumgartner, *TypeScript Cookbook* — while staying universal (no framework/architecture assumptions) and consistent with a strict reference ESLint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc, Prettier-owned formatting).
+
+- New `references/type-design.md`: invalid states unrepresentable (tagged unions over flag bags, no in-domain sentinels, optional-`never` exclusivity), discriminated unions as the default state model, exhaustive `switch`es closed with a `never` check, wide inputs / narrow outputs, nullability at the perimeter, `satisfies` vs annotation vs `as const`, type-guard/assertion-function soundness discipline, parse-don't-assert trust boundaries with one source of truth per shape, and structural-typing consequences (open types, excess-property freshness, `Object.keys`, `Map` for dynamic keys, ES `#private` for runtime privacy).
+- New `references/generics-and-type-level.md`: the golden rule of generics (a type parameter must relate two types; no return-only generics), constraints/defaults/naming, conditional return types vs overloads, variadic and labeled tuples, type-level DRY (`keyof`, mapped types, `Record<keyof T, V>`, utility-type composition, shallowness caveats), template literal types with tail-recursive parsing, and "keep types simple; type-level-test the complex ones".
+- `typing-and-style.md`: no annotations on inferable locals, parameter defaults in the signature, domain vocabulary and units in names; `@ts-expect-error` clarified as banned in shipped code with its one sanctioned home in negative type-level tests.
+- `testing.md`: types-vs-tests division of labour (don't test type-forbidden inputs; test harmful bypasses via `@ts-expect-error` + runtime enforcement; unit-test every type guard with near-miss values; type-level tests for nontrivial utilities).
+- `knowledge/`: +4 patterns (discriminated union + `assertUnreachable`, `satisfies` registries, narrow structural test seams, one source of truth per boundary shape) and +5 pitfalls (excess-property freshness, `Object.keys` is `string[]`, `filter(Boolean)` doesn't narrow, shallow `Readonly`/`Partial`/spread, TS `private` is compile-time only), all with evidence links.
+- SKILL.md: new workflow step "Design the types before the code", routing rows for both new references, and four new hard rules; skill README updated accordingly.
+
+The one deliberate deviation from the books: constructor parameter properties stay encouraged (the reference ESLint stack mandates them); the books' advice against TS-only runtime features is adopted only for `namespace`/`enum`/triple-slash references. The convention checker (`scripts/check_conventions.py`) is unchanged.
+
 ## [1.4.1] — 2026-07-17
 
 This release rebuilds the `hexagonal-service` skill from the source literature and adds user-facing documentation to every skill in the library. It aggregates the unpublished versions 1.3.0 and 1.4.0 (their full entries are below); the previous published release was 1.2.0.
