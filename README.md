@@ -62,6 +62,7 @@ Skill здесь — не одна инструкция, а **версионир
 ├── skills/                    # ЕДИНСТВЕННЫЙ источник истины опубликованных skills
 │   ├── example-skill/         # эталонный skill — полная модель, см. «Анатомия skill»
 │   ├── typescript-coding/     # универсальный TypeScript-стандарт (без фреймворков/архитектуры)
+│   ├── python-coding/         # универсальный Python-стандарт (без фреймворков/архитектуры)
 │   ├── hexagonal-service/     # архитектура ports-and-adapters (язык- и фреймворк-нейтральная)
 │   └── typescript-nestjs/     # NestJS-специфика поверх hexagonal-service и typescript-coding
 │
@@ -117,6 +118,10 @@ Skill здесь — не одна инструкция, а **версионир
   генератор Conventional Commits сообщений из diff;
 - [typescript-coding](skills/typescript-coding/README.md) — универсальный
   строго типизированный стандарт TypeScript;
+- [python-coding](skills/python-coding/README.md) — универсальный строго
+  типизированный стандарт Python: строгий type checker, закрытые множества
+  как enum/Literal, исчерпывающий match, иммутабельность по умолчанию,
+  дисциплина ошибок и тестов;
 - [hexagonal-service](skills/hexagonal-service/README.md) — канон
   ports-and-adapters, нейтральный к языку, фреймворку и проекту;
 - [typescript-nestjs](skills/typescript-nestjs/README.md) — NestJS-механика

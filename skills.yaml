@@ -65,3 +65,21 @@ skills:
       pii_allowed: false
       secrets_allowed: false
       observation_review_required: true
+  # python-coding stays draft until the eval-gate (scripts/run_skill_evals.py
+  # over __test__/evals/python-coding/cases.json against a real harness) passes.
+  - name: python-coding
+    path: skills/python-coding
+    version: 0.1.0
+    status: draft
+    summary: Universal strictly-typed Python coding standard and convention checker; no framework or architecture assumptions.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
+    capabilities:
+      knowledge: true
+      data: true
+      observations: true
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true

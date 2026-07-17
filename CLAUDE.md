@@ -72,7 +72,7 @@ Releases are auto-published from `main` only (`.github/workflows/release.yml`, i
 - No network, no secrets, no destructive operations; use `TempDirTestCase` and the library/skill factories from `__test__/helpers.py` (`make_library`, `make_layered_library`, `write_skill`, `add_layers`).
 - Per-skill tests: `__test__/skills/test_<name_with_underscores>.py`, using the skill's own `data/fixtures/` as inputs (they double as observation evidence).
 - Fixtures: `__test__/fixtures/valid-skill/` (positive) and `invalid-skill/` (intentionally broken — don't "fix" it). Policy changes require updating the tests that pin the policy.
-- Mutation testing is expensive and CI-owned (weekly/manual `mutation.yml` over the whole `[tool.mutmut].only_mutate` scope). Do NOT run the full `mutmut run` locally. After editing a file in that scope (`security.py`, `lockfile.py`, `installer.py`, `yamlio.py`, `validator.py`, or the two skill analyzer scripts), run only that file's mutants with `python scripts/mutation.py <file-or-short-name>` — it throttles parallelism to CPU−2 and re-tests just that module; editing a file outside the scope is a no-op.
+- Mutation testing is expensive and CI-owned (weekly/manual `mutation.yml` over the whole `[tool.mutmut].only_mutate` scope). Do NOT run the full `mutmut run` locally. After editing a file in that scope (`security.py`, `lockfile.py`, `installer.py`, `yamlio.py`, `validator.py`, or the three skill analyzer scripts), run only that file's mutants with `python scripts/mutation.py <file-or-short-name>` — it throttles parallelism to CPU−2 and re-tests just that module; editing a file outside the scope is a no-op.
 
 ## Hard rules (violations are expensive)
 

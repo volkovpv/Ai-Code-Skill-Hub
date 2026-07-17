@@ -1,0 +1,3 @@
+<stdin>:2: PY-PRINT print() call in shipped code; route output through the project's logging seam
+<stdin>:3: PY-ANY Any defeats strict typing; type the value or take object and narrow
+<stdin>:3: PY-ENV environment read outside the config layer; centralize os.environ in configuration code

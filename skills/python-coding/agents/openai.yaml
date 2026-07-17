@@ -1,0 +1,7 @@
+# Vendor-specific adapter for OpenAI harnesses (Codex).
+# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
+# Note: the in-house YAML subset has no multiline scalars, so default_prompt is one line.
+interface:
+  display_name: Python Coding (universal)
+  short_description: Universal strictly-typed Python coding standard, free of framework and architecture assumptions.
+  default_prompt: "Apply the python-coding skill: a universal Python coding standard with no framework, architecture, or library assumptions. Activate it when writing, reviewing, or refactoring any .py code. Enforce a strict type checker (mypy --strict or pyright strict) with full annotations on the public surface, no Any and no unproven cast, closed sets as enums or Literal unions, NewType-branded ids, frozen dataclasses and read-only collection parameters, tagged unions with exhaustive match closed by assert_never, validated (never cast) boundary data, narrowest except clauses with raise-from at most once at the source, no un-awaited coroutines and gather for independent awaits, explicit boolean expressions and None-checks instead of or-defaults, centralized os.environ access, no print or assert-as-validation in shipped code, no type or lint suppressions, and tests shipped in the same change. Do not apply architecture-specific rules (they live in the hexagonal-service skill), and do not force the skill onto non-Python requests. Project instructions always take precedence over the skill."
