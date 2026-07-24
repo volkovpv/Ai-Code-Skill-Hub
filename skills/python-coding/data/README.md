@@ -1,8 +1,11 @@
 # Data contract — python-coding
 
 - **Purpose**: reproducible Python inputs for the convention checker.
-  `fixtures/` feeds the automated tests of this skill; `examples/` shows a
-  minimal input/expected-output pair that calibrates the checker's format.
+  `fixtures/` feeds the automated tests of this skill and ships only in
+  `full` installs — a `runtime` install strips it (see the Layout
+  convention below), so shipped prose must not link into it; `examples/`
+  ships in every install mode and shows a minimal input/expected-output pair
+  that calibrates the checker's format.
 - **Source / generation**: hand-written synthetic Python; no real project
   code. Regenerate by editing the files directly — they are small enough that
   scripted generation would add complexity without benefit. After editing a

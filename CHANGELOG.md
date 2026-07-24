@@ -5,6 +5,26 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.3.0] — 2026-07-24
+
+### `python-coding` 1.0.0 → 1.1.0 (minor: an existing skill's layers changed)
+
+- Fixed OBS-20260724-001 (transferred from consumer `news-intel-docs`
+  `harness/observations/OBS-20260721-001.md`, Reviewer-confirmed C3,
+  `harness/review/skill-triage-2026-07-22.md`): shipped prose in
+  `knowledge/patterns.md`, `knowledge/pitfalls.md` and
+  `references/typing-and-style.md` linked into `data/fixtures/*`, which a
+  `runtime` install strips (`RUNTIME_EXCLUDED_PREFIXES`) — 7 dangling
+  references across 3 files. The citations are now plain code spans (not
+  markdown links) with an explicit "Hub-only, not shipped in `runtime`
+  installs" note, and `data/README.md`'s Purpose bullet states the same
+  install-mode split the Layout section already described.
+- Added a regression in `__test__/skills/test_python_coding.py`
+  (`TestRuntimeInstallLinkResolution`): every markdown link in a `runtime`-
+  installed copy of the skill must resolve on disk, with a negative guard
+  that a `full` install (which does ship `data/fixtures/`) keeps the very
+  same links resolving too.
+
 ## [2.2.0] — 2026-07-17
 
 ### `python-coding` 1.0.0, promoted to `stable` (minor: an existing skill's catalog contract changed)

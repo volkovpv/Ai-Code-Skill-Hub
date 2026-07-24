@@ -4,6 +4,11 @@ Each pattern states its scope of applicability and links to evidence. None
 is an unconditional rule — apply it when its precondition holds. All
 patterns are framework- and architecture-neutral.
 
+Some patterns cite `data/fixtures/*` below as calibration evidence. That
+directory is Hub-only development content and does **not** ship in a
+`runtime` install (see `data/README.md`) — those citations are written as
+plain code spans, not clickable links, for that reason.
+
 ## Contents
 
 - [Closed set = enum or `Literal` union](#closed-set--enum-or-literal-union-never-loose-strings)
@@ -25,7 +30,7 @@ patterns are framework- and architecture-neutral.
 (or a `Literal` union for lightweight boundary shapes) so the checker has a
 finite domain to exhaust; comparing loose strings by value scatters the set
 and hides typos. Evidence: the `UserStatus` enum in
-[../data/fixtures/clean_sample.py](../data/fixtures/clean_sample.py) and
+`data/fixtures/clean_sample.py` and
 [../references/typing-and-style.md](../references/typing-and-style.md).
 
 ## Branded id: `NewType` + validating constructor at the boundary
@@ -34,7 +39,7 @@ and hides typos. Evidence: the `UserStatus` enum in
 its constructor (behind a validating `parse_xxx_id` function) exactly where
 untyped input enters, so a raw `str` can never be passed where an id is
 expected. Evidence: `UserId` / `parse_user_id` in
-[../data/fixtures/clean_sample.py](../data/fixtures/clean_sample.py) and
+`data/fixtures/clean_sample.py` and
 [../references/typing-and-style.md](../references/typing-and-style.md).
 
 ## Frozen dataclass, read-only surface
@@ -55,7 +60,7 @@ re-wrapping in intermediate callers duplicates context and mangles the
 chain. Evidence:
 [../references/errors-config-logging.md](../references/errors-config-logging.md)
 and the typed-error example in
-[../data/fixtures/clean_sample.py](../data/fixtures/clean_sample.py).
+`data/fixtures/clean_sample.py`.
 
 ## Tagged union + `assert_never` default
 
@@ -83,7 +88,7 @@ production objects satisfy it structurally, and tests pass a plain stub
 object instead of a mock library. Evidence:
 [../references/generics-and-protocols.md](../references/generics-and-protocols.md)
 and the `UserSource` protocol in
-[../data/fixtures/clean_sample.py](../data/fixtures/clean_sample.py).
+`data/fixtures/clean_sample.py`.
 
 ## TaskGroup owns the fan-out
 
@@ -103,7 +108,7 @@ placeholders for SQL, an argument list for subprocess (no `shell=True`),
 an allowlist for identifiers. Escaping by hand is the fallback of last
 resort inside one audited seam. Evidence:
 [../references/security.md](../references/security.md) and the `PY-SHELL`
-calibration in [../data/fixtures/violations.py](../data/fixtures/violations.py).
+calibration in `data/fixtures/violations.py`.
 
 ## Path containment: resolve, then `is_relative_to`
 
