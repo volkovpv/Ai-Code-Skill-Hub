@@ -5,6 +5,35 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.3.0] — 2026-07-24
+
+### `typescript-coding` 1.2.0 → 1.3.0 (minor: an existing skill's layers changed)
+
+- Fixed OBS-20260724-001 (transferred from consumer `news-intel-docs`
+  `harness/observations/OBS-20260721-002.md`, Reviewer-confirmed C3,
+  `harness/review/skill-triage-2026-07-22.md`): shipped prose in
+  `knowledge/patterns.md`, `knowledge/pitfalls.md` and
+  `references/typing-and-style.md` linked into `data/fixtures/*`, which a
+  `runtime` install strips (`RUNTIME_EXCLUDED_PREFIXES`) — 4 dangling
+  references across 3 files. `observations/INDEX.md` additionally stated the
+  candidates-are-not-shipped rule and then linked
+  `candidates/OBS-20260713-001.md`, contradicting it two lines later; that
+  link is now plain, non-shipped-annotated text. `data/README.md`'s Purpose
+  bullet now states the same install-mode split its Layout section already
+  described.
+- Also fixed, per the Reviewer's transfer note: the shipped
+  `observations/accepted/OBS-20260715-001.md` cited
+  `data/fixtures/justified_rule_disable.ts` as its own reproduction evidence
+  without disclosing it is unreachable in a `runtime` install; the evidence
+  entry and reproduction text now say so explicitly and point a `runtime`
+  consumer at the equivalent test instead.
+- Added a regression in `__test__/skills/test_typescript_coding.py`
+  (`TestRuntimeInstallLinkResolution`): every markdown link in a `runtime`-
+  installed copy of the skill must resolve on disk; a negative guard checks
+  a `full` install (which does ship `data/fixtures/` and
+  `observations/candidates/`) keeps the same links resolving, and a third
+  test pins the accepted-observation evidence annotation.
+
 ## [2.2.0] — 2026-07-17
 
 ### `python-coding` 1.0.0, promoted to `stable` (minor: an existing skill's catalog contract changed)
