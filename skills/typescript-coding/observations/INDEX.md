@@ -28,9 +28,14 @@ Reading rules for agents:
   around a documented upstream lint-rule limitation (transferred from the
   news-intel consumer; deterministic fixture attached; reviewed by the
   operator, 2026-07-15).
+- [OBS-20260724-001](accepted/OBS-20260724-001.md) — shipped prose linked into
+  `data/fixtures/*` and this very index linked into `candidates/`, both
+  stripped by a `runtime` install (transferred from the news-intel consumer;
+  reviewed by the operator, 2026-07-24).
 
 ## Candidates awaiting review
 
-- [OBS-20260713-001](candidates/OBS-20260713-001.md) — the convention checker
+- `OBS-20260713-001` (`candidates/`, development-only — not shipped in a
+  `runtime` install, see the reading rules above) — the convention checker
   over-reports `process.env` access when it has no file path for context
   (reproducible evidence attached; not yet reviewed, not promoted anywhere).

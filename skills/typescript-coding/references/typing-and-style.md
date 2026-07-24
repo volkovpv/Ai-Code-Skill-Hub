@@ -88,5 +88,6 @@ the project's compiler; run scripts with a modern TS runner, not a legacy one.
 The checker `scripts/check_conventions.py` flags the mechanical violations of
 this file (`enum`, `any`, non-null `!`, suppression comments) and of the other
 references. It is a backstop, not the source of truth; the compiler in
-`strict` mode is. See [../data/fixtures/clean_sample.ts](../data/fixtures/clean_sample.ts)
-for a file that satisfies every rule here.
+`strict` mode is. `data/fixtures/clean_sample.ts` (Hub-only development
+content, not shipped in a `runtime` install — see `data/README.md`) is a
+file that satisfies every rule here.

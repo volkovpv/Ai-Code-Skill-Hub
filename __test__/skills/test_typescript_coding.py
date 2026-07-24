@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import re
 import subprocess
 import sys
 import tempfile
@@ -30,6 +31,34 @@ SKILL = ROOT / "skills" / "typescript-coding"
 SCRIPT = SKILL / "scripts" / "check_conventions.py"
 FIXTURES = SKILL / "data" / "fixtures"
 EXAMPLES = SKILL / "data" / "examples"
+
+_MD_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+_FENCED_CODE_BLOCK = re.compile(r"```.*?```", re.DOTALL)
+_INLINE_CODE_SPAN = re.compile(r"`[^`\n]*`")
+
+
+def _broken_markdown_links(root: Path) -> list[str]:
+    """Every markdown-link target under *root* that does not resolve on disk.
+
+    Only relative, non-anchor targets are checked; ``http(s)``/``mailto:``
+    links and same-document ``#anchor`` fragments are out of scope (regression
+    for OBS-20260721-002: a runtime install strips ``data/fixtures/`` and
+    ``observations/candidates/``, but the shipped prose kept linking into
+    them). Fenced and inline code spans are stripped first so a language's
+    own bracket/paren syntax is never mistaken for a markdown link.
+    """
+    offenders: list[str] = []
+    for md in sorted(root.rglob("*.md")):
+        text = _FENCED_CODE_BLOCK.sub("", md.read_text(encoding="utf-8"))
+        text = _INLINE_CODE_SPAN.sub("", text)
+        for target in _MD_LINK.findall(text):
+            target = target.split("#", 1)[0].strip()
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            resolved = (md.parent / target).resolve()
+            if not resolved.is_file():
+                offenders.append(f"{md.relative_to(root)} -> {target}")
+    return offenders
 
 # Every rule the checker enforces; violations.ts triggers each exactly once.
 ALL_CODES = {
@@ -142,6 +171,44 @@ class TestFixtureContract(TempDirMixin):
     def test_checker_writes_nothing_to_disk(self):
         run_checker(str(FIXTURES / "clean_sample.ts"))
         self.assertEqual(list(self.tmp.iterdir()), [])
+
+
+class TestRuntimeInstallLinkResolution(TempDirMixin):
+    """Regression for OBS-20260721-002 (SFL, transferred as OBS-20260724-001):
+    shipped content must not reference paths a ``runtime`` install strips
+    (``data/fixtures/``, ``observations/candidates/``, ``observations/rejected/``)."""
+
+    def _install(self, install_mode: str) -> Path:
+        sys.path.insert(0, str(ROOT / "src"))
+        from skill_library.installer import install_skill
+
+        target = self.tmp / f"consumer-{install_mode}"
+        target.mkdir()
+        install_skill(ROOT, "typescript-coding", target, install_mode=install_mode)
+        return target / ".agents" / "skills" / "typescript-coding"
+
+    def test_no_dangling_markdown_links_in_runtime_install(self):
+        self.assertEqual(_broken_markdown_links(self._install("runtime")), [])
+
+    def test_full_install_keeps_the_same_links_resolving(self):
+        # Negative guard: a `full` install still ships data/fixtures/ and
+        # observations/candidates/, so the very same shipped content must
+        # keep resolving there too — the fix must not turn working links
+        # into dangling ones for `full`.
+        self.assertEqual(_broken_markdown_links(self._install("full")), [])
+
+    def test_accepted_observation_evidence_path_is_annotated_as_dev_only(self):
+        # Reviewer note (skill-triage-2026-07-22.md, OBS-20260721-002): the
+        # shipped accepted/OBS-20260715-001.md cites data/fixtures/... as its
+        # own reproduction evidence, unreachable in the tree it ships to. The
+        # citation itself is legitimate provenance (kept), but a reader of a
+        # runtime install must not be left thinking the path resolves there.
+        installed = self._install("runtime")
+        accepted = installed / "observations" / "accepted" / "OBS-20260715-001.md"
+        self.assertTrue(accepted.is_file())
+        text = accepted.read_text(encoding="utf-8")
+        self.assertIn("data/fixtures/", text)
+        self.assertIn("not shipped in a runtime install", text, text)
 
 
 class TestLiteralMasking(unittest.TestCase):
