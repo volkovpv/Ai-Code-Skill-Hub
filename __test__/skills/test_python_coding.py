@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import re
 import subprocess
 import sys
 import tempfile
@@ -31,6 +32,35 @@ SKILL = ROOT / "skills" / "python-coding"
 SCRIPT = SKILL / "scripts" / "check_py_conventions.py"
 FIXTURES = SKILL / "data" / "fixtures"
 EXAMPLES = SKILL / "data" / "examples"
+
+_MD_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+_FENCED_CODE_BLOCK = re.compile(r"```.*?```", re.DOTALL)
+_INLINE_CODE_SPAN = re.compile(r"`[^`\n]*`")
+
+
+def _broken_markdown_links(root: Path) -> list[str]:
+    """Every markdown-link target under *root* that does not resolve on disk.
+
+    Only relative, non-anchor targets are checked; ``http(s)``/``mailto:``
+    links and same-document ``#anchor`` fragments are out of scope (regression
+    for OBS-20260721-001: a runtime install strips ``data/fixtures/``, but the
+    shipped prose kept linking into it). Fenced and inline code spans are
+    stripped first so a language's own bracket/paren syntax (e.g. PEP 695
+    generics such as ``def pluck[T, K](records: ...)``) is never mistaken for
+    a markdown link.
+    """
+    offenders: list[str] = []
+    for md in sorted(root.rglob("*.md")):
+        text = _FENCED_CODE_BLOCK.sub("", md.read_text(encoding="utf-8"))
+        text = _INLINE_CODE_SPAN.sub("", text)
+        for target in _MD_LINK.findall(text):
+            target = target.split("#", 1)[0].strip()
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            resolved = (md.parent / target).resolve()
+            if not resolved.is_file():
+                offenders.append(f"{md.relative_to(root)} -> {target}")
+    return offenders
 
 # Every rule the checker enforces; violations.py triggers each exactly once.
 ALL_CODES = {
@@ -150,6 +180,34 @@ class TestFixtureContract(TempDirMixin):
     def test_checker_writes_nothing_to_disk(self):
         run_checker(str(FIXTURES / "clean_sample.py"))
         self.assertEqual(list(self.tmp.iterdir()), [])
+
+
+class TestRuntimeInstallLinkResolution(TempDirMixin):
+    """Regression for OBS-20260721-001 (SFL, transferred as OBS-20260724-001):
+    shipped prose must not link into paths a ``runtime`` install strips."""
+
+    def test_no_dangling_markdown_links_in_runtime_install(self):
+        sys.path.insert(0, str(ROOT / "src"))
+        from skill_library.installer import install_skill
+
+        target = self.tmp / "consumer"
+        target.mkdir()
+        install_skill(ROOT, "python-coding", target, install_mode="runtime")
+        installed = target / ".agents" / "skills" / "python-coding"
+        self.assertEqual(_broken_markdown_links(installed), [])
+
+    def test_full_install_keeps_the_same_links_resolving(self):
+        # Negative guard: a `full` install still ships data/fixtures/, so the
+        # very same shipped prose files must keep resolving there too — the
+        # fix must not turn working links into dangling ones for `full`.
+        sys.path.insert(0, str(ROOT / "src"))
+        from skill_library.installer import install_skill
+
+        target = self.tmp / "consumer-full"
+        target.mkdir()
+        install_skill(ROOT, "python-coding", target, install_mode="full")
+        installed = target / ".agents" / "skills" / "python-coding"
+        self.assertEqual(_broken_markdown_links(installed), [])
 
 
 class TestScannerExactViews(unittest.TestCase):

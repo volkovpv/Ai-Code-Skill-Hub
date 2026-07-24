@@ -125,6 +125,6 @@ function fully, including `-> None`.
 The checker `scripts/check_py_conventions.py` flags the mechanical violations
 of this file (`Any`, suppression comments, `print`, raw env reads) and of
 the other references. It is a backstop, not the source of truth; the type
-checker in strict mode is. See
-[../data/fixtures/clean_sample.py](../data/fixtures/clean_sample.py) for a
-file that satisfies every rule here.
+checker in strict mode is. `data/fixtures/clean_sample.py` (Hub-only
+development content, not shipped in a `runtime` install — see
+`data/README.md`) is a file that satisfies every rule here.

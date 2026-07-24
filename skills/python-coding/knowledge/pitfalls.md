@@ -4,6 +4,11 @@ Read this when a checker finding looks wrong or a typing/runtime edge case
 bites. Every pitfall lists its evidence; treat anything without evidence as
 a hypothesis, not knowledge.
 
+A pitfall below cites `data/fixtures/*` as calibration evidence. That
+directory is Hub-only development content and does **not** ship in a
+`runtime` install (see `data/README.md`) — the citation is a plain code
+span, not a clickable link, for that reason.
+
 ## Contents
 
 - [The checker is lexical, not an AST](#the-checker-is-lexical-not-an-ast)
@@ -28,7 +33,7 @@ line, and semantic questions (is this `Any` reachable? is this `cast`
 sound?) are beyond it. It is a backstop; the type checker in strict mode
 and the project linter are authoritative. Evidence: the masking tests in
 `__test__/skills/test_python_coding.py` and the calibrated fixture
-[../data/fixtures/masked_literals.py](../data/fixtures/masked_literals.py).
+`data/fixtures/masked_literals.py`.
 
 ## `x or default` swallows every falsy value
 
