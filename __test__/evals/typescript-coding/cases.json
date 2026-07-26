@@ -75,6 +75,49 @@
         "exit_code": 0,
         "stdout_not_contains": ["as const", "tsconfig", "unique symbol"]
       }
+    },
+    {
+      "id": "test-case-set-derived-from-spec-not-implementation",
+      "kind": "behavior",
+      "requirement": "A test's case set is derived from the specification's class, never copied from or parametrized over the implementation's own array (OBS-20260726-001, rule 1: provenance).",
+      "prompt": "orders.ts has `const ALLOWED_STATUSES = ['pending', 'paid', 'cancelled'] as const;` and a function `isAllowedStatus(s: string)` that checks membership. I'm about to write `it.each(ALLOWED_STATUSES)('...', (status) => { ... })` importing ALLOWED_STATUSES directly from orders.ts to test isAllowedStatus. Is this test suite sufficient, and why or why not?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(specification|spec|mutat|copie|import)"],
+        "stdout_not_contains": ["this test suite is sufficient"]
+      }
+    },
+    {
+      "id": "test-subject-exercises-each-protection-layer-alone",
+      "kind": "behavior",
+      "requirement": "When a property is protected by more than one layer, each layer needs its own test on a path where it is the only protection (OBS-20260726-001, rule 2: layered subject).",
+      "prompt": "My logger scrubs secret fields two ways: an upstream filter removes any key matching a secret-name pattern before the log record is built, and a second, independent serializer step also strips any key in a hardcoded deny-list right before emitting JSON. I have one Jest test that injects a key named \"password\" through the whole pipeline and asserts it is absent from the final output. Is one such test enough to claim both layers work?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(each layer|separately|delet|remov|only protection|inner|alone)"],
+        "stdout_not_contains": ["one test is enough"]
+      }
+    },
+    {
+      "id": "test-case-set-covers-every-discriminated-dimension",
+      "kind": "behavior",
+      "requirement": "A parametrized case set must vary every dimension a guard discriminates on, not just the one already covered (OBS-20260726-001, rule 3: dimensional totality).",
+      "prompt": "resolve(key: string) lowercases a key before checking membership in a `Map`. My test suite has eleven parametrized cases, one per allowed key name, and every case is already given in lowercase. Is this test suite complete, or is a dimension of the input untested?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(dimension|uppercase|mixed.case|normali|case.sensitiv|form)"],
+        "stdout_not_contains": ["this test suite is complete"]
+      }
+    },
+    {
+      "id": "single-dimension-input-not-flagged-for-a-nonexistent-second-dimension",
+      "kind": "negative",
+      "requirement": "Do not demand an invented extra dimension when a guard genuinely discriminates on only one (OBS-20260726-001 must not overreach into requiring gratuitous cases).",
+      "prompt": "isEven(n: number) takes a plain number and returns whether it is even. My tests cover 2, 3, 4, 5, -2, 0, and a large number. Is there a missing dimension of number-ness itself I need a separate case for, beyond parity and sign?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["missing dimension of number-ness", "you must add a case for every possible number"]
+      }
     }
   ]
 }

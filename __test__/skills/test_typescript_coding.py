@@ -211,6 +211,85 @@ class TestRuntimeInstallLinkResolution(TempDirMixin):
         self.assertIn("not shipped in a runtime install", text, text)
 
 
+class TestCaseProvenanceSubjectAndDimensionGuidance(unittest.TestCase):
+    """Regression for OBS-20260726-001 (SFL, mirrored from
+    ``skills/python-coding`` OBS-20260726-001 / PR #11, itself transferred
+    from consumer ``news-intel-docs``
+    ``harness/observations/OBS-20260726-001.md``, Reviewer-confirmed C3,
+    ``harness/review/skill-triage-2026-07-25.md``, occurrences: 9).
+
+    ``references/testing.md`` §Hygiene had a rule against hardcoding an
+    expected value "so it passes", but no rule against the distinct pattern of
+    choosing a test's *case set*, its *subject*, or its *dimensional coverage*
+    from the artifact under test rather than from the specification. The gap
+    is language-independent — it already recurred nine times in a Python
+    consumer build and is reproduced here in TypeScript idiom (`as const`
+    registries, layered filter/serializer defence, normalized `Map` keys).
+    Each of the three anchor phrases below is a load-bearing clause of one of
+    the three rules, not an incidental word choice; their absence is exactly
+    the silence the observation reports, and their presence is the minimal,
+    checkable contract the delta must ship (a prose rule, per this skill's own
+    checker-rule/prose-rule split, gets a text-content pin here plus the
+    ``behavior``/``negative`` eval cases in
+    ``__test__/evals/typescript-coding``).
+    """
+
+    TESTING_MD = SKILL / "references" / "testing.md"
+
+    # One literal, specific clause per rule — chosen so a superficial mention
+    # of "specification" or "dimension" elsewhere in the file cannot satisfy
+    # the check by accident.
+    RULE_PROVENANCE = (
+        "never copied from — or parametrized over — the artifact under test"
+    )
+    RULE_SUBJECT = (
+        "a test that reaches it through the outer layer proves nothing about "
+        "the inner one"
+    )
+    RULE_DIMENSION = "treat a surviving mutation as evidence of a missing dimension"
+
+    def _text(self) -> str:
+        # Markdown hard-wraps prose at ~80 columns, so a multi-word anchor
+        # phrase can straddle a line break; collapse all whitespace runs
+        # (including the wrap-induced newline + indentation) to a single
+        # space before searching, exactly as a human skimming the rendered
+        # text would read it.
+        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
+
+    def test_provenance_rule_is_present(self):
+        self.assertIn(self.RULE_PROVENANCE, self._text())
+
+    def test_layered_subject_rule_is_present(self):
+        self.assertIn(self.RULE_SUBJECT, self._text())
+
+    def test_dimensional_totality_rule_is_present(self):
+        self.assertIn(self.RULE_DIMENSION, self._text())
+
+    def test_each_rule_ships_an_illustrative_ts_reproduction(self):
+        # The rule must be checkable, not merely aspirational: each of the
+        # three carries its own minimal, deterministic TypeScript
+        # reproduction snippet.
+        text = self._text()
+        self.assertIn("as const", text, "rule 1 (provenance) needs its as-const/mutation snippet")
+        self.assertIn("downstream", text)
+        self.assertIn("overwrite", text)
+        self.assertIn("normalized", text)
+        self.assertIn("raw key", text)
+
+    def test_negative_do_not_tune_the_gate_rule_survives_untouched(self):
+        # False-positive guard: the new block must not have replaced or
+        # duplicated the pre-existing, distinct "do not tune a test to the
+        # gate" rule this observation explicitly does NOT cover.
+        text = self._text()
+        needle = 'never hardcode an expected value "so it passes"'
+        self.assertEqual(text.count(needle), 1, text)
+
+    def test_new_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (self.RULE_PROVENANCE, self.RULE_SUBJECT, self.RULE_DIMENSION):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestLiteralMasking(unittest.TestCase):
     """Rule text inside literals must not fire; interpolated code must."""
 

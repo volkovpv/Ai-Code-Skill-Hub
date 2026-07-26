@@ -32,6 +32,12 @@ Reading rules for agents:
   `data/fixtures/*` and this very index linked into `candidates/`, both
   stripped by a `runtime` install (transferred from the news-intel consumer;
   reviewed by the operator, 2026-07-24).
+- [OBS-20260726-001](accepted/OBS-20260726-001.md) — `references/testing.md`
+  §Hygiene had no rule against a test's case set, subject, or dimensional
+  coverage being chosen from the artifact under test rather than the
+  specification (mirrored from `python-coding@1.1.0->1.2.0`, PR #11; source
+  consumer occurrence: news-intel-docs RM-TASK-016; reviewed by
+  HC-AGENT-010, 2026-07-26).
 
 ## Candidates awaiting review
 

@@ -5,6 +5,57 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.6.0] — 2026-07-26
+
+### `typescript-coding` 1.3.0 → 1.4.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260726-001 (mirrored from `python-coding` OBS-20260726-001 /
+  PR #11, commit 67fffe3, itself transferred from consumer `news-intel-docs`
+  `harness/observations/OBS-20260726-001.md`, Reviewer-confirmed C3,
+  `harness/review/skill-triage-2026-07-25.md`, `occurrences: 9`, SFL-INV-08
+  met on both limbs): `references/testing.md` §Hygiene carried a rule
+  against hardcoding an expected value "so it passes", but no rule against
+  the distinct pattern of a test's *case set*, its *subject*, or its
+  *dimensional coverage* being chosen from the artifact under test rather
+  than the specification — the same language-independent gap already fixed
+  in `python-coding`, ported here in TypeScript idiom. Added one guidance
+  block, three rules (identical in substance to `python-coding` 1.2.0):
+  1. **Provenance of the case set** — derive cases from the specification's
+     class, never copy or parametrize over the implementation's own
+     `as const` array; a healthy mutation score is not evidence of
+     specification coverage.
+  2. **Subject of the test under layered protection** — a defence-in-depth
+     claim is unverified until each layer is exercised on a path where it
+     is the only protection.
+  3. **Totality across the dimensions a control discriminates on** — name
+     the dimensions a guard discriminates on and require at least one case
+     per dimension; a surviving mutation is evidence of a missing
+     dimension, not merely a missing case.
+
+  Each rule ships its own deterministic, project-independent minimal
+  reproduction snippet in TypeScript idiom (an `as const` registry vs.
+  mutation case for rule 1; an upstream-filter-vs-downstream-serializer-
+  overwrite case for rule 2; a normalized-vs-raw `Map`-key membership case
+  for rule 3, with an exhaustive discriminated-union `switch` noted as the
+  same pattern on a second dimension).
+- Added a regression in `__test__/skills/test_typescript_coding.py`
+  (`TestCaseProvenanceSubjectAndDimensionGuidance`): pins the presence of
+  each rule's load-bearing clause and its illustrative reproduction, a
+  negative guard that the pre-existing, distinct "do not tune a test to the
+  gate" rule survives untouched, and a duplication guard. Confirmed
+  genuinely red before the delta (5 failing assertions against the
+  pre-change text) and green after (679/679 for the library).
+- Added four eval cases to `__test__/evals/typescript-coding/cases.json`
+  (three `behavior`, one `negative`) exercising each rule and a
+  false-positive guard against over-applying rule 3 to a genuinely
+  single-dimension input. Schema-validated
+  (`run_skill_evals.py --validate-only`); the LLM-backed execution is the
+  Hub's opt-in eval runner, not part of this local run.
+
+`uv run skillctl validate typescript-coding` && `uv run skillctl test`:
+679/679 passed, no regressions. Non-main branch; no push to `main`, no tag,
+no release — PR only.
+
 ## [2.5.0] — 2026-07-26
 
 ### `python-coding` 1.1.0 → 1.2.0 (minor: an existing skill's rules changed)
