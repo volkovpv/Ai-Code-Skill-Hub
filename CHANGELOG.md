@@ -5,6 +5,52 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.5.0] — 2026-07-26
+
+### `python-coding` 1.1.0 → 1.2.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260726-001 (transferred from consumer `news-intel-docs`
+  `harness/observations/OBS-20260726-001.md`, Reviewer-confirmed C3,
+  `harness/review/skill-triage-2026-07-25.md`, `occurrences: 9`, SFL-INV-08
+  met on both limbs): `references/testing.md` §Hygiene carried a rule
+  against hardcoding an expected value "so it passes", but no rule against
+  the distinct pattern of a test's *case set*, its *subject*, or its
+  *dimensional coverage* being chosen from the artifact under test rather
+  than the specification — silence that let the class recur nine times
+  across a consumer build, every instance found by a live probe or a
+  mutation battery, never by the suite that was supposed to guard the
+  property. Added one guidance block, three rules:
+  1. **Provenance of the case set** — derive cases from the specification's
+     class, never copy or parametrize over the implementation's own
+     enumeration; a healthy mutation score is not evidence of specification
+     coverage.
+  2. **Subject of the test under layered protection** — a defence-in-depth
+     claim is unverified until each layer is exercised on a path where it
+     is the only protection.
+  3. **Totality across the dimensions a control discriminates on** — name
+     the dimensions a guard discriminates on and require at least one case
+     per dimension; a surviving mutation is evidence of a missing
+     dimension, not merely a missing case.
+
+  Each rule ships its own deterministic, project-independent minimal
+  reproduction snippet (an `ALLOWED = {...}` enum-vs-mutation case for rule
+  1; an upstream-filter-vs-downstream-overwrite case for rule 2; a
+  normalized-vs-raw-key mapping case for rule 3), reproduced from the
+  consumer Reviewer's own executed verification (rule 3: `303 passed`
+  before the remedy, `11 failed` after a single case varying the key's form
+  was added).
+- Added a regression in `__test__/skills/test_python_coding.py`
+  (`TestCaseProvenanceSubjectAndDimensionGuidance`): pins the presence of
+  each rule's load-bearing clause and its illustrative reproduction, a
+  negative guard that the pre-existing, distinct "do not tune a test to the
+  gate" rule survives untouched, and a duplication guard. Confirmed
+  genuinely red before the delta (5 failing assertions against the
+  pre-change text) and green after (119/119 for `python-coding`, 673/673
+  for the library).
+- Added four eval cases to `__test__/evals/python-coding/cases.json` (three
+  `behavior`, one `negative`) exercising each rule and a false-positive
+  guard against over-applying rule 3 to a genuinely single-dimension input.
+
 ## [2.4.0] — 2026-07-24
 
 ### `python-coding` 1.0.0 → 1.1.0 (minor: an existing skill's layers changed)
