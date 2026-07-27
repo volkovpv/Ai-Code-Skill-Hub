@@ -18,6 +18,33 @@ ports-and-adapters service, DI seams) live in the `hexagonal-service` and
   internals (private methods, third-party library guts). Patching module
   imports is a last resort, used only when no seam exists, with a justifying
   comment.
+- **A fake's own return values, when the property under test belongs to an
+  external system, are established by observing that system once, never by
+  reading.** The rule above says *what* to fake; this says how the fake's
+  contract becomes known to be true. When the subject is a message broker,
+  an authentication encoder, a database driver's row shape, or any other
+  system this project does not own, no fake, and no re-reading of a project
+  norm, an RFC, or vendor documentation, can establish what that system
+  actually does — only a live observation against the real system can. Write
+  the fake only after a probe against the real system has pinned the
+  behaviour, then reuse that pinned observation as a fixture rather than
+  re-deriving it from prose on every subsequent change. Treat a second
+  rejection of the same reading on the same external-system property as the
+  signal to switch evidence class from reading to a live observation, not as
+  cause to produce a third reading. Minimal reproduction:
+  `new URL("amqp://:p@h:1").username` is `""` — indistinguishable from the
+  absent user of `new URL("amqp://h:1")`, whose `username` is also `""` — so
+  any client library reading that URL is free to substitute its own default
+  identity, a fact no fake at the wrapper's own seam can see, because the
+  fake's job is to stand in for the very layer performing the substitution.
+  Second reproduction, same family: PostgreSQL names an unaliased expression
+  column `?column?`, so `SELECT true, false` yields two identically-named
+  fields, and a driver that builds each row as an object keyed by column
+  name collapses them into a one-key row (`{ "?column?": false }`) while
+  `SELECT true AS a, false AS b` returns both — a two-property object fake
+  for that row, the ordinary expectation, is exactly wrong, and only a live
+  query against the real database (or the driver's array row mode) exposes
+  it.
 - Prefer factories/builders over copy-pasted fixture blobs. Use
   property-based tests for pure functions whose invariants you can state.
 

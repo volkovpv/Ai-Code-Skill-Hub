@@ -38,6 +38,13 @@ Reading rules for agents:
   specification (mirrored from `python-coding@1.1.0->1.2.0`, PR #11; source
   consumer occurrence: news-intel-docs RM-TASK-016; reviewed by
   HC-AGENT-010, 2026-07-26).
+- [OBS-20260727-001](accepted/OBS-20260727-001.md) — `references/testing.md`
+  said *what* to fake but not how a fake's own return values become known to
+  be true of an external system, so a double for a third-party seam could
+  stay green while encoding a wrong belief about that system's runtime
+  behaviour (mirrored from `python-coding@1.2.0->1.3.0`, PR #13; source
+  consumer occurrence: news-intel-docs RM-TASK-017; reviewed by
+  HC-AGENT-010, 2026-07-27).
 
 ## Candidates awaiting review
 

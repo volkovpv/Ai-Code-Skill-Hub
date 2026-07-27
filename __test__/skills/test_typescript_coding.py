@@ -290,6 +290,78 @@ class TestCaseProvenanceSubjectAndDimensionGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestExternalReferenceBehaviourGuidance(unittest.TestCase):
+    """Regression for OBS-20260726-002 (SFL, mirrored from
+    ``skills/python-coding`` OBS-20260727-001 / PR #13, itself transferred
+    from consumer ``news-intel-docs``
+    ``harness/observations/OBS-20260726-002.md``, Reviewer-confirmed C3,
+    ``harness/review/skill-triage-2026-07-26.md``, occurrences: 3, both
+    claimed minimal reproductions independently re-executed by that
+    Reviewer).
+
+    ``references/testing.md`` already says *what* to fake (an interface or
+    seam the code exposes, never someone else's internals) but was silent on
+    *how the fake's own return values are known to be true of the real
+    system* before the fake is written. The gap is language-independent: a
+    unit-test double for a third-party seam stays green while encoding a
+    wrong belief about that system's runtime behaviour, and only a live
+    probe against the real system — never a re-reading of project norms or
+    vendor prose — catches it. The anchor phrases below are load-bearing
+    clauses of the new rule, not incidental word choice; their absence is
+    exactly the silence the observation reports.
+    """
+
+    TESTING_MD = SKILL / "references" / "testing.md"
+
+    RULE_NO_READING_ESTABLISHES_IT = (
+        "no fake, and no re-reading of a project norm, an RFC, or vendor "
+        "documentation, can establish what that system actually does"
+    )
+    RULE_SWITCH_TRIGGER = (
+        "a second rejection of the same reading on the same external-system "
+        "property"
+    )
+
+    def _text(self) -> str:
+        # Same whitespace-collapse rationale as the provenance/subject/
+        # dimension guidance above: Markdown hard-wraps prose, so a
+        # multi-word anchor phrase can straddle a line break.
+        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
+
+    def test_external_system_observation_rule_is_present(self):
+        self.assertIn(self.RULE_NO_READING_ESTABLISHES_IT, self._text())
+
+    def test_second_rejection_switch_trigger_is_present(self):
+        self.assertIn(self.RULE_SWITCH_TRIGGER, self._text())
+
+    def test_rule_ships_two_illustrative_ts_reproductions(self):
+        # The rule must be checkable, not merely aspirational: two
+        # deterministic, project-independent minimal reproductions in
+        # TypeScript idiom, one per occurrence family (an empty-vs-absent
+        # URL identity; a driver's object-row column collapse).
+        text = self._text()
+        self.assertIn('new URL("amqp://:p@h:1")', text)
+        self.assertIn("?column?", text)
+
+    def test_negative_fake_the_seam_rule_survives_untouched(self):
+        # False-positive guard: the new block must not have replaced or
+        # duplicated the pre-existing, distinct "mock interfaces and seams
+        # the code exposes, never someone else's internals" rule — this
+        # observation is silent-not-wrong about that rule, not a
+        # replacement for it.
+        text = self._text()
+        needle = "never someone else's internals"
+        self.assertEqual(text.count(needle), 1, text)
+
+    def test_new_rule_is_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_NO_READING_ESTABLISHES_IT,
+            self.RULE_SWITCH_TRIGGER,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestLiteralMasking(unittest.TestCase):
     """Rule text inside literals must not fire; interpolated code must."""
 

@@ -5,6 +5,63 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.8.0] — 2026-07-27
+
+### `typescript-coding` 1.4.0 → 1.5.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260727-001 (mirrored from `python-coding` OBS-20260727-001 /
+  PR #13, commit 8e6177e, itself a field report from a consuming project,
+  reviewer-confirmed class C3, `occurrences: 3`, universality threshold met
+  on both limbs, both claimed minimal reproductions independently
+  re-executed by that reviewer): `references/testing.md` already said *what*
+  to fake ("mock interfaces and seams the code exposes, never someone else's
+  internals") but was silent on *how the fake's own return values are known
+  to be true of the real system* before the fake is written — the same
+  language-independent gap already fixed in `python-coding`, ported here in
+  TypeScript idiom. In the three source occurrences — a broker rewriting the
+  delivery key at every dead-letter hop, an authentication encoder
+  substituting a default identity for an absent **or empty** username, and a
+  database driver collapsing two un-aliased columns into a single row key —
+  a unit-test fake for a third-party seam stayed green while encoding a
+  wrong belief about that system's runtime behaviour, and only a live probe
+  against the real system, never a re-reading of project norms or vendor
+  prose, ever caught it. Added one guidance block adjacent to the existing
+  mock-the-seam rule: the reference behaviour a fake encodes for an
+  **external** system is established once, by observing the real system, and
+  pinned as a fixture; a second rejection of the same reading on the same
+  external-system property is the trigger to switch evidence class from
+  reading to a live observation, not to produce a third reading. Ships two
+  deterministic, project-independent minimal reproductions in TypeScript
+  idiom — `new URL("amqp://:p@h:1").username` is `""`, indistinguishable
+  from the absent user of `new URL("amqp://h:1")` (re-executed on Node
+  v26.4.0); and PostgreSQL's `?column?` naming of unaliased expression
+  columns, which makes `SELECT true, false` collapse into a one-key row
+  under an object-row driver while `SELECT true AS a, false AS b` returns
+  both (the PostgreSQL-side fact carried over from the reporting reviewer's
+  own execution against a live instance). The third occurrence (a live
+  two-hop broker dead-letter cycle) is not reducible to a snippet, which the
+  new guidance states explicitly.
+- Added a regression in `__test__/skills/test_typescript_coding.py`
+  (`TestExternalReferenceBehaviourGuidance`): pins the rule's two
+  load-bearing clauses, both illustrative reproductions, a negative guard
+  that the pre-existing, distinct "mock interfaces and seams the code
+  exposes, never someone else's internals" rule survives untouched, and a
+  duplication guard. Confirmed genuinely red before the delta (4 of 5
+  assertions failing against the pre-change text) and green after.
+- Added two eval cases to `__test__/evals/typescript-coding/cases.json` (one
+  `behavior`, one `negative`) exercising the rule and guarding against
+  over-applying it to a fake of an interface this project itself owns and
+  defines. Schema-validated (`run_skill_evals.py --validate-only`); the
+  LLM-backed execution is the Hub's opt-in eval runner, not part of this
+  local run.
+- `docs/history.{eng,rus}.md`: the existing "Where a stub gets its truth
+  from" entry gains this release on its **Releases** line — one story, one
+  entry, per the history-docs discipline.
+
+`uv run skillctl validate` && `uv run skillctl test`: 703/703 passed, no
+regressions. Non-main branch; no push to `main`, no tag, no release — PR
+only.
+
 ## [2.7.0] — 2026-07-27
 
 ### `python-coding` 1.2.0 → 1.3.0 (minor: an existing skill's rules changed)
