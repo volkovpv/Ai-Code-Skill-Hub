@@ -1,8 +1,9 @@
 """Tests for scripts/check_language.py — the English-only policy gate.
 
 Policy (AGENTS.md): Russian is allowed only in the root README.md,
-__test__/README.md and audit reports under _audit/; everywhere else the text
-must be English, with explicit per-line waivers for Unicode test data.
+__test__/README.md, docs/history.rus.md and audit reports under _audit/;
+everywhere else the text must be English, with explicit per-line waivers for
+Unicode test data.
 """
 
 from __future__ import annotations
@@ -48,9 +49,23 @@ class TestLanguagePolicy(TempDirTestCase):
     def test_allowlisted_locations_pass(self):
         self.write("README.md", RU_LINE)
         self.write("__test__/README.md", RU_LINE)
+        self.write("docs/history.rus.md", RU_LINE)
         self.write("_audit/2026-01-01-report.md", RU_LINE)
         result = self.run_scan(str(self.tmp))
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_english_half_of_the_history_pair_is_not_allowlisted(self):
+        # Only the .rus half is carved out; its English twin stays English-only.
+        self.write("docs/history.eng.md", RU_LINE)
+        result = self.run_scan(str(self.tmp))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("docs/history.eng.md:1:", result.stdout)
+
+    def test_other_docs_files_are_not_allowlisted(self):
+        self.write("docs/guide.md", RU_LINE)
+        result = self.run_scan(str(self.tmp))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("docs/guide.md:1:", result.stdout)
 
     def test_readme_outside_root_is_not_allowlisted(self):
         self.write("skills/demo/data/README.md", RU_LINE)

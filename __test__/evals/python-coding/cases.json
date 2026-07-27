@@ -150,6 +150,27 @@
         "exit_code": 0,
         "stdout_not_contains": ["missing dimension of int-ness", "you must add a case for every possible integer"]
       }
+    },
+    {
+      "id": "external-system-fake-contract-needs-a-live-observation",
+      "kind": "behavior",
+      "requirement": "A unit-test fake for a third-party system's seam must have its own return values established by a live observation of the real system, never by re-reading project norms or vendor docs (OBS-20260726-002).",
+      "prompt": "I'm writing a fake for our AMQP client's publisher port so I can unit-test the code that reads a dead-lettered message's event name. I typed the fake's routing_key return value by re-reading our own AC-CONV-004 routing-key convention doc a second time, since my first reading turned out wrong. Is a second careful reading of the convention doc enough to trust the fake's return value this time, or is something else needed first?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(observ|live|real broker|probe|real system)"],
+        "stdout_not_contains": ["a second reading is enough", "re-reading the doc again is sufficient"]
+      }
+    },
+    {
+      "id": "external-system-fake-not-required-for-project-owned-seam",
+      "kind": "negative",
+      "requirement": "Do not demand a live external-system observation for a fake of a seam the project itself owns and defines (OBS-20260726-002 must not overreach onto in-project Protocols).",
+      "prompt": "My repository class depends on a small `Clock` Protocol with a single `now()` method, defined and owned entirely by this project. I'm writing a plain stub class that implements `Clock` and returns a fixed, hardcoded datetime for a unit test. Do I need to run a live probe against some external system before I can trust this fake's return value?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["you must probe a live external system", "requires a live observation of a third-party system"]
+      }
     }
   ]
 }
