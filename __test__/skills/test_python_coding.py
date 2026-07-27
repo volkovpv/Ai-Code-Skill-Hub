@@ -358,6 +358,116 @@ class TestExternalReferenceBehaviourGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestOutboundMutationAndWiringLevelFakeGuidance(unittest.TestCase):
+    """Regression for OBS-20260727-001 (SFL, transferred from consumer
+    ``news-intel-docs`` ``harness/observations/OBS-20260727-001.md``, Reviewer-
+    confirmed C3, ``harness/review/skill-triage-2026-07-27.md`` §4, re-confirmed
+    unchanged §5, occurrences: 6 across two consecutive tasks).
+
+    Two sub-shapes of the same root as ``OBS-20260726-002``
+    (``TestExternalReferenceBehaviourGuidance`` above) — "evidence collected
+    somewhere other than where the property lives" — that its own scope
+    sentence did not make legible:
+
+    1. **Outbound-mutation / input-side.** The existing rule scopes itself to
+       "a fake's own return values", i.e. a fake computing a WRONG OUTPUT for
+       a given input. A fake bound at the exact layer that substitutes a
+       value the caller does not fully control on the way OUT of a call
+       (a header, an id, a default) has no return value to inspect at all,
+       so a reader keying on "return values" would not recognise this shape
+       as covered, even though the same "the fake stands in for the very
+       layer performing the substitution" principle applies.
+    2. **Wiring-level.** A test that constructs its own copy of a third-party
+       collaborator (to assert a property of *how* it is built — which
+       constructor arguments, which interceptors/hooks) establishes nothing
+       about the construction the product's own factory performs; the two
+       are different code paths and only the second one ships.
+
+    The anchor phrases below are load-bearing clauses of the new guidance,
+    not incidental word choice; their absence is exactly the silence the
+    observation reports.
+    """
+
+    TESTING_MD = SKILL / "references" / "testing.md"
+
+    RULE_OUTBOUND_NO_RETURN_VALUE = (
+        "there is no return value to inspect and the fake stands in for the "
+        "very code that would decide the outcome"
+    )
+    RULE_OUTBOUND_BELIEF = "the caller's argument reaches the wire unmodified"
+    RULE_WIRING_LEAD = (
+        "A test that constructs the collaborator itself establishes nothing "
+        "about the construction the product performs"
+    )
+    RULE_WIRING_PROVES_ACHIEVABLE = (
+        "proves only that the property is achievable, never that the "
+        "product's own wiring achieves it"
+    )
+
+    def _text(self) -> str:
+        # Same whitespace-collapse rationale as the two guidance classes
+        # above: Markdown hard-wraps prose, so a multi-word anchor phrase can
+        # straddle a line break.
+        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
+
+    def test_outbound_mutation_no_return_value_rule_is_present(self):
+        self.assertIn(self.RULE_OUTBOUND_NO_RETURN_VALUE, self._text())
+
+    def test_outbound_mutation_belief_framing_is_present(self):
+        self.assertIn(self.RULE_OUTBOUND_BELIEF, self._text())
+
+    def test_wiring_level_lead_rule_is_present(self):
+        self.assertIn(self.RULE_WIRING_LEAD, self._text())
+
+    def test_wiring_level_achievable_vs_achieves_distinction_is_present(self):
+        self.assertIn(self.RULE_WIRING_PROVES_ACHIEVABLE, self._text())
+
+    def test_rule_ships_two_illustrative_reproductions(self):
+        # Deterministic, project-independent minimal reproductions, one per
+        # sub-shape: an outbound header/id substitution the caller does not
+        # control, and a factory whose interceptor argument has zero test
+        # coverage.
+        text = self._text()
+        self.assertIn("request-id, retry token, or default identity header", text)
+        self.assertIn(
+            "leave the suite fully green while the running product wires "
+            "no interceptors at all",
+            text,
+        )
+
+    def test_negative_existing_reproductions_survive_untouched(self):
+        # False-positive guard: the pre-existing OBS-20260726-002 rule and
+        # its two reproductions must not have been replaced or duplicated by
+        # this widening.
+        text = self._text()
+        for needle in (
+            'yarl.URL.build(scheme="amqp"',
+            "row_factory=dict_row",
+            "no fake, and no re-reading of a project norm, an RFC, or vendor "
+            "documentation, can establish what that system actually does",
+            "a second rejection of the same reading on the same "
+            "external-system property",
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+    def test_negative_fake_the_seam_rule_survives_untouched(self):
+        # The pre-existing, distinct "fake protocols and seams the code
+        # exposes, never someone else's internals" rule (unrelated to this
+        # observation) must survive untouched.
+        text = self._text()
+        self.assertEqual(text.count("never someone else's internals"), 1, text)
+
+    def test_new_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_OUTBOUND_NO_RETURN_VALUE,
+            self.RULE_OUTBOUND_BELIEF,
+            self.RULE_WIRING_LEAD,
+            self.RULE_WIRING_PROVES_ACHIEVABLE,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestScannerExactViews(unittest.TestCase):
     """The masking scanner's exact per-line output for Python lexical forms."""
 

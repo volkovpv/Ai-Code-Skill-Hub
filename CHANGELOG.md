@@ -5,6 +5,41 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.9.0] — 2026-07-28
+
+### `python-coding` 1.3.0 → 1.4.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260728-001 (field report from a consuming project, reviewer-
+  confirmed class C3, `occurrences: 6` across two consecutive tasks, at
+  least three of them after the sibling fix `OBS-20260727-001`/PR #13 for
+  the adjacent external-system-fake class was already pinned and active;
+  universality threshold met on both limbs, both claimed minimal
+  reproductions independently re-executed by that reviewer, re-confirmed
+  unchanged at a second review pass): `references/testing.md` already said
+  a fake's own return values, for a property belonging to an external
+  system, must be pinned by a live observation rather than by reading —
+  but its scope sentence named only "return values", an output-side
+  property, and stayed silent on two adjacent shapes. (1) Outbound-mutation:
+  a value a third-party client substitutes on the way OUT of a call (a
+  header, id, or default the caller does not fully control) has no return
+  value to inspect at all, so a fake bound at exactly the layer performing
+  that substitution cannot show whether it happened, and a reader keying on
+  "return values" would not recognise the shape as covered. (2)
+  Wiring-level: a test that constructs its own copy of a third-party
+  collaborator to assert *how* it is built (which constructor arguments,
+  which interceptors) proves the property achievable, never that the
+  product's own production factory achieves it — a materially different
+  code path that, left uncovered, can carry a defect the sibling test
+  suite stays fully green on. Widened the existing guidance's scope
+  sentence and added both sub-shapes as their own guidance block, each with
+  a deterministic, project-independent minimal reproduction (an outbound
+  header/id substitution the caller does not control; a factory whose
+  interceptor argument has zero test coverage because every test builds
+  its own client). Added one `behavior` and one `negative` eval case per
+  sub-shape guarding against over-application onto a project-owned seam
+  with no outbound call, and onto a test that already exercises the real
+  production factory.
+
 ## [2.8.0] — 2026-07-27
 
 ### `typescript-coding` 1.4.0 → 1.5.0 (minor: an existing skill's rules changed)
