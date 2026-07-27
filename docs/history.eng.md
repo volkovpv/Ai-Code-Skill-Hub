@@ -174,10 +174,6 @@ added → the test went green (5 of 5) → two evaluation cases were added, one 
 the behaviour and one guarding against the false positive above → the full suite
 ran 684 of 684 with no regressions.
 
-The TypeScript release repeated the same sequence against its own standard —
-red (4 of 5), guidance block, green (5 of 5), two evaluation cases, full suite
-703 of 703.
-
 ---
 
 ## Where a test gets its cases from
