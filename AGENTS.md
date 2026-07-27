@@ -20,7 +20,10 @@
 - Optional layers `knowledge/`, `data/`, `observations/` are capabilities, not
   requirements: a skill with only `SKILL.md` + `references/` + `scripts/` +
   `assets/` stays valid. Do not create empty layers "for structure".
-- Do not create a `history/` directory — Git history is the history.
+- Do not create a `history/` directory inside a skill — Git history is the
+  history. This is about the skill layers; it does not touch the repository-level
+  narrative pair `docs/history.eng.md` / `docs/history.rus.md`, which is governed
+  by "History docs discipline" below.
 
 ## Knowledge and observation discipline
 
@@ -48,6 +51,43 @@
   the approval. Agents never push to `main`, never tag and never publish
   releases (release publication stays the `main`-push automation triggered by
   the human merge).
+
+## History docs discipline
+
+`docs/history.eng.md` and `docs/history.rus.md` are the human-readable
+counterpart of `CHANGELOG.md`. `CHANGELOG.md` answers *what changed in which
+release* and drives the release notes; the history pair answers *what was going
+wrong, why it was wrong, and what the fix does*. Both files are mandatory
+reading surface for a person, not for an agent at runtime, and neither is
+installed into a consumer.
+
+- **The pair is bilingual and symmetric.** Every entry exists in both files, in
+  the same order, with the same **Releases** line. Adding an entry to one file
+  and not the other is an incomplete change. `docs/history.rus.md` is the second
+  and last carve-out from the English-only policy (alongside the root
+  `README.md` and `__test__/README.md`) and is allowlisted in
+  `scripts/check_language.py`; `docs/history.eng.md` is English like everything
+  else.
+- **Show, do not list.** An entry must make the defect visible: an AS IS
+  diagram of how it went wrong, a TO BE diagram of how it goes now, a minimal
+  example a reader can run, and tables instead of paragraphs wherever a table
+  fits. Plain language throughout — no internal jargon, no identifier soup. A
+  bare bullet list of changed files belongs in `CHANGELOG.md`, not here.
+- **One story, one entry — group the releases.** When the same fix lands in
+  several skills across several releases, it is written once and every carrying
+  version is named on a single **Releases** line. Never duplicate the same
+  explanation per skill or per version.
+- **Never name a consuming project — in `docs/history.*.md` or in
+  `CHANGELOG.md`.** A defect discovered while a skill was in use is described by
+  its technical content only. The consuming project's name, its repository, its
+  file paths and its internal record identifiers must not appear in either
+  document; the neutral form is "a field report from a consuming project", with
+  the reviewer verdict class and the occurrence count carried as data. The
+  traceability link is kept on the consumer's side, where it belongs.
+- Entries are newest-first, and the history pair does not claim to cover
+  releases older than its first entry — `CHANGELOG.md` remains complete.
+- `docs/` is gate infrastructure, not used code: a docs-only change must NOT
+  bump the project version (`scripts/check_release_gate.py`).
 
 ## Change discipline (layers)
 
@@ -81,8 +121,8 @@
   cross-file run stays in CI (`.github/workflows/mutation.yml`, weekly/manual);
   do not run it locally by hand.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
-  features that do not exist. Only the root `README.md` and
-  `__test__/README.md` are written in Russian; every other document is in
+  features that do not exist. Only the root `README.md`, `__test__/README.md`
+  and `docs/history.rus.md` are written in Russian; every other document is in
   English (audit reports under `_audit/` are exempt).
 - Bump the skill's `version` in `skills.yaml` whenever its content changes.
 

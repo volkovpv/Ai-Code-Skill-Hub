@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fail when Cyrillic text appears outside the allowlisted locations.
 
-Language policy (AGENTS.md): only the root ``README.md`` and
-``__test__/README.md`` are written in Russian; audit reports under ``_audit/``
-are exempt; everything else — skill content, source code, scripts, templates,
-workflows, tests, docs — is English-only.
+Language policy (AGENTS.md): only the root ``README.md``,
+``__test__/README.md`` and ``docs/history.rus.md`` are written in Russian;
+audit reports under ``_audit/`` are exempt; everything else — skill content,
+source code, scripts, templates, workflows, tests, docs — is English-only.
 
 Usage::
 
@@ -35,6 +35,9 @@ ALLOWED_FILES = frozenset(
     {
         "README.md",  # the root README is written in Russian by policy
         "__test__/README.md",  # the test-suite guide is written in Russian by policy
+        # the Russian half of the mandatory bilingual history pair; its English
+        # twin docs/history.eng.md stays under the English-only rule
+        "docs/history.rus.md",
         "pyproject.toml",  # carries the author's legal name in project metadata
         "uv.lock",  # mirrors pyproject.toml metadata verbatim
     }
@@ -118,8 +121,9 @@ def main(argv: list[str] | None = None) -> int:
     for rel_posix, line_no in findings:
         print(
             f"{rel_posix}:{line_no}: non-English (Cyrillic) text outside the "
-            "allowlist (README.md, __test__/README.md, _audit/); translate it "
-            "or add an inline 'non-english-ok: <reason>' waiver"
+            "allowlist (README.md, __test__/README.md, docs/history.rus.md, "
+            "_audit/); translate it or add an inline "
+            "'non-english-ok: <reason>' waiver"
         )
     summary = "OK(language)" if not findings else "FAIL(language)"
     print(f"{summary}: {len(findings)} finding(s)", file=sys.stderr)

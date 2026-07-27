@@ -9,15 +9,14 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
 ### `python-coding` 1.2.0 → 1.3.0 (minor: an existing skill's rules changed)
 
-- Fixed OBS-20260727-001 (transferred from consumer `news-intel-docs`
-  `harness/observations/OBS-20260726-002.md`, Reviewer-confirmed C3,
-  `harness/review/skill-triage-2026-07-26.md`, `occurrences: 3`, SFL-INV-08
-  met on both limbs, both claimed minimal reproductions independently
-  re-executed by the consumer Reviewer): `references/testing.md` already
+- Fixed OBS-20260727-001 (field report from a consuming project, reviewer-
+  confirmed class C3, `occurrences: 3`, universality threshold met on both
+  limbs, both claimed minimal reproductions independently re-executed by
+  that reviewer): `references/testing.md` already
   said *what* to fake ("fake protocols and seams the code exposes, never
   someone else's internals") but was silent on *how the fake's own return
   values are known to be true of the real system* before the fake is
-  written. Across three independent occurrences in one consumer build —
+  written. Across three independent occurrences in a single build —
   RabbitMQ's dead-letter key rewriting via `aio-pika`, the `aiormq`
   SASL-PLAIN identity substitution for an absent/empty user, and
   `psycopg`'s `dict_row` column collapse — a unit-test fake for a
@@ -32,8 +31,8 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
   reading to a live observation, not to produce a third reading. Ships two
   deterministic, project-independent minimal reproductions (a `yarl.URL`
   empty-user-vs-absent-user case; a `psycopg` `dict_row`
-  unaliased-column-collapse case, both reproduced from the consumer
-  Reviewer's own executed verification) — the third occurrence (a live
+  unaliased-column-collapse case, both reproduced from the reporting
+  reviewer's own executed verification) — the third occurrence (a live
   two-hop broker DLX cycle) is not reducible to a snippet, which the new
   guidance states explicitly.
 - Added a regression in `__test__/skills/test_python_coding.py`
@@ -48,15 +47,41 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
   guard against over-applying it to a fake of a seam this project itself
   owns and defines.
 
+### Documentation and policy
+
+- New human-readable history pair `docs/history.eng.md` /
+  `docs/history.rus.md` — the narrative counterpart of this file. This file
+  says *what changed in which release*; the pair says *what was going wrong,
+  why it was wrong and what the fix does*, with AS IS / TO BE diagrams, a
+  runnable minimal example and tables instead of paragraphs. Linked from
+  `README.md`; the policy is recorded in `AGENTS.md` ("History docs
+  discipline"): the pair is bilingual and symmetric, one fix is written once
+  with every carrying release on a single line, and neither the pair nor this
+  file may attribute a defect to a named consuming project.
+- Applied that last rule to this file: five entries (2.7.0, 2.6.0, 2.5.0,
+  2.4.0, 2.3.0) named a consuming project and cited its internal record paths
+  and identifiers. Only the attribution was removed — every technical claim,
+  verdict class and occurrence count is unchanged; the neutral form is "a
+  field report from a consuming project".
+- `scripts/check_language.py`: `docs/history.rus.md` joins the Russian
+  allowlist (the second and last carve-out, after the root `README.md` and
+  `__test__/README.md`); its English twin stays under the English-only rule.
+  Verified load-bearing — removing the entry turns the gate red on 98 lines.
+- New `__test__/test_history_docs.py` pins the whole policy: the pair exists
+  and is symmetric, each half carries diagrams, tables and a runnable example,
+  `README.md` links both, and neither the pair nor this file matches any
+  defect-attribution shape. The attribution check is written by shape, never
+  as a denylist of project names — naming them would reintroduce exactly what
+  the rule forbids — and carries a guard-the-guard case proving it can fail.
+
 ## [2.6.0] — 2026-07-26
 
 ### `typescript-coding` 1.3.0 → 1.4.0 (minor: an existing skill's rules changed)
 
 - Fixed OBS-20260726-001 (mirrored from `python-coding` OBS-20260726-001 /
-  PR #11, commit 67fffe3, itself transferred from consumer `news-intel-docs`
-  `harness/observations/OBS-20260726-001.md`, Reviewer-confirmed C3,
-  `harness/review/skill-triage-2026-07-25.md`, `occurrences: 9`, SFL-INV-08
-  met on both limbs): `references/testing.md` §Hygiene carried a rule
+  PR #11, commit 67fffe3, itself a field report from a consuming project,
+  reviewer-confirmed class C3, `occurrences: 9`, universality threshold met
+  on both limbs): `references/testing.md` §Hygiene carried a rule
   against hardcoding an expected value "so it passes", but no rule against
   the distinct pattern of a test's *case set*, its *subject*, or its
   *dimensional coverage* being chosen from the artifact under test rather
@@ -103,15 +128,14 @@ no release — PR only.
 
 ### `python-coding` 1.1.0 → 1.2.0 (minor: an existing skill's rules changed)
 
-- Fixed OBS-20260726-001 (transferred from consumer `news-intel-docs`
-  `harness/observations/OBS-20260726-001.md`, Reviewer-confirmed C3,
-  `harness/review/skill-triage-2026-07-25.md`, `occurrences: 9`, SFL-INV-08
-  met on both limbs): `references/testing.md` §Hygiene carried a rule
+- Fixed OBS-20260726-001 (field report from a consuming project, reviewer-
+  confirmed class C3, `occurrences: 9`, universality threshold met on both
+  limbs): `references/testing.md` §Hygiene carried a rule
   against hardcoding an expected value "so it passes", but no rule against
   the distinct pattern of a test's *case set*, its *subject*, or its
   *dimensional coverage* being chosen from the artifact under test rather
   than the specification — silence that let the class recur nine times
-  across a consumer build, every instance found by a live probe or a
+  across a single build, every instance found by a live probe or a
   mutation battery, never by the suite that was supposed to guard the
   property. Added one guidance block, three rules:
   1. **Provenance of the case set** — derive cases from the specification's
@@ -130,7 +154,7 @@ no release — PR only.
   reproduction snippet (an `ALLOWED = {...}` enum-vs-mutation case for rule
   1; an upstream-filter-vs-downstream-overwrite case for rule 2; a
   normalized-vs-raw-key mapping case for rule 3), reproduced from the
-  consumer Reviewer's own executed verification (rule 3: `303 passed`
+  reporting reviewer's own executed verification (rule 3: `303 passed`
   before the remedy, `11 failed` after a single case varying the key's form
   was added).
 - Added a regression in `__test__/skills/test_python_coding.py`
@@ -149,9 +173,8 @@ no release — PR only.
 
 ### `python-coding` 1.0.0 → 1.1.0 (minor: an existing skill's layers changed)
 
-- Fixed OBS-20260724-001 (transferred from consumer `news-intel-docs`
-  `harness/observations/OBS-20260721-001.md`, Reviewer-confirmed C3,
-  `harness/review/skill-triage-2026-07-22.md`): shipped prose in
+- Fixed OBS-20260724-001 (field report from a consuming project,
+  reviewer-confirmed class C3): shipped prose in
   `knowledge/patterns.md`, `knowledge/pitfalls.md` and
   `references/typing-and-style.md` linked into `data/fixtures/*`, which a
   `runtime` install strips (`RUNTIME_EXCLUDED_PREFIXES`) — 7 dangling
@@ -169,9 +192,8 @@ no release — PR only.
 
 ### `typescript-coding` 1.2.0 → 1.3.0 (minor: an existing skill's layers changed)
 
-- Fixed OBS-20260724-001 (transferred from consumer `news-intel-docs`
-  `harness/observations/OBS-20260721-002.md`, Reviewer-confirmed C3,
-  `harness/review/skill-triage-2026-07-22.md`): shipped prose in
+- Fixed OBS-20260724-001 (field report from a consuming project,
+  reviewer-confirmed class C3): shipped prose in
   `knowledge/patterns.md`, `knowledge/pitfalls.md` and
   `references/typing-and-style.md` linked into `data/fixtures/*`, which a
   `runtime` install strips (`RUNTIME_EXCLUDED_PREFIXES`) — 4 dangling
