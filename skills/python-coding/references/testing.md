@@ -21,6 +21,32 @@ to fake in a ports-and-adapters service, DI seams) live in the
   parameter is satisfied by a plain stub class — no mock library needed;
   `monkeypatch`/`unittest.mock.patch` of module attributes is a last
   resort, used only when no seam exists, with a justifying comment.
+- **A fake's own return values, when the property under test belongs to an
+  external system, are established by observing that system once, never by
+  reading.** The rule above says *what* to fake; this says how the fake's
+  contract becomes known to be true. When the subject is a broker, an
+  authentication encoder, a driver's row factory, or any other system this
+  project does not own, no fake, and no re-reading of a project norm, an
+  RFC, or vendor documentation, can establish what that system actually
+  does — only a live observation against the real system can. Write the
+  fake only after a probe against the real system has pinned the
+  behaviour, then reuse that pinned observation as a fixture rather than
+  re-deriving it from prose on every subsequent change. Treat a second
+  rejection of the same reading on the same external-system property as
+  the signal to switch evidence class from reading to a live observation,
+  not as cause to produce a third reading. Minimal reproduction:
+  `yarl.URL.build(scheme="amqp", host="h", port=1, user="", password="p").user`
+  is `None` for an empty string — indistinguishable from an absent one —
+  so any client library reading that URL is free to substitute its own
+  default identity, a fact no fake at the wrapper's own seam can see,
+  because the fake's job is to stand in for the very layer performing the
+  substitution. Second reproduction, same family: with
+  `psycopg.rows.dict_row`, `SELECT true, false` (unaliased) collapses two
+  columns into a one-key mapping (`{"?column?": False}`) while
+  `SELECT true AS a, false AS b` returns both — a plain-tuple fake for the
+  cursor, the ordinary DB-API expectation, is exactly wrong for a
+  connection opened with `row_factory=dict_row`, and only a live query
+  against the real database exposes it.
 - Prefer factories/builders over copy-pasted fixture blobs. Use
   property-based tests (Hypothesis-style) for parsers, serializers, and
   pure functions whose invariants you can state (round-trip, idempotence,

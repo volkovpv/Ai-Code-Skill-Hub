@@ -5,6 +5,49 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.7.0] — 2026-07-27
+
+### `python-coding` 1.2.0 → 1.3.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260727-001 (transferred from consumer `news-intel-docs`
+  `harness/observations/OBS-20260726-002.md`, Reviewer-confirmed C3,
+  `harness/review/skill-triage-2026-07-26.md`, `occurrences: 3`, SFL-INV-08
+  met on both limbs, both claimed minimal reproductions independently
+  re-executed by the consumer Reviewer): `references/testing.md` already
+  said *what* to fake ("fake protocols and seams the code exposes, never
+  someone else's internals") but was silent on *how the fake's own return
+  values are known to be true of the real system* before the fake is
+  written. Across three independent occurrences in one consumer build —
+  RabbitMQ's dead-letter key rewriting via `aio-pika`, the `aiormq`
+  SASL-PLAIN identity substitution for an absent/empty user, and
+  `psycopg`'s `dict_row` column collapse — a unit-test fake for a
+  third-party seam stayed green while encoding a wrong belief about that
+  system's runtime behaviour, and only a live probe against the real
+  system, never a re-reading of project norms or vendor prose, ever caught
+  it. Added one guidance block adjacent to the existing fake-the-seam
+  rules: the reference behaviour a fake encodes for an **external** system
+  is established once, by observing the real system, and pinned as a
+  fixture; a second rejection of the same reading on the same
+  external-system property is the trigger to switch evidence class from
+  reading to a live observation, not to produce a third reading. Ships two
+  deterministic, project-independent minimal reproductions (a `yarl.URL`
+  empty-user-vs-absent-user case; a `psycopg` `dict_row`
+  unaliased-column-collapse case, both reproduced from the consumer
+  Reviewer's own executed verification) — the third occurrence (a live
+  two-hop broker DLX cycle) is not reducible to a snippet, which the new
+  guidance states explicitly.
+- Added a regression in `__test__/skills/test_python_coding.py`
+  (`TestExternalReferenceBehaviourGuidance`): pins the rule's two
+  load-bearing clauses, both illustrative reproductions, a negative guard
+  that the pre-existing, distinct "fake protocols and seams the code
+  exposes, never someone else's internals" rule survives untouched, and a
+  duplication guard. Confirmed genuinely red before the delta (4/5
+  assertions failing against the pre-change text) and green after.
+- Added two eval cases to `__test__/evals/python-coding/cases.json` (one
+  `behavior`, one `negative`) exercising the new rule and a false-positive
+  guard against over-applying it to a fake of a seam this project itself
+  owns and defines.
+
 ## [2.6.0] — 2026-07-26
 
 ### `typescript-coding` 1.3.0 → 1.4.0 (minor: an existing skill's rules changed)

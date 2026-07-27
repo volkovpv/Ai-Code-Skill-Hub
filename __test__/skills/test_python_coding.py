@@ -284,6 +284,80 @@ class TestCaseProvenanceSubjectAndDimensionGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestExternalReferenceBehaviourGuidance(unittest.TestCase):
+    """Regression for OBS-20260726-002 (SFL, transferred from consumer
+    ``news-intel-docs`` ``harness/observations/OBS-20260726-002.md``, Reviewer-
+    confirmed C3, ``harness/review/skill-triage-2026-07-26.md``, occurrences: 3,
+    both claimed minimal reproductions independently re-executed by the
+    consumer Reviewer).
+
+    ``references/testing.md`` already says *what* to fake (a seam the code
+    exposes, never someone else's internals) but was silent on *how the
+    fake's own return values are known to be true of the real system* before
+    the fake is written. Across three independent occurrences in one consumer
+    build — a broker's dead-letter key rewriting, an auth encoder's identity
+    substitution for an absent/empty user, and a DB driver's row-factory
+    column collapse — a unit-test fake for a third-party seam stayed green
+    while encoding a belief about that system's runtime behaviour that was
+    simply wrong, and only a live probe against the real system (never a
+    re-reading of project norms or vendor prose) ever caught it. The anchor
+    phrases below are load-bearing clauses of the new rule, not incidental
+    word choice; their absence is exactly the silence the observation
+    reports.
+    """
+
+    TESTING_MD = SKILL / "references" / "testing.md"
+
+    RULE_NO_READING_ESTABLISHES_IT = (
+        "no fake, and no re-reading of a project norm, an RFC, or vendor "
+        "documentation, can establish what that system actually does"
+    )
+    RULE_SWITCH_TRIGGER = (
+        "a second rejection of the same reading on the same external-system "
+        "property"
+    )
+
+    def _text(self) -> str:
+        # Same whitespace-collapse rationale as the provenance/subject/
+        # dimension guidance above: Markdown hard-wraps prose, so a
+        # multi-word anchor phrase can straddle a line break.
+        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
+
+    def test_external_system_observation_rule_is_present(self):
+        self.assertIn(self.RULE_NO_READING_ESTABLISHES_IT, self._text())
+
+    def test_second_rejection_switch_trigger_is_present(self):
+        self.assertIn(self.RULE_SWITCH_TRIGGER, self._text())
+
+    def test_rule_ships_two_illustrative_reproductions(self):
+        # The rule must be checkable, not merely aspirational: two
+        # deterministic, project-independent minimal reproductions, one per
+        # occurrence family (URL identity substitution; row-factory column
+        # collapse) — the third occurrence (a live two-hop broker DLX cycle)
+        # is not reducible to a snippet, per the OBS's own record.
+        text = self._text()
+        self.assertIn('yarl.URL.build(scheme="amqp"', text)
+        self.assertIn("row_factory=dict_row", text)
+
+    def test_negative_fake_the_seam_rule_survives_untouched(self):
+        # False-positive guard: the new block must not have replaced or
+        # duplicated the pre-existing, distinct "fake protocols and seams
+        # the code exposes, never someone else's internals" rule — this
+        # observation is silent-not-wrong about that rule, not a
+        # replacement for it.
+        text = self._text()
+        needle = "never someone else's internals"
+        self.assertEqual(text.count(needle), 1, text)
+
+    def test_new_rule_is_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_NO_READING_ESTABLISHES_IT,
+            self.RULE_SWITCH_TRIGGER,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestScannerExactViews(unittest.TestCase):
     """The masking scanner's exact per-line output for Python lexical forms."""
 
