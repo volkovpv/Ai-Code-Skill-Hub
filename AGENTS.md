@@ -84,8 +84,9 @@ installed into a consumer.
   document; the neutral form is "a field report from a consuming project", with
   the reviewer verdict class and the occurrence count carried as data. The
   traceability link is kept on the consumer's side, where it belongs.
-- Entries are newest-first, and the history pair does not claim to cover
-  releases older than its first entry — `CHANGELOG.md` remains complete.
+- **Entries are newest-first — a new one goes above the others**, the same
+  order as `CHANGELOG.md`. The pair does not claim to cover releases older than
+  its last entry — `CHANGELOG.md` remains complete.
 - `docs/` is gate infrastructure, not used code: a docs-only change must NOT
   bump the project version (`scripts/check_release_gate.py`).
 

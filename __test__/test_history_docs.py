@@ -39,6 +39,21 @@ def read(path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def entry_releases(text: str) -> list[tuple[int, ...]]:
+    """The project release of each entry, in the order the entries appear.
+
+    An entry's release is the first backticked ``X.Y.Z`` in its body — the
+    project version that opens its ``Releases`` line, in either language.
+    Sections without a version (the preamble) are not entries.
+    """
+    releases: list[tuple[int, ...]] = []
+    for section in text.split("\n## ")[1:]:
+        found = re.search(r"`(\d+)\.(\d+)\.(\d+)`", section)
+        if found:
+            releases.append(tuple(int(part) for part in found.groups()))
+    return releases
+
+
 class TestHistoryPairExistsAndIsSymmetric(unittest.TestCase):
     def test_both_halves_exist(self):
         self.assertTrue(ENG.is_file(), "docs/history.eng.md is missing")
@@ -60,6 +75,18 @@ class TestHistoryPairExistsAndIsSymmetric(unittest.TestCase):
             return sorted(re.findall(r"`(\d+\.\d+\.\d+)`", text))
 
         self.assertEqual(versions(read(ENG)), versions(read(RUS)))
+
+    def test_entries_are_newest_first(self):
+        # Same order as CHANGELOG.md: the latest release heads the file.
+        for path in (ENG, RUS):
+            with self.subTest(path=path.name):
+                releases = entry_releases(read(path))
+                self.assertGreater(len(releases), 1, "expected several entries")
+                self.assertEqual(
+                    releases,
+                    sorted(releases, reverse=True),
+                    "entries must run newest-first; insert a new one above the others",
+                )
 
     def test_each_half_links_to_the_other(self):
         self.assertIn("history.rus.md", read(ENG))

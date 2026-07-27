@@ -55,9 +55,15 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
   why it was wrong and what the fix does*, with AS IS / TO BE diagrams, a
   runnable minimal example and tables instead of paragraphs. Linked from
   `README.md`; the policy is recorded in `AGENTS.md` ("History docs
-  discipline"): the pair is bilingual and symmetric, one fix is written once
-  with every carrying release on a single line, and neither the pair nor this
-  file may attribute a defect to a named consuming project.
+  discipline"): the pair is bilingual and symmetric, entries run newest-first
+  like this file, one fix is written once with every carrying release on a
+  single line, and neither the pair nor this file may attribute a defect to a
+  named consuming project.
+- Two entries so far. **2.5.0 + 2.6.0, written as one entry** across both
+  skills that carry the same fix — where a test gets its cases from
+  (provenance, subject under layered protection, totality across dimensions).
+  **2.7.0** — where a stub gets its truth from (an external system's behaviour
+  is observed, never read).
 - Applied that last rule to this file: five entries (2.7.0, 2.6.0, 2.5.0,
   2.4.0, 2.3.0) named a consuming project and cited its internal record paths
   and identifiers. Only the attribution was removed — every technical claim,

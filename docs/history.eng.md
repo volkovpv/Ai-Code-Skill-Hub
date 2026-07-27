@@ -30,8 +30,9 @@ Three conventions hold everywhere in this file:
    is described by its technical content only. Which project ran into it, which
    file it was found in, and that project's internal record identifiers never
    appear here — the same rule applies to `CHANGELOG.md`.
-3. **Newest first.** Entries begin at project version 2.7.0; anything older is
-   in `CHANGELOG.md` only.
+3. **Newest first — the latest entry at the top, a new one added above the
+   others.** Same order as `CHANGELOG.md`. The oldest entry covers project
+   version 2.5.0; anything older is in `CHANGELOG.md` only.
 
 ---
 
@@ -154,3 +155,140 @@ and confirmed genuinely red (4 of 5 assertions failing) → the guidance block w
 added → the test went green (5 of 5) → two evaluation cases were added, one for
 the behaviour and one guarding against the false positive above → the full suite
 ran 684 of 684 with no regressions.
+
+---
+
+## Where a test gets its cases from
+
+**Releases:** project `2.5.0` (`python-coding` `1.1.0 → 1.2.0`) · project
+`2.6.0` (`typescript-coding` `1.3.0 → 1.4.0`)
+**Type:** a gap closed — one story, two languages, two releases
+
+### In one sentence
+
+The skill checked the **quality** of a test — it must be red before the fix, it
+must be deterministic — but said nothing about where the test's **cases come
+from**. So cases were copied from the code under test instead of derived from
+the specification, and test and code went wrong in the same direction, agreeing
+with each other all the way.
+
+### The gap, precisely
+
+The nearest existing rule was:
+
+> Do not tune a test to the gate: never hardcode an expected value "so it
+> passes".
+
+It covers none of what actually happened. Nothing was hardcoded to pass; every
+case was honestly red before its fix. What was missing was three different
+things: **where the cases come from**, **what the test's subject is**, and
+**which dimensions it has to vary**.
+
+### AS IS — how a green suite stayed blind
+
+```mermaid
+flowchart TD
+    SPEC["SPECIFICATION<br/>an open class:<br/>'a, b, c, d, … — anything that qualifies'"]
+    IMPL["IMPLEMENTATION<br/>a closed list:<br/>ALLOWED = {a, b, c}"]
+    TEST["TEST<br/>cases copied from ALLOWED"]
+    GAP["member d is not in the list<br/>= an unmet requirement"]
+    BLIND["nobody ever checks d"]
+
+    SPEC -->|"d must be handled"| GAP
+    IMPL -->|"cases copied out of the code"| TEST
+    TEST -->|"only a, b, c are exercised"| BLIND
+    GAP -.->|"the hole is invisible"| BLIND
+```
+
+And the trap closes: **mutation testing cannot save you here.** Mutate `ALLOWED`
+in the code and the test — copied from `ALLOWED` — mutates with it, goes red,
+kills the mutant, and reports a healthy score. In the stricter form, where the
+test *imports* the enumeration instead of copying it, the mutation does not even
+fail. A healthy mutation score is not evidence of specification coverage.
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    SPEC["SPECIFICATION<br/>name the class, not the list"]
+    CASES["CASES<br/>derived from the class,<br/>including members the code does not have yet"]
+    TEST["TEST"]
+    IMPL["IMPLEMENTATION"]
+    SPEC --> CASES --> TEST
+    TEST -->|"exercises the code"| IMPL
+    IMPL -.->|"never feeds cases back"| CASES
+```
+
+The arrow from implementation to cases is the one that must not exist.
+
+### Example you can hold in your head
+
+```python
+ALLOWED = {"totalTokens", "inputTokens", "outputTokens"}   # the code
+
+@pytest.mark.parametrize("field", ALLOWED)                 # the test
+def test_field_is_handled(field): ...
+```
+
+The specification says "any token-count field". The code knows three. The test
+asks the code which three. A fourth real field — `totalTokenCount` — is handled
+by nobody, and no run of this suite will ever say so. The TypeScript shape is
+the same: an `as const` registry with `it.each(ALLOWED)` over it.
+
+### The three rules that were added
+
+They ship as one family, under a single thesis: **a test's case set, its
+subject and its dimensions are all chosen from the specification, never from
+the artifact under test.**
+
+| Rule | In plain words | The mistake it prevents |
+|---|---|---|
+| **1. Provenance of the case set** | Derive cases from the class the specification names; never copy or parametrize over the code's own list | The suite can only ever confirm what the code already knows |
+| **2. Subject under layered protection** | A defence-in-depth claim is unproven until each layer is exercised on a path where it is the **only** protection | One end-to-end test through two layers proves nothing about either |
+| **3. Totality across dimensions** | Name the dimensions a guard discriminates on and require at least one case per dimension; a surviving mutant means a missing **dimension**, not just a missing case | 11 cases over 11 names cover one dimension eleven times |
+
+Rule 2, drawn:
+
+```mermaid
+flowchart LR
+    IN["a secret arrives"] --> L1["Layer 1<br/>upstream filter by field name"]
+    L1 --> L2["Layer 2<br/>unconditional downstream rewrite"]
+    L2 --> OUT["clean output"]
+    T["one end-to-end test<br/>injects through the filtered channel"] -.->|"only ever looks at the output"| OUT
+    DEL["delete Layer 2"] -.->|"the test stays GREEN —<br/>Layer 1 already caught it"| L1
+```
+
+Rule 3 in numbers, measured rather than argued: a suite of **303 passing** tests
+went to **11 failing** the moment a single case was added that varied the *form*
+of a key (raw vs normalized) rather than its *text*. Eleven real holes, one
+missing dimension.
+
+### How bad it got before anyone noticed
+
+Nine independent occurrences in one build, over thirteen fix rounds. Every one
+was found by a live probe or by a mutation battery — **not once by the suite
+that was supposed to be guarding the property**, which stayed green at 133, 247,
+251, 276, 303, 320 and 310 passing tests while real defects walked through.
+
+The decisive evidence that this was a missing rule and not a careless author:
+two of the nine occurrences appeared **inside the very change that was fixing a
+third one** — the pattern reproduced in its own cure, in a round whose author
+had just been warned about it and whose test file named the pattern out loud.
+
+### Where the rule stops
+
+Rule 3 is about inputs a guard genuinely discriminates on. An input with one
+real dimension needs one dimension's worth of cases and no more; the change
+ships a dedicated negative test so the rule is not turned into a demand for
+ceremonial cases.
+
+### How the change was made
+
+Test first, both times: a regression pinning the new wording was written and
+confirmed genuinely red (5 of 6 assertions failing) → the guidance block was
+added → green → evaluation cases, one per rule plus a false-positive guard.
+Full suite 673 of 673 for the Python release and 679 of 679 for the TypeScript
+one, no regressions. The TypeScript half is a deliberate mirror: same three
+rules, examples re-cast in TypeScript idiom (an `as const` registry, `it.each`,
+a `Map` with normalized keys, an exhaustive `switch` over a discriminated union
+as a second dimension).
