@@ -38,7 +38,8 @@ Three conventions hold everywhere in this file:
 
 ## Where a stub gets its truth from
 
-**Releases:** project `2.7.0` · `python-coding` `1.2.0 → 1.3.0`
+**Releases:** project `2.8.0` (`typescript-coding` `1.4.0 → 1.5.0`) · project
+`2.7.0` (`python-coding` `1.2.0 → 1.3.0`)
 **Type:** a gap closed — the skill was not wrong, it was silent
 
 ### In one sentence
@@ -120,6 +121,23 @@ reading that URL is free to substitute its own default identity. No stub placed
 at the wrapper's own seam can see this happen — the stub stands in for the very
 layer that does the substituting.
 
+### The same two facts, in another language
+
+Nothing here belongs to Python. The rule ships in the TypeScript standard too,
+with the same two examples restated in the tools a Node project uses:
+
+```ts
+new URL("amqp://:p@h:1").username;  // "" — and so is new URL("amqp://h:1").username
+```
+
+| What the query looks like | What a driver that builds rows as objects returns |
+|---|---|
+| `SELECT true AS a, false AS b` | `{ "a": true, "b": false }` — two keys |
+| `SELECT true, false` (no aliases) | `{ "?column?": false }` — **one** key; the database names both columns `?column?` and the second overwrites the first |
+
+The language changed; the lesson did not. Which is the point: the rule is about
+where a belief comes from, not about a syntax.
+
 ### The same mistake, three times over
 
 | # | Third-party system | What the stub believed | What is actually true |
@@ -155,6 +173,10 @@ and confirmed genuinely red (4 of 5 assertions failing) → the guidance block w
 added → the test went green (5 of 5) → two evaluation cases were added, one for
 the behaviour and one guarding against the false positive above → the full suite
 ran 684 of 684 with no regressions.
+
+The TypeScript release repeated the same sequence against its own standard —
+red (4 of 5), guidance block, green (5 of 5), two evaluation cases, full suite
+703 of 703.
 
 ---
 
