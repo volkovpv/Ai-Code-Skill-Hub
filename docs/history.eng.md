@@ -38,7 +38,8 @@ Three conventions hold everywhere in this file:
 
 ## What a stub still can't see — two more shapes of the same blind spot
 
-**Releases:** project `2.9.0` (`python-coding` `1.3.0 → 1.4.0`)
+**Releases:** project `2.10.0` (`typescript-coding` `1.5.0 → 1.6.0`) · project
+`2.9.0` (`python-coding` `1.3.0 → 1.4.0`)
 **Type:** a gap widened — the previous fix's own scope sentence was too narrow
 
 ### In one sentence
@@ -111,6 +112,26 @@ The wiring case is shorter still: a factory function is the only place a client
 gets built for real use; every test builds a parallel client of its own. Delete
 the argument from the factory call, and the whole suite — every test file — stays
 green, because none of them ever call the factory.
+
+### The same two shapes, in another language
+
+Neither shape belongs to Python. Both rules ship in the TypeScript standard too,
+restated in the tools a Node project uses:
+
+```ts
+const send = jest.fn();
+client.send = send;
+expect(send.mock.calls[0][0].traceId).toBe("t-1");  // what was passed in — never what left
+```
+
+```ts
+createClient({ interceptors: [logging] });     // the one place the product builds a client
+new SdkClient({ interceptors: [logging] });    // what every test builds instead
+```
+
+An options object instead of keyword arguments, an interceptor array instead of a
+list — the same construction seam, and the same question: is the thing under test
+the one that ships?
 
 ### What the skill now says
 
