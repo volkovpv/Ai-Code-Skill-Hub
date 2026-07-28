@@ -16,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from skill_library.installer import AGENT_TARGET_DIRS, InstallError, install_skill  # noqa: E402
+from skill_library.security import SecurityError, safe_join  # noqa: E402
+
+# A case id names a file under --save-output, so it may not carry separators.
+CASE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 class EvalError(ValueError):
@@ -56,6 +60,11 @@ def load_manifest(path: Path) -> dict:
                 raise EvalError(f"{prefix}.{field} must be a non-empty string")
         if case["kind"] not in {"trigger", "behavior", "negative"}:
             raise EvalError(f"{prefix}.kind must be trigger, behavior, or negative")
+        if not CASE_ID_RE.fullmatch(case["id"]):
+            raise EvalError(
+                f"{prefix}.id must match /{CASE_ID_RE.pattern}/ — it names a file "
+                "when --save-output is used"
+            )
         if case["id"] in seen:
             raise EvalError(f"{path}: duplicate case id {case['id']!r}")
         seen.add(case["id"])
@@ -64,11 +73,12 @@ def load_manifest(path: Path) -> dict:
             raise EvalError(f"{prefix}.expect must be an object")
         _strings(expect.get("stdout_contains"), f"{prefix}.expect.stdout_contains")
         _strings(expect.get("stdout_not_contains"), f"{prefix}.expect.stdout_not_contains")
-        for pattern in _strings(expect.get("stdout_matches"), f"{prefix}.expect.stdout_matches"):
-            try:
-                re.compile(pattern)
-            except re.error as exc:
-                raise EvalError(f"{prefix}: invalid regex {pattern!r}: {exc}") from exc
+        for field in ("stdout_matches", "stdout_not_matches"):
+            for pattern in _strings(expect.get(field), f"{prefix}.expect.{field}"):
+                try:
+                    re.compile(pattern)
+                except re.error as exc:
+                    raise EvalError(f"{prefix}: invalid regex {pattern!r}: {exc}") from exc
         if not isinstance(expect.get("exit_code", 0), int):
             raise EvalError(f"{prefix}.expect.exit_code must be an integer")
     return data
@@ -89,7 +99,22 @@ def evaluate(case: dict, result: subprocess.CompletedProcess[str]) -> list[str]:
     for pattern in expect.get("stdout_matches", []):
         if re.search(pattern, result.stdout, re.MULTILINE) is None:
             problems.append(f"stdout does not match /{pattern}/")
+    for pattern in expect.get("stdout_not_matches", []):
+        if re.search(pattern, result.stdout, re.MULTILINE) is not None:
+            problems.append(f"stdout matches forbidden pattern /{pattern}/")
     return problems
+
+
+def save_output(directory: Path, skill: str, case_id: str, attempt: int, text: str) -> Path:
+    """Write one harness stdout under *directory*, named after the case.
+
+    A failing expectation says which oracle missed but not what the harness
+    actually answered, and the temporary project is gone by then — without
+    this the only way to read a failure is to run the case again.
+    """
+    target = safe_join(directory, f"{skill}--{case_id}--{attempt}.txt")
+    target.write_text(text, encoding="utf-8")
+    return target
 
 
 def run_manifest(path: Path, data: dict, args: argparse.Namespace) -> int:
@@ -121,6 +146,10 @@ def run_manifest(path: Path, data: dict, args: argparse.Namespace) -> int:
                         check=False,
                     )
                     problems = evaluate(case, result)
+                    if args.save_output is not None:
+                        save_output(
+                            args.save_output, data["skill"], case["id"], attempt, result.stdout
+                        )
                 except subprocess.TimeoutExpired:
                     problems = [f"timed out after {args.timeout}s"]
                 label = f"{data['skill']}:{case['id']}#{attempt}"
@@ -140,11 +169,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--platform", default="claude", choices=sorted(AGENT_TARGET_DIRS))
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument(
+        "--save-output",
+        type=Path,
+        metavar="DIR",
+        help="write each harness stdout to DIR/<skill>--<case>--<attempt>.txt",
+    )
     args = parser.parse_args(argv)
     if args.repeat < 1 or args.timeout <= 0:
         parser.error("--repeat and --timeout must be positive")
     if not args.validate_only and not args.command:
         parser.error("--command is required unless --validate-only is used")
+    if args.save_output is not None:
+        args.save_output.mkdir(parents=True, exist_ok=True)
 
     try:
         loaded = [(path, load_manifest(path)) for path in args.manifests]
@@ -153,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"OK {path}: {len(data['cases'])} case(s)")
             return 0
         failures = sum(run_manifest(path, data, args) for path, data in loaded)
-    except (EvalError, InstallError, KeyError) as exc:
+    except (EvalError, InstallError, SecurityError, KeyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     return 1 if failures else 0

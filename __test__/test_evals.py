@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 from .helpers import ROOT, TempDirTestCase, sandboxed_env
 
@@ -110,6 +111,134 @@ class TestEvalRunner(TempDirTestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("PASS example-skill:local#1", result.stdout)
+
+    def _not_matches_manifest(self, pattern: object) -> Path:
+        manifest = self.tmp / "not-matches.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "skill": "example-skill",
+                    "platforms": ["universal"],
+                    "cases": [
+                        {
+                            "id": "unconditional",
+                            "kind": "behavior",
+                            "requirement": "the verdict must not be handed down flat",
+                            "prompt": "The reviewer is right, move the test.",
+                            "expect": {"exit_code": 0, "stdout_not_matches": pattern},
+                        },
+                        {
+                            "id": "conditional",
+                            "kind": "behavior",
+                            "requirement": "the same words under a condition are allowed",
+                            "prompt": "Under London the reviewer is right about the label.",
+                            "expect": {"exit_code": 0, "stdout_not_matches": pattern},
+                        },
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return manifest
+
+    def test_forbidden_pattern_separates_a_flat_claim_from_a_conditional_one(self):
+        # A plain stdout_not_contains ban cannot tell "the reviewer is right"
+        # used as a verdict from the same words inside a school-conditional
+        # clause; an anchored pattern can, which is why the field exists.
+        manifest = self._not_matches_manifest(["(?i)^\\W*the reviewer is right"])
+        command = f'{sys.executable} -c "import sys; print(sys.argv[1])" {{prompt}}'
+        result = self.run_eval(
+            "--platform",
+            "universal",
+            "--command",
+            command,
+            str(manifest),
+        )
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("FAIL example-skill:unconditional#1", result.stderr)
+        self.assertIn("matches forbidden pattern", result.stderr)
+        self.assertIn("PASS example-skill:conditional#1", result.stdout)
+
+    def test_invalid_forbidden_pattern_is_rejected(self):
+        manifest = self._not_matches_manifest(["(unbalanced"])
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("invalid regex", result.stderr)
+
+    def test_forbidden_patterns_must_be_a_list_of_strings(self):
+        manifest = self._not_matches_manifest("not a list")
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("stdout_not_matches must be a list of strings", result.stderr)
+
+    def _echo_manifest(self, case_id: str = "echoed") -> Path:
+        manifest = self.tmp / "echo.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "skill": "example-skill",
+                    "platforms": ["universal"],
+                    "cases": [
+                        {
+                            "id": case_id,
+                            "kind": "behavior",
+                            "requirement": "runner contract",
+                            "prompt": "ANSWER",
+                            "expect": {"exit_code": 0, "stdout_contains": ["ANSWER"]},
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return manifest
+
+    def test_save_output_keeps_one_harness_answer_per_attempt(self):
+        # A verdict names the oracle that missed, not what the harness said,
+        # and the temporary project is gone by then; without the saved answer
+        # a failure can only be read by running the case again.
+        manifest = self._echo_manifest()
+        outdir = self.tmp / "answers"
+        command = f'{sys.executable} -c "import sys; print(sys.argv[1])" {{prompt}}'
+        result = self.run_eval(
+            "--platform",
+            "universal",
+            "--command",
+            command,
+            "--repeat",
+            "2",
+            "--save-output",
+            str(outdir),
+            str(manifest),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        saved = sorted(p.name for p in outdir.iterdir())
+        self.assertEqual(saved, ["example-skill--echoed--1.txt", "example-skill--echoed--2.txt"])
+        self.assertEqual(
+            (outdir / "example-skill--echoed--1.txt").read_text(encoding="utf-8").strip(),
+            "ANSWER",
+        )
+
+    def test_nothing_is_written_without_save_output(self):
+        manifest = self._echo_manifest()
+        command = f'{sys.executable} -c "import sys; print(sys.argv[1])" {{prompt}}'
+        result = self.run_eval(
+            "--platform",
+            "universal",
+            "--command",
+            command,
+            str(manifest),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ["echo.json"])
+
+    def test_case_id_that_would_escape_the_output_directory_is_rejected(self):
+        manifest = self._echo_manifest("../escaped")
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(".id must match", result.stderr)
 
 
 if __name__ == "__main__":

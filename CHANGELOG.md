@@ -5,6 +5,88 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.4.1] — 2026-07-28
+
+### Eval manifests can forbid a pattern, not just a substring
+
+- `scripts/run_skill_evals.py` accepts an optional `stdout_not_matches` list
+  in a case's `expect`: regexes the harness output must **not** match,
+  searched with `re.MULTILINE`, validated and compiled at manifest-load time
+  alongside `stdout_matches`. The four existing oracles are unchanged, so
+  every manifest stays valid as written.
+- The gap this closes: `stdout_not_contains` bans a phrase wherever it
+  occurs, which is wrong for any case whose correct answer is conditional.
+  Ran against the live Claude Code CLI, the `testing-discipline` case
+  `unit-integration-line-is-taken-from-the-declared-school` failed 5 of 6
+  attempts on the banned phrase `the reviewer is right` — every failure
+  inside a clause like "under London the reviewer is right about the label",
+  which is precisely the school-conditional answer the case requires. The
+  one passing attempt differed only in wording, not in behaviour, so the
+  case was scoring synonyms rather than the skill.
+- That case now states its requirement positively (the verdict must be tied
+  to a declared school) and uses an anchored `stdout_not_matches` to reject
+  an unconditional verdict — including the hybrid answer that names the
+  schools and *then* hands down a flat one, which neither the old ban nor a
+  positive pattern alone could catch. Verified against nine real harness
+  outputs (zero false rejections) and re-run live: 3/3 pass, against 1/5
+  before the fix.
+- `__test__/test_evals.py` pins the new field (a flat claim fails while the
+  same words inside a conditional clause pass, invalid regexes and
+  non-list values are rejected at validation); `__test__/README.md`
+  documents the oracle and when to reach for it.
+
+### A failing case keeps its answer (`--save-output`)
+
+- `scripts/run_skill_evals.py --save-output DIR` writes every harness stdout
+  to `DIR/<skill>--<case>--<attempt>.txt`. A verdict names the oracle that
+  missed but not what the harness actually said, and the temporary project
+  is deleted with the attempt — so until now the only way to read a failure
+  was to run the case again. Diagnosing three failures in one gate run cost
+  two extra live runs; this removes that.
+- The output path is built with `skill_library.security.safe_join`, and a
+  case `id` must now match `[A-Za-z0-9][A-Za-z0-9._-]*` because it names a
+  file. No manifest in the repository violates the rule; the runner rejects
+  an id that would escape the directory at validation time, before anything
+  runs.
+
+### The whole class of form-pinned expectations, not just the one that fired
+
+- A full `--repeat 3` gate over `testing-discipline` (120 live invocations)
+  came back **117/120**. All three failures were manifest defects, not skill
+  defects: re-run with the answers captured, the skill stated the required
+  rule every time.
+  - `bug-fix-ships-a-regression-test-that-fails-first` required the bigram
+    `(fail|red) (before|without)`. The failing answer wrote "a regression
+    test that **fails** before the fix" — the requirement verbatim, rejected
+    over one inflected letter. The two passing attempts matched only because
+    they happened to also write the uninflected "red before".
+  - `expected-value-derivation-is-visible-but-not-borrowed-from-production`
+    required a negative verb near "import". The failing answer put the
+    prohibition in a heading ("Why not import the constants") and a gerund
+    ("Importing … recomputes the expected value with the algorithm under
+    test") — right answer, wrong part of speech. The same case also banned
+    the substring `import COMMISSION_RATE`, which the correct advice "do not
+    import COMMISSION_RATE" contains; it had not fired yet only because the
+    model wrote the identifier in backticks.
+  - `declared-school-is-followed-not-overridden` banned `use the real
+    PriceCalculator` — the exact words the correct answer must write after
+    "don't". It passed three re-runs only because the identifier came back
+    backticked.
+- So the audit covered all 40 cases rather than the three that fired.
+  Seventeen cases had bans phrased as advice, which a correct answer has to
+  contradict verbatim; each is now an endorsement pattern that matches only
+  where the phrase is put forward as a recommendation — sentence-initial,
+  with no negation between the sentence start and the phrase — and tolerates
+  backticked identifiers. Bans that a correct answer cannot utter (`yes,
+  this test is sufficient`, `this is a good test`) were left as substrings.
+- Every conversion is checked in both directions: 23 sentence pairs assert
+  that the negated form survives and the endorsement is still caught, and
+  all 18 real harness answers saved so far pass, including the two that the
+  gate rejected.
+- `testing-discipline` stays `draft` and its version is unchanged — no skill
+  content changed here, only the instrument measuring it. The gate must be
+  re-run green before the status can move.
+
 ## [3.4.0] — 2026-07-28
 
 ### Every skill now stands alone (`typescript-nestjs` 1.1.1 → 1.2.0, `typescript-coding` 1.7.0 → 1.8.0, `python-coding` 1.5.0 → 1.6.0, `hexagonal-service` 2.1.1 → 2.2.0, `testing-discipline` 1.3.0 → 1.4.0)

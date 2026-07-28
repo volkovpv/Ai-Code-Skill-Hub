@@ -168,8 +168,24 @@ __test__/
 Versioned cases хранятся в `__test__/evals/<имя-skill>/cases.json`. Manifest
 schema v1 требует `skill`, `platforms` и непустые cases с полями `id`,
 `kind`, `requirement`, `prompt`, `expect`. Допустимые виды:
-`trigger`, `behavior`, `negative`. Оракулы: exit code,
-обязательные/запрещённые подстроки и regex.
+`trigger`, `behavior`, `negative`. Оракулы: exit code, обязательные и
+запрещённые подстроки (`stdout_contains`, `stdout_not_contains`),
+обязательные и запрещённые regex (`stdout_matches`, `stdout_not_matches`;
+поиск в режиме MULTILINE).
+
+Запрещённый regex нужен там, где запрет подстроки забраковал бы и
+корректный ответ. Если запрет сформулирован как совет («сделай X»), то
+корректный ответ обязан его *опровергнуть* — и повторяет запрещённые слова
+после отрицания. Подстрочный запрет этого не различает и наказывает за
+правильный ответ. Такой запрет записывается как regex, срабатывающий лишь
+там, где фраза подаётся как рекомендация: начало предложения, между ним и
+фразой нет отрицания.
+
+По той же причине ожидание не должно зависеть от формы слова
+(`fails before` против `fail before`), части речи (`don't import` против
+`why not import`) и markdown-разметки идентификатора
+(`PriceCalculator` против `` `PriceCalculator` ``). Проверяется поведение,
+а не формулировка.
 
 Проверка schema не запускает модель и обязательна в offline CI:
 
@@ -183,6 +199,17 @@ Runner устанавливает skill во временный проект п�
 поддерживает placeholders `{prompt}`, `{project}`, `{skill}`. Не
 сохраняйте в manifest credentials, PII или production data; логи реального
 harness проверяются перед публикацией.
+
+Вердикт называет промахнувшийся оракул, но не ответ harness, а временный
+проект к этому моменту уже удалён. Чтобы разбирать падения не переснимая
+прогон, добавьте `--save-output DIR` — каждый ответ ляжет в
+`DIR/<skill>--<case>--<attempt>.txt`:
+
+    uv run python scripts/run_skill_evals.py --platform claude --repeat 3 --save-output /tmp/eval-out --command 'claude -p {prompt}' __test__/evals/example-skill/cases.json
+
+Каталог назначения задаёте вы, поэтому `id` кейса ограничен
+`[A-Za-z0-9][A-Za-z0-9._-]*`: он становится именем файла. Сохранённые ответы
+— вывод модели, а не тестовые данные; в репозиторий они не коммитятся.
 
 ## Что проверяется автоматически, а что — на review
 
