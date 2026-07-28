@@ -14,6 +14,10 @@ The core discipline it enforces:
 
 - tests land in the same change as the code, and every bug fix ships a
   regression test that fails before the fix;
+- **a test is not evidence until it has been seen red for its own reason** —
+  free if it was written first, one deliberate break-and-restore otherwise;
+- a test that is hard to write, slow or fragile is treated as a **report on
+  the design**, answered by changing the code rather than bending the test;
 - Arrange/Act/Assert, one act step, no branching, one scenario per test,
   names that state the behaviour and the condition as a fact, assertions
   that pin the expected error *and* its condition;
@@ -37,8 +41,27 @@ The core discipline it enforces:
   from the artifact under test: a healthy mutation score is not evidence
   of specification coverage, and a surviving mutation is evidence of a
   missing dimension;
+- the expected value is named exactly and its derivation from the inputs is
+  visible in the test; no constant means two things in one case;
+- only code you wrote is on the hook, depth follows the cost of being
+  wrong, and a test is deleted only when it is redundant *both* on
+  confidence and on communication;
 - suite hygiene: no committed focus/skip markers, no test tuned to the
   gate, deterministic runs, test-only secrets.
+
+## Test-driven development is your project's decision too
+
+The skill carries the **red/green/refactor cycle** — a written test list
+worked one item at a time, never more than one red test at once, four
+gears for reaching green (obvious implementation → one-to-many →
+triangulate → fake it), duplication between the test and the code removed
+in the refactor step, and step size chosen deliberately rather than by
+habit — in [`references/tdd-cycle.md`](references/tdd-cycle.md).
+
+**It is applied only where your project rules declare that you practise
+it**, the same way the school is. What holds either way, and is never
+optional, is the evidence rule: a test that has never been seen to fail is
+not yet protection.
 
 ## The unit-testing school is your project's decision
 
@@ -83,11 +106,11 @@ test-driven development if you practise it.
   provenance) each ship a minimal, deterministic reproduction — they were
   written because a green suite hid a real defect, not because they sound
   prudent.
-- **Progressive disclosure.** `SKILL.md` stays short and routes to seven
-  reference files: the two schools, structure and naming, what makes a test
-  worth having, isolation and fakes, suite hygiene and case provenance, the
-  anti-pattern catalog, and the division of labour between static checks
-  and tests.
+- **Progressive disclosure.** `SKILL.md` stays short and routes to nine
+  reference files: the two schools, the test-first cycle, tests as design
+  feedback, structure and naming, what makes a test worth having,
+  isolation and fakes, suite hygiene and case provenance, the anti-pattern
+  catalog, and the division of labour between static checks and tests.
 
 ## How to install
 
@@ -110,11 +133,13 @@ The skill covers *what makes a test worth having*; your project rules
 cover the mechanics of your suite. Effective split:
 
 - **Put in project rules:** the **unit-testing school** and everything that
-  follows from it (see above); the runner and its invocation, where tests
-  live and how they are named for discovery, which fixtures/factories the
-  project ships, how integration tests get their environment, the
-  coverage or mutation thresholds the build enforces, and any deliberate
-  deviations. Project instructions always take precedence over the skill.
+  follows from it (see above); **whether you practise test-driven
+  development** and in which direction; the runner and its invocation,
+  where tests live and how they are named for discovery, which
+  fixtures/factories the project ships, how integration tests get their
+  environment, the coverage or mutation thresholds the build enforces, and
+  any deliberate deviations. Project instructions always take precedence
+  over the skill.
 - **Leave to the skill:** what a test must establish, how a test is judged,
   what may be faked and how a fake's contract is justified, where cases
   come from, and the hygiene rules — no need to restate them in your rules;

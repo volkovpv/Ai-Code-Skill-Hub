@@ -94,6 +94,8 @@ class TestStructure(unittest.TestCase):
         body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         expected = {
             "schools.md",
+            "tdd-cycle.md",
+            "tests-as-design-feedback.md",
             "structure-and-naming.md",
             "unit-test-value.md",
             "isolation-and-fakes.md",
@@ -590,6 +592,360 @@ class TestUnitTestValueAndAntiPatterns(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestCycleAndEvidenceGuidance(unittest.TestCase):
+    """The process axis: when a test exists relative to the code it covers.
+
+    Every rule the skill carried before this addition judged a test that
+    already existed. Nothing said when it comes into being, how to choose
+    the next one, how to reach green, or how big a step to take — so an
+    agent applying the skill could write a flawless test that had never
+    been seen to fail, and nothing in the skill objected.
+
+    The pins below split into two groups, and the split is the point:
+    ``test_evidence_rule_*`` covers what holds in any project whatever its
+    process, and the rest covers the cycle, which the host project declares
+    the same way it declares the school.
+    """
+
+    DOC = REFERENCES / "tdd-cycle.md"
+
+    RULE_EVIDENCE = (
+        "**A test that has never been observed to fail is not yet evidence "
+        "of anything.**"
+    )
+    RULE_CONDITIONAL = "applies where the host project declares that it practises it"
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_evidence_rule_is_present_and_stated_unconditionally(self):
+        text = self._text()
+        self.assertIn(self.RULE_EVIDENCE, text)
+        # It must sit in the section that explicitly holds regardless of
+        # process; burying it inside the cycle would make it opt-in.
+        self.assertIn(
+            "## Holds regardless of process: a test is not evidence until it "
+            "has been red",
+            text,
+        )
+
+    def test_evidence_rule_gives_the_test_after_procedure(self):
+        # Without a way to satisfy it when the test is written last, the rule
+        # is only reachable by projects that already practise the cycle.
+        text = self._text()
+        self.assertIn("break the behaviour the test names", text)
+        self.assertIn("**Watch which failure you got.**", text)
+        self.assertIn("**An unexpected green is information, never a relief.**", text)
+
+    def test_the_two_generating_rules_are_present(self):
+        text = self._text()
+        self.assertIn(
+            "**Write a failing automated test before writing any production "
+            "code.**",
+            text,
+        )
+        self.assertIn("**Remove duplication.**", text)
+
+    def test_the_loop_constraints_are_pinned(self):
+        text = self._text()
+        self.assertIn("**Never more than one red test at a time.**", text)
+        self.assertIn("**A green bar is a place you can stand.**", text)
+
+    def test_the_test_list_is_the_planning_unit(self):
+        text = self._text()
+        self.assertIn("## The test list", text)
+        self.assertIn("**Implement one at a time.**", text)
+        self.assertIn("**New ideas go on the list, not into the current change.**", text)
+
+    def test_choosing_and_sizing_the_next_test_is_pinned(self):
+        text = self._text()
+        self.assertIn("**One step at a time.**", text)
+        self.assertIn("**Start with a degenerate case.**", text)
+        self.assertIn(
+            "**When a test turns out to be too big, replace it with a smaller "
+            "one.**",
+            text,
+        )
+
+    def test_all_four_gears_to_green_are_present_and_ordered(self):
+        text = self._text()
+        for gear in (
+            "| **Obvious implementation** |",
+            "| **One to many** |",
+            "| **Triangulate** |",
+            "| **Fake it** |",
+        ):
+            self.assertIn(gear, text, gear)
+        # A gearbox with no rule for changing gear is a list of tricks.
+        self.assertIn("**Downshift on surprise.**", text)
+
+    def test_step_size_is_named_as_the_controlled_variable(self):
+        text = self._text()
+        self.assertIn(
+            "**awareness of the gap between a decision and the feedback on "
+            "it, and deliberate control of that gap.**",
+            text,
+        )
+        self.assertIn(
+            "**the harder the problem, the less ground each test covers.**", text
+        )
+
+    def test_the_cycle_is_scoped_to_a_project_declaration(self):
+        # The skill is universal; it must not impose a development process on
+        # a project that never asked for one.
+        self.assertIn(self.RULE_CONDITIONAL, self._text())
+        self.assertIn(
+            "**Where the project practises test-driven development, work the",
+            flat(SKILL / "SKILL.md"),
+        )
+        self.assertIn(
+            "**Whether the project practises test-driven development at all**",
+            flat(REFERENCES / "schools.md"),
+        )
+        self.assertIn(
+            "do not impose the cycle on a project that has not declared it",
+            yamlio.load_file(SKILL / "agents" / "openai.yaml")["interface"][
+                "default_prompt"
+            ],
+        )
+
+    def test_the_evidence_rule_is_not_scoped_to_that_declaration(self):
+        # False-positive guard for the test above: the one rule of this file
+        # that holds unconditionally must be stated unconditionally in
+        # SKILL.md too, not behind the cycle's "where declared".
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "A test that has never been observed to fail for its own reason "
+            "is not yet evidence.",
+            body,
+        )
+
+    def test_the_limits_of_the_cycle_are_stated(self):
+        text = self._text()
+        self.assertIn("## Where the cycle does not reach", text)
+        self.assertIn("**Security and concurrency.**", text)
+        self.assertIn("**Existing code with no seams.**", text)
+
+    def test_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (self.RULE_EVIDENCE, self.RULE_CONDITIONAL):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
+class TestDesignFeedbackGuidance(unittest.TestCase):
+    """A painful test is a report on the product, not on the test file.
+
+    The pre-existing references answer "is this test any good?" in seven
+    ways and never answer the question that follows from a bad answer: the
+    code is what made the test bad. Without this file an agent's only
+    licensed response to a hundred-line arrange step is to write it more
+    tidily.
+    """
+
+    DOC = REFERENCES / "tests-as-design-feedback.md"
+
+    RULE_DESIGN_FIRST = "**Change the design first, and the test second.**"
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_every_symptom_of_the_catalog_is_present(self):
+        text = self._text()
+        for symptom in (
+            "| **A long arrange step**",
+            "| **Arrange duplication with no natural home**",
+            "| **A slow test** |",
+            "| **A fragile test**",
+            "| **The urge to reach private state**",
+            "| **An act step of more than one call** |",
+            "| **No name fits**",
+        ):
+            self.assertIn(symptom, text, symptom)
+
+    def test_each_symptom_names_the_change_it_asks_for(self):
+        # A symptom list with no prescribed response is a diagnosis nobody
+        # can act on; the table's third column is the load-bearing one.
+        text = self._text()
+        self.assertIn(
+            "| Symptom in the test | What it says about the code | The change "
+            "it asks for |",
+            text,
+        )
+        self.assertIn(self.RULE_DESIGN_FIRST, text)
+
+    def test_the_rule_ships_its_escape_valve(self):
+        # Stated without one, the rule licenses blocking on a design insight
+        # that may not arrive — so the honest fallback is part of the rule.
+        text = self._text()
+        self.assertIn("**if the design idea does not come, it does not come.**", text)
+        self.assertIn("with the cost recorded rather than hidden", text)
+
+    def test_isolation_is_named_as_a_design_force(self):
+        text = self._text()
+        self.assertIn(
+            "**Isolating tests from one another is a design force, not just a "
+            "hygiene rule.**",
+            text,
+        )
+
+    def test_the_file_states_what_it_does_not_license(self):
+        # False-positive guard against the obvious misreading: "the design is
+        # to blame" must not become a licence to widen a surface or to test
+        # everything.
+        text = self._text()
+        self.assertIn("## What this does not license", text)
+        self.assertIn(
+            "A member made public so a test can reach it is a design made "
+            "worse to make a test easier",
+            text,
+        )
+
+    def test_rule_is_not_accidentally_duplicated(self):
+        self.assertEqual(self._text().count(self.RULE_DESIGN_FIRST), 1)
+
+
+class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
+    """Four places where the process rules and the artifact rules collide.
+
+    Each pair below reads as a contradiction unless the boundary between
+    them is written down: a reader who meets only one half applies it to
+    the other half's case. These pins exist because dropping a boundary
+    clause is a silent, plausible edit that leaves both rules intact and
+    the skill self-contradicting.
+    """
+
+    def test_a_constant_first_implementation_is_distinguished_from_a_tuned_test(self):
+        cycle = flat(REFERENCES / "tdd-cycle.md")
+        hygiene = flat(REFERENCES / "hygiene.md")
+        self.assertIn("**Faking it is not tuning a test to the gate.**", cycle)
+        self.assertIn("the constant goes into the *production* code", cycle.lower())
+        # And the rule it is being distinguished from is still there, once.
+        self.assertEqual(
+            hygiene.count('never hardcode an expected value "so it passes"'), 1
+        )
+        self.assertIn(
+            "a deliberately constant first implementation in the *production* "
+            "code",
+            hygiene,
+        )
+
+    def test_visible_derivation_is_distinguished_from_leaking_the_algorithm(self):
+        structure = flat(REFERENCES / "structure-and-naming.md")
+        anti = flat(REFERENCES / "anti-patterns.md")
+        self.assertIn(
+            "**Make the relationship between input and expected value "
+            "visible.**",
+            structure,
+        )
+        self.assertIn(
+            "**This is not recomputing the expected value with the code under "
+            "test.**",
+            structure,
+        )
+        self.assertIn("**Where the boundary runs.**", anti)
+        self.assertIn(
+            "not that it computes, but *whose* computation it reuses", anti
+        )
+        # The anti-pattern's own prescription survives, exactly once.
+        self.assertEqual(anti.count("**Hardcode the expected results**"), 1)
+
+    def test_a_local_bookmark_is_distinguished_from_a_shared_red_suite(self):
+        cycle = flat(REFERENCES / "tdd-cycle.md")
+        hygiene = flat(REFERENCES / "hygiene.md")
+        self.assertIn("with the last test written and **failing**", cycle)
+        self.assertIn(
+            "The broken test above lives in the working copy and nowhere else.",
+            cycle,
+        )
+        self.assertIn("is the hygiene rule and it always wins", cycle)
+        self.assertEqual(hygiene.count("**No focused or skipped tests committed.**"), 1)
+
+    def test_the_classical_direction_is_corrected_against_its_primary_sources(self):
+        # The pre-existing summary ("inside-out") is not how the classical
+        # school describes itself; leaving it unqualified made the skill
+        # assert something its own source rejects.
+        schools = flat(REFERENCES / "schools.md")
+        self.assertIn(
+            "**Test-driven development is usually summarized as running "
+            "inside-out**",
+            schools,
+        )
+        self.assertIn(
+            "the school's primary sources reject the vertical metaphor "
+            "outright",
+            schools,
+        )
+        self.assertIn(
+            "The direction that predicts anything is **known-to-unknown**",
+            schools,
+        )
+        # London's outside-in is a live claim of that school and stays.
+        self.assertIn("**Test-driven development runs outside-in**", schools)
+
+
+class TestDataDeletionAndScopeRules(unittest.TestCase):
+    """Smaller rules the process work brought with it, pinned where they live."""
+
+    def test_the_data_a_test_carries_is_governed(self):
+        text = flat(REFERENCES / "structure-and-naming.md")
+        self.assertIn("## The data a test carries", text)
+        self.assertIn("**Never let one constant mean two things in the same test.**", text)
+        self.assertIn("**Use the smallest data that forces the same decisions.**", text)
+        self.assertIn("**Realistic data is for the cases that require it**", text)
+
+    def test_an_assertion_names_the_value_not_a_property_of_it(self):
+        text = flat(REFERENCES / "structure-and-naming.md")
+        self.assertIn(
+            "**Name the expected value; do not settle for a property of it.**", text
+        )
+
+    def test_assert_first_is_offered_as_a_writing_order(self):
+        text = flat(REFERENCES / "structure-and-naming.md")
+        self.assertIn(
+            "**Write it backwards when the shape is unclear: assertion "
+            "first.**",
+            text,
+        )
+
+    def test_deletion_requires_both_criteria(self):
+        text = flat(REFERENCES / "hygiene.md")
+        self.assertIn("## When a test may be deleted", text)
+        self.assertIn("| **Confidence** |", text)
+        self.assertIn("| **Communication** |", text)
+        self.assertIn("**Deleting a test is a change to what the suite claims.**", text)
+
+    def test_only_code_you_wrote_is_on_the_hook(self):
+        text = flat(REFERENCES / "unit-test-value.md")
+        self.assertIn("### What is on the hook, and how deep to go", text)
+        self.assertIn("**Do not test other people's code.**", text)
+        self.assertIn("**Depth is calibrated by the cost of being wrong.**", text)
+
+    def test_the_external_observation_has_a_lifecycle(self):
+        text = flat(REFERENCES / "isolation-and-fakes.md")
+        self.assertIn("### The observation is a test, and it has a lifecycle", text)
+        self.assertIn(
+            "**Re-run it on every upgrade of that dependency, before anything "
+            "else.**",
+            text,
+        )
+        self.assertIn(
+            "**The fake and the real thing should answer to the same tests.**", text
+        )
+
+    def test_negative_the_live_observation_rule_it_extends_survives_untouched(self):
+        # False-positive guard: the lifecycle subsection must extend the
+        # provenance rule, not restate or replace it.
+        text = flat(REFERENCES / "isolation-and-fakes.md")
+        self.assertEqual(
+            text.count(
+                "no fake, and no re-reading of a project norm, an RFC, or "
+                "vendor documentation, can establish what that system "
+                "actually does"
+            ),
+            1,
+        )
+
+
 class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
     """The split is only worth its cost while the rules live in one place.
 
@@ -619,6 +975,10 @@ class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
         "project's rules",
         "**Isolation means: unit tests are isolated from each other**",
         "A test's value is the **product** of the four, not their sum",
+        "**A test that has never been observed to fail is not yet evidence "
+        "of anything.**",
+        "**Change the design first, and the test second.**",
+        "**Faking it is not tuning a test to the gate.**",
     )
 
     def test_no_universal_rule_text_remains_in_a_language_skill(self):

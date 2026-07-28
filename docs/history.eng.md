@@ -36,6 +36,150 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A test nobody ever watched fail — and the half of testing the skill never described
+
+**Releases:** project `3.2.0` (`testing-discipline` `1.1.0 → 1.2.0`)
+**Type:** missing axis added — every rule judged the test, none described how it comes to exist
+
+### In one sentence
+
+The standard could tell you everything about a test except when to write it,
+which meant a test that had never once been observed to fail — and therefore
+proved nothing — passed every rule the skill had.
+
+### The gap, precisely
+
+Split what a testing standard can say into two columns. The skill had one of
+them, in depth, and the other not at all.
+
+| Question | Covered before | |
+|---|---|---|
+| What shape must the test have? | yes — structure, naming, one act step | ✔ |
+| What may it touch, what may it assert? | yes — schools, doubles, boundaries | ✔ |
+| Where do its cases come from? | yes — specification, never the artifact | ✔ |
+| **When does the test come into being?** | **no** | ✘ |
+| **How do I know this test can fail at all?** | **no** | ✘ |
+| **Which test do I write next, and how big is the step?** | **no** | ✘ |
+| **What do I do when writing the test hurts?** | **no** | ✘ |
+
+The second block is not a nicety. A test is a claim about behaviour, and the
+only evidence that the claim is *checkable* is having seen the check fail. The
+skill demanded a failing run in exactly one place — a bug fix — and nowhere
+else, so its own rule "a test that cannot fail protects nothing" had no
+procedure attached to it.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Code written"] --> B["Test written after"]
+    B --> C["Suite is green"]
+    C --> D{"Skill's checks"}
+    D -->|"shape ok, naming ok,\ncases from spec"| E["Test accepted"]
+    E --> F["Nobody ever saw it red"]
+    F --> G["A test that cannot fail\ncounts as protection"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Test written"] --> B{"Has it been\nseen red?"}
+    B -->|"written first"| C["The first run\nis the measurement"]
+    B -->|"written after"| D["Break the behaviour\nit names, watch it fail,\nrestore"]
+    C --> E{"Red for its\nown reason?"}
+    D --> E
+    E -->|"yes"| F["Now it is protection"]
+    E -->|"no — arrange blew up,\nor green unexpectedly"| G["Investigate before\ncounting it"]
+```
+
+### Example — a test that passes for a reason nobody chose
+
+```python
+class Expired(Exception):
+    pass
+
+
+class Token:
+    def __init__(self, user, expires_at, now):
+        if expires_at <= now:          # the constructor also validates
+            raise Expired
+        self.user, self.expires_at = user, expires_at
+
+
+def authorize(token, now):
+    if token.expires_at <= now:        # the guard under test
+        raise Expired
+    return Session(token.user)
+
+
+def test_rejects_an_expired_token():
+    with raises(Expired):
+        token = Token("u", expires_at=YESTERDAY, now=TODAY)
+        authorize(token, now=TODAY)
+```
+
+Delete the guard inside `authorize` entirely and this test stays green: the
+exception it catches was raised two lines earlier, in the arrange step. It has
+the right shape, the right name and a case taken straight from the
+specification — every rule the skill had before this release. What exposes it
+is watching it run: written first it goes green immediately, which is now an
+*unexpected green* to be investigated rather than a small victory; written
+last, breaking the guard leaves it green, which is now the missing evidence.
+
+### Four places where the new rules and the old ones look like a contradiction
+
+Adding a process to a standard about artifacts creates collisions. Each pair
+below is now separated by an explicit boundary, and each boundary is pinned by
+a test, because dropping one is a plausible edit that leaves the skill quietly
+self-contradicting.
+
+| The process says | The standard says | Where the line runs |
+|---|---|---|
+| Reach green by returning a constant, then generalize | Never hardcode a value so a test passes | the constant goes in **production** code and is transient; hardcoding happens **in the test** and stays |
+| Write the derivation into the assertion: `100 / 2 * (1 - 0.015)` | Never recompute the expected value with the algorithm under test | it is about *whose* computation: the specification's, in the test's own literals — never the production routine or constant |
+| End a solo session with the last test failing | Nothing broken, focused or skipped is committed | the red test lives in the working copy; anything shared is green |
+| Classical test-driven development runs inside-out | *(the skill said exactly this)* | that is a contrast with London's outside-in, not the school's own account — its sources reject the vertical metaphor for **known-to-unknown** |
+
+### What the skill now says
+
+- **A test that has never been observed to fail for its own reason is not yet
+  evidence.** Free when it is written first; one deliberate break-and-restore
+  otherwise. *Which* failure matters — an arrange step that blew up has
+  demonstrated nothing about the assertion. An unexpected green is
+  investigated, never enjoyed.
+- **The red/green/refactor cycle is the project's declaration**, exactly like
+  the school: a written test list worked one item at a time, never more than
+  one red test at once, the next test chosen for what it teaches against what
+  you can confidently pass, a degenerate first case, four gears to green
+  (obvious implementation → one-to-many → triangulate → fake it) with a rule
+  for changing gear, and step size named as the variable being controlled.
+- **A test that is hard to write, slow, or fragile is a report on the design.**
+  Long arrange, setup that resists sharing, action at a distance, the urge to
+  reach private state — each maps to what it says about the code and the change
+  it asks for, under one rule: change the design first, the test second.
+- **Smaller rules that came with it:** name the expected value rather than a
+  property many wrong answers share; never let one constant mean two things in
+  one case; test only what you wrote, calibrating depth by the cost of being
+  wrong; delete a test only when it is redundant on *both* confidence and
+  communication.
+
+### Where the rule stops
+
+- **The cycle is never imposed.** A project that writes tests immediately after
+  each function, deliberately, is doing nothing the skill objects to. Only the
+  evidence rule applies unconditionally.
+- **The cycle does not reach everywhere.** Security and concurrency cannot be
+  demonstrated by passing tests; performance, stress and usability are separate
+  activities; a design decided in advance keeps being surprised; and legacy
+  code without seams is handled by limiting scope, not by stopping delivery.
+- **A painful test is a symptom, not a diagnosis.** It is usually right that
+  something is wrong and frequently wrong about what. And when the design idea
+  does not come, it does not come — assert the state, record the cost, move on;
+  what is forbidden is doing that silently.
+
+---
+
 ## "In isolation" means two different things — and now the project says which
 
 **Releases:** project `3.1.0` (`testing-discipline` `1.0.0 → 1.1.0`)

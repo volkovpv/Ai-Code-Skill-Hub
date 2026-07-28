@@ -1,7 +1,12 @@
 {
   "schema_version": 1,
   "skill": "testing-discipline",
-  "platforms": ["claude", "codex", "opencode", "universal"],
+  "platforms": [
+    "claude",
+    "codex",
+    "opencode",
+    "universal"
+  ],
   "cases": [
     {
       "id": "trigger-on-writing-tests-for-a-change",
@@ -10,7 +15,10 @@
       "prompt": "I just finished a change and I'm about to write its tests. What does each test have to establish, and how should I structure it?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(one scenario|arrange|act|assert|given)", "(?i)(name|behaviour|behavior|condition)"]
+        "stdout_matches": [
+          "(?i)(one scenario|arrange|act|assert|given)",
+          "(?i)(name|behaviour|behavior|condition)"
+        ]
       }
     },
     {
@@ -20,8 +28,13 @@
       "prompt": "Our services are written in Go and we use the standard library testing package. Do these test rules apply to us, and what changes for a table-driven test?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(appl|yes|hold)", "(?i)(dimension|case|specification|spec)"],
-        "stdout_not_contains": ["only applies to"]
+        "stdout_matches": [
+          "(?i)(appl|yes|hold)",
+          "(?i)(dimension|case|specification|spec)"
+        ],
+        "stdout_not_contains": [
+          "only applies to"
+        ]
       }
     },
     {
@@ -31,8 +44,12 @@
       "prompt": "The payments module has ALLOWED_STATUSES = {\"pending\", \"paid\", \"cancelled\"} and a function is_allowed_status(s) that checks membership. I'm about to parametrize my test over that same ALLOWED_STATUSES, imported directly from the module. Is this test suite sufficient, and why or why not?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(specification|spec|mutat|copie|import)"],
-        "stdout_not_contains": ["this test suite is sufficient"]
+        "stdout_matches": [
+          "(?i)(specification|spec|mutat|copie|import)"
+        ],
+        "stdout_not_contains": [
+          "this test suite is sufficient"
+        ]
       }
     },
     {
@@ -42,8 +59,12 @@
       "prompt": "My logger scrubs secret fields two ways: an upstream filter removes any key matching a secret-name pattern before the log record is built, and a second, independent serializer step also strips any key in a hardcoded deny-list right before emitting JSON. I have one test that injects a key named \"password\" through the whole pipeline and asserts it is absent from the final output. Is one such test enough to claim both layers work?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(each layer|separately|delet|remov|only protection|inner|alone)"],
-        "stdout_not_contains": ["one test is enough"]
+        "stdout_matches": [
+          "(?i)(each layer|separately|delet|remov|only protection|inner|alone)"
+        ],
+        "stdout_not_contains": [
+          "one test is enough"
+        ]
       }
     },
     {
@@ -53,8 +74,12 @@
       "prompt": "resolve(key) lowercases a key before checking membership in a lookup table. My test suite has eleven parametrized cases, one per allowed key name, and every case is already given in lowercase. Is this test suite complete, or is a dimension of the input untested?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(dimension|uppercase|mixed.case|normali|case.sensitiv|form)"],
-        "stdout_not_contains": ["this test suite is complete"]
+        "stdout_matches": [
+          "(?i)(dimension|uppercase|mixed.case|normali|case.sensitiv|form)"
+        ],
+        "stdout_not_contains": [
+          "this test suite is complete"
+        ]
       }
     },
     {
@@ -64,8 +89,13 @@
       "prompt": "I'm writing a fake for our AMQP client's publisher port so I can unit-test the code that reads a dead-lettered message's event name. I typed the fake's routing-key return value by re-reading our own AC-CONV-004 routing-key convention doc a second time, since my first reading turned out wrong. Is a second careful reading of the convention doc enough to trust the fake's return value this time, or is something else needed first?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(observ|live|real broker|probe|real system)"],
-        "stdout_not_contains": ["a second reading is enough", "re-reading the doc again is sufficient"]
+        "stdout_matches": [
+          "(?i)(observ|live|real broker|probe|real system)"
+        ],
+        "stdout_not_contains": [
+          "a second reading is enough",
+          "re-reading the doc again is sufficient"
+        ]
       }
     },
     {
@@ -75,8 +105,13 @@
       "prompt": "I am unit-testing an adapter that calls a third-party SDK client. My test replaces the SDK method the adapter calls with a fake that records the arguments it was given, and I assert the fake received the trace id my adapter passed in. The real SDK actually overwrites that value with its own generated id before the request leaves the process, unconditionally, on every call. Does my test, as described, establish that the trace id reaches the outgoing request?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(no|does not|cannot|will not)"],
-        "stdout_not_contains": ["yes, that establishes it", "your test confirms the trace id is sent"]
+        "stdout_matches": [
+          "(?i)(no|does not|cannot|will not)"
+        ],
+        "stdout_not_contains": [
+          "yes, that establishes it",
+          "your test confirms the trace id is sent"
+        ]
       }
     },
     {
@@ -86,8 +121,12 @@
       "prompt": "I want to unit-test that our production client factory wires a logging interceptor onto the SDK client it builds. In my test I construct a new instance of the SDK client directly, pass the interceptor to its constructor myself, and assert the interceptor is present on that instance. Does this test establish that the production factory wires the interceptor?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(no|does not|factory|production)"],
-        "stdout_not_contains": ["yes, this test is sufficient"]
+        "stdout_matches": [
+          "(?i)(no|does not|factory|production)"
+        ],
+        "stdout_not_contains": [
+          "yes, this test is sufficient"
+        ]
       }
     },
     {
@@ -97,8 +136,14 @@
       "prompt": "I found and fixed a one-line off-by-one in our pagination code. The existing suite is green with the fix in place. Am I done, or does something else have to land in this change?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)regression", "(?i)(fail|red) (before|without)"],
-        "stdout_not_contains": ["you are done", "the green suite is enough"]
+        "stdout_matches": [
+          "(?i)regression",
+          "(?i)(fail|red) (before|without)"
+        ],
+        "stdout_not_contains": [
+          "you are done",
+          "the green suite is enough"
+        ]
       }
     },
     {
@@ -108,8 +153,13 @@
       "prompt": "After my refactor one assertion is red and a snapshot no longer matches. Can I update the expected value to what the code now produces and refresh the snapshot so the build goes green?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(cause|understand|investigat|why)"],
-        "stdout_not_contains": ["yes, just update the expected value", "refresh the snapshot and move on"]
+        "stdout_matches": [
+          "(?i)(cause|understand|investigat|why)"
+        ],
+        "stdout_not_contains": [
+          "yes, just update the expected value",
+          "refresh the snapshot and move on"
+        ]
       }
     },
     {
@@ -119,7 +169,10 @@
       "prompt": "is_even(n) takes a plain integer and returns whether it is even. My tests cover 2, 3, 4, 5, -2, 0, and a large number. Is there a missing dimension of integer-ness itself I need a separate case for, beyond parity and sign?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["missing dimension of integer-ness", "you must add a case for every possible integer"]
+        "stdout_not_contains": [
+          "missing dimension of integer-ness",
+          "you must add a case for every possible integer"
+        ]
       }
     },
     {
@@ -129,7 +182,10 @@
       "prompt": "My repository class depends on a small Clock interface with a single now() method, defined and owned entirely by this project. I'm writing a plain stub that implements it and returns a fixed, hardcoded timestamp for a unit test. Do I need to run a live probe against some external system before I can trust this fake's return value?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["you must probe a live external system", "requires a live observation of a third-party system"]
+        "stdout_not_contains": [
+          "you must probe a live external system",
+          "requires a live observation of a third-party system"
+        ]
       }
     },
     {
@@ -139,7 +195,10 @@
       "prompt": "My service depends on a small in-project Repository interface with a single find_by_id() method. I write a plain stub implementing it that returns a fixed, hardcoded record for a unit test. There is no third-party client and no outgoing call involved. Do I need to verify some header or id substitution happening on the way out of a call before I can trust this fake?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["you must verify an outbound header substitution", "check what the real layer substitutes on the way out"]
+        "stdout_not_contains": [
+          "you must verify an outbound header substitution",
+          "check what the real layer substitutes on the way out"
+        ]
       }
     },
     {
@@ -149,7 +208,10 @@
       "prompt": "I am testing our create_client(...) production factory directly: I call it with my interceptor — the real factory, not a hand-rolled substitute — and assert the returned client carries the interceptor. Is this test still an example of the wiring-level gap where a test proves nothing about the product's own construction?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["yes, this is still the wiring gap", "this still proves nothing about production wiring"]
+        "stdout_not_contains": [
+          "yes, this is still the wiring gap",
+          "this still proves nothing about production wiring"
+        ]
       }
     },
     {
@@ -159,8 +221,14 @@
       "prompt": "In our service OrderService calls InventoryStore, a plain in-memory class we wrote ourselves. Should my unit test for OrderService replace InventoryStore with a test double, or use the real one? Our project rules say nothing about how we test.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(school|london|mockist|classical|detroit)", "(?i)(project rule|declare|record|existing (suite|test))"],
-        "stdout_not_contains": ["always mock", "never use the real"]
+        "stdout_matches": [
+          "(?i)(school|london|mockist|classical|detroit)",
+          "(?i)(project rule|declare|record|existing (suite|test))"
+        ],
+        "stdout_not_contains": [
+          "always mock",
+          "never use the real"
+        ]
       }
     },
     {
@@ -170,8 +238,13 @@
       "prompt": "Our project rules state: 'Unit testing follows the London school: every mutable collaborator is replaced by a test double, and a unit is one class.' I am writing a test for Basket, which collaborates with PriceCalculator, a mutable class of ours. What do I do with PriceCalculator in the test?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(double|stub|mock|replace)", "(?i)(london|declar|project rule)"],
-        "stdout_not_contains": ["use the real PriceCalculator"]
+        "stdout_matches": [
+          "(?i)(double|stub|mock|replace)",
+          "(?i)(london|declar|project rule)"
+        ],
+        "stdout_not_contains": [
+          "use the real PriceCalculator"
+        ]
       }
     },
     {
@@ -181,8 +254,12 @@
       "prompt": "My test stubs UserRepository.get_count() to return 10, then asserts the report says 10 users, and also asserts that get_count() was called exactly once. Is that second assertion worth keeping?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(stub|input|implementation detail|over.specif|fragile|brittle)"],
-        "stdout_not_contains": ["keep both assertions"]
+        "stdout_matches": [
+          "(?i)(stub|input|implementation detail|over.specif|fragile|brittle)"
+        ],
+        "stdout_not_contains": [
+          "keep both assertions"
+        ]
       }
     },
     {
@@ -192,8 +269,12 @@
       "prompt": "Here is my test for the pricing engine: expected = base_price - compute_discount(customer, items) + compute_tax(items); actual = engine.total(customer, items); assert actual == expected. Those helpers are the same ones the engine calls. Is this a good test?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(hardcode|hard-code|duplicat|same (algorithm|implementation)|itself|specification)"],
-        "stdout_not_contains": ["this is a good test"]
+        "stdout_matches": [
+          "(?i)(hardcode|hard-code|duplicat|same (algorithm|implementation)|itself|specification)"
+        ],
+        "stdout_not_contains": [
+          "this is a good test"
+        ]
       }
     },
     {
@@ -203,8 +284,12 @@
       "prompt": "Customer.promote() sets a private _status field and nothing public returns it. I want to make _status public so my test can assert it flipped to PREFERRED. Reasonable?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(observable behaviour|observable behavior|discount|implementation detail|do not (expose|widen))"],
-        "stdout_not_contains": ["make it public"]
+        "stdout_matches": [
+          "(?i)(observable behaviour|observable behavior|discount|implementation detail|do not (expose|widen))"
+        ],
+        "stdout_not_contains": [
+          "make it public"
+        ]
       }
     },
     {
@@ -214,7 +299,11 @@
       "prompt": "Our project rules declare the classical school, with doubles only for unmanaged dependencies. I am adding a unit test for a domain object that has two in-process collaborators. Anything to flag about our choice of school?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["you should switch to", "the London school is better", "reconsider your school"]
+        "stdout_not_contains": [
+          "you should switch to",
+          "the London school is better",
+          "reconsider your school"
+        ]
       }
     },
     {
@@ -224,7 +313,134 @@
       "prompt": "How do I change my bundler's output directory and hashed filenames for a production build?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["Arrange/Act/Assert", "regression test", "one scenario per test"]
+        "stdout_not_contains": [
+          "Arrange/Act/Assert",
+          "regression test",
+          "one scenario per test"
+        ]
+      }
+    },
+    {
+      "id": "test-written-after-the-code-must-still-be-seen-red",
+      "kind": "behavior",
+      "requirement": "A test that has never been observed to fail for its own reason is not yet evidence; written after the code, it costs one deliberate break-and-restore.",
+      "prompt": "I finished the discount calculation yesterday and wrote its tests today. They all pass on the first run and coverage is 100%. Is there anything left to do before I call this covered?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(see|watch|observe).{0,40}(fail|red)",
+          "(?i)(break|revert|invert|remove).{0,60}(behaviour|behavior|guard|condition|code)"
+        ],
+        "stdout_not_contains": [
+          "nothing left to do"
+        ]
+      }
+    },
+    {
+      "id": "unexpected-green-is-investigated-not-accepted",
+      "kind": "behavior",
+      "requirement": "A test expected to fail that passes is investigated: the behaviour already exists, the test misses its subject, or the mechanism is misunderstood.",
+      "prompt": "I wrote a test for a rollback case I was certain we had not implemented yet, ran it before writing any code, and it passed straight away. Great, one less thing — should I move on to the next item?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(why|investigat|find out|reach|subject|already)"
+        ],
+        "stdout_not_contains": [
+          "move on to the next"
+        ]
+      }
+    },
+    {
+      "id": "hard-to-write-test-is-answered-by-changing-the-design",
+      "kind": "behavior",
+      "requirement": "A long arrange step is a report on the design; the answer is to change the code, not to tidy the test.",
+      "prompt": "To test one branch of our pricing rule I need about 120 lines of setup: eight collaborators, three of them only there so the constructor succeeds. Should I move that block into a shared helper so the test file stays readable?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(design|split|too (big|many)|collaborat|responsibilit)"
+        ],
+        "stdout_not_contains": [
+          "just move it into a shared helper"
+        ]
+      }
+    },
+    {
+      "id": "expected-value-derivation-is-visible-but-not-borrowed-from-production",
+      "kind": "behavior",
+      "requirement": "The specification's own derivation may be written into the assertion over the test's literals; importing the production constant or helper to build it may not.",
+      "prompt": "Conversion takes a 1.5% commission: converting 100 USD at a rate of 2 should yield 49.25 GBP. Should the assertion say 49.25, or should I import COMMISSION_RATE and STANDARD_RATE from the pricing module and compute the expected value from them?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(literal|in the test|specification|spec)",
+          "(?i)(do not|don't|never|avoid).{0,60}(import|production|module|same)"
+        ],
+        "stdout_not_contains": [
+          "import COMMISSION_RATE"
+        ]
+      }
+    },
+    {
+      "id": "constant-first-implementation-is-not-a-tuned-test",
+      "kind": "behavior",
+      "requirement": "Returning a constant from production code to reach green is a step in the cycle; it is distinguished from hardcoding an expected value in the test.",
+      "prompt": "We practise TDD. My new test asserts the summary reads \"1 run, 0 failed\". To get to green fast I made the method return that exact string as a literal, and I plan to generalize it once the next test forces me to. Is that the same sin as hardcoding an expected value so a test passes?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(not the same|different|production code|transient|generaliz|duplicat)"
+        ],
+        "stdout_not_contains": [
+          "yes, it is the same"
+        ]
+      }
+    },
+    {
+      "id": "cycle-is-not-imposed-on-a-project-that-has-not-declared-it",
+      "kind": "negative",
+      "requirement": "The red/green/refactor cycle applies where the host project declares it; the skill does not mandate a development process.",
+      "prompt": "Our team writes tests right after each function, deliberately, and our project rules say nothing about TDD. I just need a review of this one test's structure and naming. Is our process wrong?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(project|declare|rules|your process)"
+        ],
+        "stdout_not_contains": [
+          "you must write the test first",
+          "your process is wrong"
+        ]
+      }
+    },
+    {
+      "id": "dependency-behaviour-is-not-re-tested-as-our-own",
+      "kind": "negative",
+      "requirement": "Only code you wrote is on the hook; a suite does not re-verify a dependency's own guarantees.",
+      "prompt": "Should I add unit tests asserting that our JSON library serializes nested objects correctly and that the standard sort is stable, so those paths are covered too?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not|own|your code|dependenc|third)"
+        ],
+        "stdout_not_contains": [
+          "yes, add tests for both"
+        ]
+      }
+    },
+    {
+      "id": "redundant-test-is-kept-when-it-communicates-a-distinct-scenario",
+      "kind": "negative",
+      "requirement": "A test is deleted only when it is redundant on both confidence and communication; same code path is not sufficient grounds.",
+      "prompt": "Coverage says these two tests execute exactly the same lines: one is named 'refuses an expired card' and the other 'refuses a card revoked by the issuer'. Can I delete one to speed up the suite?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(scenario|communicat|different|distinct|keep)"
+        ],
+        "stdout_not_contains": [
+          "yes, delete one"
+        ]
       }
     }
   ]

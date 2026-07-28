@@ -35,6 +35,13 @@ whether the product or the test is wrong.
 - A test's setup belongs to the test. Shared mutable state between tests —
   a module-level accumulator, a database row left behind, an object cached
   across cases — turns an unrelated failure into a mystery.
+- **Write it backwards when the shape is unclear: assertion first.** Start
+  from the assertion that will hold when the work is done, then add
+  whatever the assertion refers to, then whatever *that* refers to, until
+  the arrange step is complete. Writing a test asks you to decide where
+  the behaviour belongs, what to call it, what the right answer is and how
+  to check it, all at once; starting from the assertion separates the last
+  two out and answers them first.
 
 ## Naming
 
@@ -80,6 +87,48 @@ whether the product or the test is wrong.
   could be compared by value is the common case.
 - No conditional assertions. An assertion inside an `if` that the test
   data may not reach is a test that can pass without checking anything.
+- **Name the expected value; do not settle for a property of it.**
+  Asserting that a result is non-zero, non-empty or merely of the right
+  kind passes for a large family of wrong answers. If the answer should be
+  50, say 50. Where a whole class of values really is acceptable, that
+  class is what the specification says and what the assertion should
+  express — not the first predicate that happens to hold.
+
+## The data a test carries
+
+The values in a test are read by people. Choose them for what they reveal.
+
+- **Make the relationship between input and expected value visible.**
+  Where the expected value is derived from the inputs by a rule the
+  specification states, write the derivation out in the test rather than
+  its result: a commission rule stated as *rate 2, commission 1.5%* reads
+  as `100 / 2 * (1 - 0.015)`, and a reader can check the claim against the
+  rule without leaving the test. Collapsing it to `49.25` hides exactly
+  the thing under test. This is the one place where in-line numeric
+  literals beat named constants — within one short test the relationship
+  between the numbers *is* the documentation. Where a symbolic constant
+  for the same quantity already exists, use it.
+- **This is not recomputing the expected value with the code under
+  test.** The derivation above is written from the specification, out of
+  literals the test owns; the moment it reaches for the production
+  routine, the helper or the constant that the subject itself uses, it
+  stops being a claim and starts asserting that the code equals itself —
+  see [anti-patterns.md](anti-patterns.md).
+- **Never let one constant mean two things in the same test.** If a
+  function takes two arguments, do not pass it 2 and 2: an implementation
+  that swaps, duplicates or ignores an argument passes. Different roles
+  get different values, and a value that differs from another should
+  differ for a reason a reader can name.
+- **Use the smallest data that forces the same decisions.** A list of
+  three items that exercises the same branches as a list of ten is the
+  better input; extra volume adds reading cost and no coverage. Handling
+  multiple inputs is still a behaviour that gets its own cases — small
+  data is not an excuse for thin coverage.
+- **Realistic data is for the cases that require it**: replaying captured
+  traces of real events, running a new implementation against a previous
+  one in parallel, or refactoring a computation that must produce
+  bit-identical answers. Elsewhere it obscures why an expected value is
+  what it is.
 
 ## Grouping similar cases
 

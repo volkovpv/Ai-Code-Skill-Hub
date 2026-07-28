@@ -79,6 +79,25 @@ allowed to assert.
   it tests itself. Prefer the narrowest seam that still expresses the
   dependency.
 
+## Two shapes worth knowing
+
+- **To exercise a path the real dependency almost never takes, sabotage
+  one operation rather than reproducing the condition.** A double that
+  differs from the real collaborator in exactly one respect — the write
+  that fails, the read that returns nothing, the call that times out —
+  reaches the error branch without filling a disk or unplugging a cable.
+  Error handling that is never executed does not work; this is usually
+  the cheapest way to execute it. Keep the deviation to the single
+  operation under test, so the double stays readable as "the real thing,
+  except this fails".
+- **To assert that things happened in a particular order, accumulate a
+  record and assert on it once.** A double that appends a marker per call
+  turns an ordering claim into a single equality against one value, which
+  reads as a sentence and fails with the whole sequence in the message.
+  Where the order genuinely does not matter, compare as an unordered
+  collection — and say so, rather than pinning an order the specification
+  never promised.
+
 ## How a fake's contract becomes known to be true
 
 **A fake's own return values, when the property under test belongs to an
@@ -112,6 +131,32 @@ cause to produce a third reading.
   ordinary two-field row fake is exactly wrong for that driver mode, and
   only a live query against the real database (or the driver's positional
   row mode) exposes it.
+
+### The observation is a test, and it has a lifecycle
+
+The probe that pins the contract is not a throwaway script. Give it the
+shape it already has — a test against the real facility — and it pays
+twice.
+
+- **Write it before the first use of an unfamiliar external facility**,
+  not after the integration misbehaves. Its job is to state what you
+  believe the facility does and find out immediately whether that is
+  true; if your understanding is right it passes first time, which costs
+  minutes and settles the question.
+- **Re-run it on every upgrade of that dependency, before anything else.**
+  A failure there means the application cannot work either, and it names
+  the cause precisely; a green run means the rest of the suite is
+  measuring your code rather than someone else's release notes.
+- **The fake and the real thing should answer to the same tests.** The
+  standing risk of any double is that it stops resembling what it
+  replaces. Writing the contract as a set of cases that can be executed
+  against both — the double in the fast suite, the real dependency
+  wherever it is reachable — is what converts that risk into a failing
+  test instead of a production surprise.
+- These tests live where the suite keeps things that touch the outside
+  world, not in the unit suite, and they carry their own lifecycle: they
+  are allowed to be slow and to require an environment, and they are
+  never the reason a unit test reaches the network.
 
 ## Properties that live on the way out of a call
 

@@ -90,8 +90,15 @@ results.
 - **An integration test is one that fails any of the three attributes**: it
   reaches a shared dependency, or it is slow, or it covers more than one
   unit of behaviour.
-- **Test-driven development runs inside-out**: start from the domain model
-  and add layers outward until the operation is reachable by its caller.
+- **Test-driven development is usually summarized as running inside-out** —
+  start from the domain model and add layers outward until the operation is
+  reachable by its caller. Treat that as a rough contrast with London's
+  outside-in, not as the school's own account of itself: the school's
+  primary sources reject the vertical metaphor outright, on the grounds
+  that a suite grown this way looks top-down from one angle and bottom-up
+  from another. The direction that predicts anything is
+  **known-to-unknown** — and a first test at application level is
+  compatible with it. See [tdd-cycle.md](tdd-cycle.md).
 - Its claimed benefit: far fewer doubles, so far less coupling to
   implementation detail; tests survive a class being split, merged or
   renamed, because they were never addressed to the class.
@@ -129,6 +136,12 @@ the following:
 - **Output verification is preferred by both schools** wherever the code
   admits it, because it is the style least able to couple to an
   implementation detail — see [unit-test-value.md](unit-test-value.md).
+- **Tests are isolated from one another under both schools**, and paying
+  for that isolation is a design force rather than a chore: the only way
+  to make per-test setup cheap is to decompose the problem into small,
+  orthogonal, loosely coupled pieces — see
+  [tests-as-design-feedback.md](tests-as-design-feedback.md). The schools
+  disagree about isolating the *unit*, never about isolating the tests.
 - Structure, naming, determinism, secret handling and the rest of suite
   hygiene do not vary by school.
 
@@ -163,7 +176,10 @@ then the split itself is what gets declared, with its boundary named.
   integration tests and which are replaced and asserted.
 - **Where an interaction is asserted**, if any is: at the last adapter
   before the call leaves the process, or earlier.
-- **The direction of test-driven development**, if the project practises it.
+- **Whether the project practises test-driven development at all**, and if
+  so its direction. The cycle itself is only imposed where this is
+  declared — see [tdd-cycle.md](tdd-cycle.md), whose evidence rule (a test
+  is not evidence until it has been seen red) applies either way.
 - The mechanics: what the doubles are built with, where tests live, how
   they are named.
 

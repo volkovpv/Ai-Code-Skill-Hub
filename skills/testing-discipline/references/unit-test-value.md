@@ -170,3 +170,28 @@ is, and how many collaborators it has.
 - Failing fast is sometimes the alternative to a test: an edge case that
   makes the application stop immediately, visibly, and without corrupting
   data does not also need a test of its own.
+
+### What is on the hook, and how deep to go
+
+What earns tests, when you need a shorter answer than the quadrants: the
+**conditionals, loops, operations and polymorphic dispatch that you
+wrote** — and only those you wrote.
+
+- **Do not test other people's code.** A suite that re-verifies a
+  dependency's own behaviour pays maintenance for a guarantee it does not
+  own. Two exceptions: you have reason to distrust it, and you are about
+  to depend on a facility for the first time — the latter is a learning
+  test against the real thing, which is evidence rather than coverage; see
+  [isolation-and-fakes.md](isolation-and-fakes.md).
+- Where a dependency's *defect* forces logic of your own, that logic is
+  yours and is tested as such. Pinning the upstream misbehaviour with a
+  test that will go red when it is finally fixed is a cheap way to be told
+  when the workaround can go.
+- **Depth is calibrated by the cost of being wrong.** How many cases a
+  behaviour deserves is a question about acceptable time between failures,
+  not about a number of tests: for a rarely reached input whose failure is
+  visible and cheap, an extra case buys nothing measurable; for code whose
+  failure is expensive or irreversible, combinations you consider unlikely
+  are exactly the ones worth writing. Confidence, not case count, is the
+  quantity being bought — where knowledge of the implementation already
+  supplies it, the test is not needed.

@@ -17,10 +17,18 @@ claims to protect is unprotected.
   escapes from the type system, direct console output, patching — are
   allowed **only** inside test files, and only where the test genuinely
   needs them.
+- **A test that has never been seen to fail has not been verified.** Watch
+  it go red for its own reason — by writing it before the code, or by
+  breaking the behaviour it names and restoring it — before you count it
+  as protection. An assertion nobody has ever seen fire is indistinguishable
+  from no assertion at all; see [tdd-cycle.md](tdd-cycle.md).
 - **Do not tune a test to the gate:** never hardcode an expected value "so
   it passes", never disable a check, never refresh a snapshot or golden
   file without understanding the cause. A red test means dig into the
-  cause.
+  cause. This is about values chosen *in the test* to make a run green and
+  left there; a deliberately constant first implementation in the
+  *production* code, removed in the same session by generalizing it, is a
+  step in the cycle and not this — see [tdd-cycle.md](tdd-cycle.md).
 - **Every bug fix ships a regression test** that reproduces the defect and
   fails before the fix. Tests are mandatory for any behaviour change.
 - Tests are deterministic: no reliance on iteration-order accidents,
@@ -78,6 +86,28 @@ Three rules, one family:
   only the key's text; a mutation that moves the membership test from the
   normalized key to the raw key — green, because no case supplies a key
   whose raw and normalized forms differ.
+
+## When a test may be deleted
+
+A suite that only ever grows eventually costs more than it protects, so
+tests do get deleted — but on two criteria, and only when **both** are
+satisfied at once:
+
+| Criterion | The question | Delete only if |
+|-----------|--------------|----------------|
+| **Confidence** | does removing it reduce what the suite establishes about the system's behaviour? | it does not |
+| **Communication** | does it describe a scenario a reader would otherwise not find in the suite? | it does not |
+
+Two tests that walk the same path through the code are still both worth
+keeping when they speak to different scenarios; two tests that tell the
+same story are one test too many, and the less useful of the pair goes.
+
+- Redundancy is judged against the specification, not against a coverage
+  report: two cases that light up the same lines can still pin two
+  different facts.
+- **Deleting a test is a change to what the suite claims.** It belongs in
+  the change that made it redundant, with the reason stated — never as
+  cleanup on the way past, and never because it is failing.
 
 ## Secrets in tests
 

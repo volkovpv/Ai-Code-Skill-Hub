@@ -53,6 +53,19 @@ when refactoring a legacy implementation, results captured from the old one
 beforehand. This is the assertion-side view of the case-set provenance rule
 in [hygiene.md](hygiene.md).
 
+**Where the boundary runs.** Writing the specification's own arithmetic
+into the assertion — the rule spelled out over literals the test owns, so
+a reader can check it without leaving the file — is the opposite of this
+anti-pattern and is encouraged; see
+[structure-and-naming.md](structure-and-naming.md). What makes an
+expression a leak is not that it computes, but *whose* computation it
+reuses: the moment the test calls the production routine, imports the
+production constant, or re-implements the subject's own steps, the
+assertion has lost its independent source. The test:
+
+- may restate the rule the specification gives, in the test's own terms;
+- may not obtain the answer from the thing it is judging.
+
 ## Code pollution — production code that exists only for tests
 
 A flag on a production type that switches its behaviour off "when running

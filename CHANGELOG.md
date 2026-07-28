@@ -5,6 +5,89 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.2.0] — 2026-07-28
+
+### `testing-discipline` 1.1.0 → 1.2.0: the process axis, from the classical school's primary source
+
+Every rule the skill carried judged a test that already existed — its
+shape, what it may touch, what it may assert. Nothing said *when* a test
+comes into being relative to the code, how the next one is chosen, how to
+get from red to green, or what to do when writing the test is painful. An
+agent could therefore produce a flawless test that had never once been
+observed to fail, and the skill had no objection. This release adds that
+axis, calibrated against Kent Beck's *Test-Driven Development By Example*
+— the classical (Detroit) school's own primary source — and reconciles it
+with the rules already in place.
+
+- **New `references/tdd-cycle.md`.** Its first section holds in any
+  project whatever its process: **a test that has never been observed to
+  fail for its own reason is not yet evidence of anything** — free when
+  the test is written first, one deliberate break-and-restore of the
+  behaviour otherwise; *which* failure you got matters (a blown-up arrange
+  step demonstrates nothing about the assertion); and an unexpected green
+  is investigated, never enjoyed. The rest describes the cycle itself and
+  is applied **only where the host project declares that it practises
+  it**, exactly as the school is declared: the two generating rules
+  (failing test first, remove duplication), the five-step loop, never more
+  than one red test at once, the written test list worked one item at a
+  time, choosing the next test for what it teaches against what you are
+  confident you can pass, a degenerate first case, replacing an oversized
+  test with a smaller one, the four gears to green (obvious implementation
+  → one-to-many → triangulate → fake it) with the rule for changing gear,
+  step size named as the variable being controlled rather than a virtue,
+  the refactor step including duplication *between the test and the code*,
+  session boundaries, and the limits — security, concurrency, performance,
+  a design decided in advance, and seamless legacy code.
+- **New `references/tests-as-design-feedback.md`.** The inversion the rest
+  of the skill implies but never stated: a long arrange step, setup that
+  resists being shared, a slow test, a fragile test, the urge to reach
+  private state, a two-call act step or a name that will not fit are each
+  a report on the *product*. Each maps to what it says about the code and
+  the change it asks for, under one rule — **change the design first and
+  the test second** — with an explicit escape valve for when the design
+  idea does not come, plus the reasons the loop works (shortest feedback
+  on an interface decision, scope control, isolation as a design force,
+  reusable structure emerging from removed duplication) and what none of
+  it licenses.
+- **Four coexistence boundaries written down**, because each pair reads as
+  a contradiction otherwise and each is now pinned by a test: a
+  deliberately constant *production* implementation is a step in the cycle,
+  not a test tuned to the gate; writing the specification's own derivation
+  into an assertion over the test's literals is the opposite of leaking the
+  algorithm into the test (the question is *whose* computation is reused);
+  a red test left as a bookmark lives in the working copy and never on a
+  shared branch; and the classical school's direction is corrected —
+  "inside-out" is a contrast with London's outside-in, not the school's
+  account of itself, which rejects the vertical metaphor in favour of
+  **known-to-unknown**.
+- **`references/structure-and-naming.md`** gains assertion-first as a
+  writing order and a new *data a test carries* section: make the
+  derivation from input to expected value visible rather than collapsing
+  it to a magic result, never let one constant mean two things in one
+  case, prefer the smallest data that forces the same decisions, and
+  reserve realistic data for replay, parallel-run and bit-exact
+  refactoring. Assertions must name the expected value rather than a
+  property many wrong answers share.
+- **`references/hygiene.md`** gains the evidence rule as a hygiene item
+  and **when a test may be deleted** — only when redundant on *both*
+  confidence and communication, judged against the specification rather
+  than a coverage report, shipped with the change that made it redundant.
+- **`references/unit-test-value.md`** gains *what is on the hook and how
+  deep to go*: the conditionals, loops, operations and dispatch **you**
+  wrote; not a dependency's own behaviour, except to learn a facility
+  before first use or to pin a defect you must work around; and depth
+  calibrated by the cost of being wrong rather than by a case count.
+- **`references/isolation-and-fakes.md`** gains the lifecycle of the live
+  observation the fake-provenance rule already demanded — write it before
+  the first use of an unfamiliar facility, re-run it on every upgrade
+  before anything else, and express the contract as cases the fake and the
+  real dependency can both answer — plus two shapes worth knowing:
+  sabotaging a single operation to reach an error path, and accumulating a
+  record to assert on ordering once.
+- `SKILL.md` grows two workflow steps and two routing rows; `README.md`
+  documents that test-driven development is the project's declaration too;
+  the OpenAI adapter carries the cycle and its conditionality.
+
 ## [3.1.0] — 2026-07-28
 
 ### `testing-discipline` 1.0.0 → 1.1.0: unit-testing rules and the two schools
