@@ -2,9 +2,9 @@
 
 Universal hygiene for the three places where TypeScript code most often rots:
 error paths, environment access, and ad-hoc output. Nothing here assumes a
-framework or an architecture; layering rules (where exactly errors are
-wrapped and mapped in a ports-and-adapters service) live in the
-`hexagonal-service` skill.
+framework or an architecture: *where exactly* an error gets wrapped and
+mapped in a layered service is a layering decision, and it is out of this
+skill's scope.
 
 ## Errors
 

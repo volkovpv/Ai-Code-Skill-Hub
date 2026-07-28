@@ -35,24 +35,24 @@ Reading rules for agents:
 - [OBS-20260726-001](accepted/OBS-20260726-001.md) — `references/testing.md`
   §Hygiene had no rule against a test's case set, subject, or dimensional
   coverage being chosen from the artifact under test rather than the
-  specification (mirrored from `python-coding@1.1.0->1.2.0`, PR #11; source
-  consumer occurrence: news-intel-docs RM-TASK-016; reviewed by
-  HC-AGENT-010, 2026-07-26).
+  specification (mirrored from a sibling skill's already-merged fix in the
+  same library; source consumer occurrence: news-intel-docs RM-TASK-016;
+  reviewed by HC-AGENT-010, 2026-07-26).
 - [OBS-20260727-001](accepted/OBS-20260727-001.md) — `references/testing.md`
   said *what* to fake but not how a fake's own return values become known to
   be true of an external system, so a double for a third-party seam could
   stay green while encoding a wrong belief about that system's runtime
-  behaviour (mirrored from `python-coding@1.2.0->1.3.0`, PR #13; source
-  consumer occurrence: news-intel-docs RM-TASK-017; reviewed by
-  HC-AGENT-010, 2026-07-27).
+  behaviour (mirrored from a sibling skill's already-merged fix in the same
+  library; source consumer occurrence: news-intel-docs RM-TASK-017; reviewed
+  by HC-AGENT-010, 2026-07-27).
 - [OBS-20260728-001](accepted/OBS-20260728-001.md) — the same rule's scope
   sentence named only a fake's *return values*, leaving two adjacent shapes
   unrecognisable: a value the real layer substitutes on the way **out** of a
   call (no return value to inspect at all), and a construction/wiring
   assertion taken at a hand-built collaborator instead of the production
-  factory (mirrored from `python-coding@1.3.0->1.4.0`, commit 33d6380;
-  source consumer occurrence: news-intel-docs RM-TASK-019; reviewed by
-  HC-AGENT-010, 2026-07-28).
+  factory (mirrored from a sibling skill's already-merged fix in the same
+  library; source consumer occurrence: news-intel-docs RM-TASK-019; reviewed
+  by HC-AGENT-010, 2026-07-28).
 
 ## Candidates awaiting review
 

@@ -98,7 +98,7 @@ def is_config_path(path: str) -> bool:
 # --- Checks ----------------------------------------------------------------
 # Each check: (code, message, compiled pattern, {"skip_in_test"|"skip_in_config"}).
 # All rules are framework- and architecture-neutral; layer- or framework-bound
-# rules live in the sibling skills (hexagonal-service, typescript-nestjs).
+# rules are out of this checker's scope.
 
 _CHECKS: list[tuple[str, str, re.Pattern, frozenset]] = [
     (

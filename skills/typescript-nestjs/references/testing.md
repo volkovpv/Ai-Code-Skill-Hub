@@ -1,18 +1,22 @@
 # Testing NestJS code
 
-Universal test hygiene comes from the `typescript-coding` skill; this file
-covers only the NestJS-specific seams.
+This file covers only the seams NestJS itself provides: the testing module,
+the token override, the module graph. Universal test discipline — what a
+test must establish, what may be replaced by a double, how a suite stays
+honest — is **outside this skill's scope**; the host project's rules decide
+it.
 
 ## Unit tests — no container at all
 
-- A use case is a plain class: construct it directly with mocked **ports**
-  (`jest.Mocked<UserRepositoryPort>` or the runner's equivalent). No
-  `Test.createTestingModule`, no reflection, no container.
-- Mock ports (interfaces), never concrete adapters, private methods, or ORM
-  models. If a test needs to reach into an implementation, the seam is
-  missing — fix the design, not the test.
-- Naming: `<subject>.spec.ts` next to unit scope; test titles state behaviour
-  and condition (`test_rejects_unknown_user`), even inside `it('...')`.
+- A use case is a plain class assembled by a factory provider, so a test
+  constructs it directly: no `Test.createTestingModule`, no reflection, no
+  container. That is the whole payoff of keeping DI decorators out of the
+  use case — the container is a wiring concern, not a unit-test concern.
+- **What stands in for each injected port is the project's call**, not
+  NestJS's: the constructor takes port interfaces, so anything satisfying
+  them works, and this skill does not decide which of them a given test
+  replaces.
+- File naming: `<subject>.spec.ts`, alongside the unit it covers.
 
 ## Integration tests — override at the token
 

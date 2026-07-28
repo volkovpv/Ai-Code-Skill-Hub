@@ -46,5 +46,4 @@ Layout convention:
   - `checked_input.py` + `checked_input.expected` — a calibrated run of the
     checker over stdin (label `<stdin>`). Note: the `raise RuntimeError(...)`
     line deliberately produces no finding — raw-raise discipline is a
-    layering rule and belongs to the `hexagonal-service` skill, not to this
-    universal checker.
+    layering rule, out of this universal checker's scope.

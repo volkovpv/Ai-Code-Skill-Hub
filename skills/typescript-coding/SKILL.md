@@ -1,11 +1,11 @@
 ---
 name: typescript-coding
-description: Universal coding standard and workflow for production TypeScript, free of framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no floating promises, immutable data, no type/lint suppressions, centralized env access, test-in-the-same-change discipline; type design (invalid states unrepresentable, discriminated unions with exhaustive switches, `satisfies`, parse-don't-assert boundaries) and generics/type-level discipline (golden rule of generics, type-level DRY, template literal types). Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) — app code, libraries, scripts, or tests. Combine with the hexagonal-service skill for ports-and-adapters layering and typescript-nestjs for NestJS.
+description: Universal coding standard and workflow for production TypeScript, free of framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no floating promises, immutable data, no type/lint suppressions, centralized env access; type design (invalid states unrepresentable, discriminated unions with exhaustive switches, `satisfies`, parse-don't-assert boundaries) and generics/type-level discipline (golden rule of generics, type-level DRY, template literal types). Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) — app code, libraries, scripts, or tests. Where the host project also declares an architecture or a framework standard, apply that on top of this skill.
 ---
 
 # TypeScript coding (universal)
 
-Write strictly-typed, test-covered TypeScript. This skill is **universal by
+Write strictly-typed TypeScript. This skill is **universal by
 contract**: every rule here holds in any TypeScript codebase — it assumes no
 framework, no architectural style, no DI container, no specific libraries.
 Architecture-bound rules live in the `hexagonal-service` skill and
@@ -36,10 +36,7 @@ uses them, apply those skills on top of this one.
    shallow functions, JSDoc on the public surface. Follow
    [references/lint-clean.md](references/lint-clean.md) so the project's `lint`
    comes back with zero errors and zero warnings.
-5. **Test in the same change.** A code change without its tests is
-   incomplete; every bug fix ships a regression test that fails before the
-   fix. See [references/testing.md](references/testing.md).
-6. **Self-check before handing off.** Run the convention checker over the
+5. **Self-check before handing off.** Run the convention checker over the
    files you touched:
 
    ```bash
@@ -69,7 +66,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Writing a generic, deriving types from a source of truth, template literal types, overloads vs conditional types | [references/generics-and-type-level.md](references/generics-and-type-level.md) |
 | Making code pass a strict linter with zero warnings (booleans, promises, immutability, complexity, JSDoc) | [references/lint-clean.md](references/lint-clean.md) |
 | Errors, `catch` blocks, env access, logging hygiene | [references/errors-config-logging.md](references/errors-config-logging.md) |
-| Writing or reviewing tests | [references/testing.md](references/testing.md) |
+| Spelling a test rule in TypeScript (stubs, module patching, skips, type-level assertions, async, checker behaviour in test paths) | [references/testing.md](references/testing.md) |
 | Applying a verified pattern | [knowledge/patterns.md](knowledge/patterns.md) |
 | A checker finding looks wrong, or a strict-mode edge case bites | [knowledge/pitfalls.md](knowledge/pitfalls.md) |
 | A calibrated input/output pair for the checker | [data/README.md](data/README.md) |
@@ -114,13 +111,12 @@ has been promoted into `knowledge/` or this workflow.
   named literals over magic values, small shallow functions, and JSDoc with a
   description on the exported surface — see
   [references/lint-clean.md](references/lint-clean.md).
-- A code change without its tests is incomplete; do not suppress the type
-  checker or linter (`@ts-ignore`, `@ts-nocheck`, `eslint-disable`) to go
-  green. Sole exception: a documented upstream limitation of a single lint
-  rule, held by a justified line-scoped
+- Do not suppress the type checker or linter (`@ts-ignore`, `@ts-nocheck`,
+  `eslint-disable`) to go green. Sole exception: a documented upstream
+  limitation of a single lint rule, held by a justified line-scoped
   `eslint-disable-next-line <rule> -- <reason>` — see
   [references/typing-and-style.md](references/typing-and-style.md).
 - Keep this skill universal: framework, architecture, and project-specific
-  choices belong to the host project or to the dedicated skills
-  (`hexagonal-service`, `typescript-nestjs`) — never here. Project
-  instructions always take precedence over this skill.
+  choices belong to the host project or to whatever dedicated standard it
+  declares — never here. Project instructions always take precedence over
+  this skill.

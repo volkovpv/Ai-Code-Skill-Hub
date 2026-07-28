@@ -61,5 +61,9 @@ driving edge of the hexagon. They translate; they never decide.
   payloads never reach the client.
 - The filter chain is the **only** place a request error is logged (ERROR,
   with the full stack and cause chain, plus the trace id) and the only place
-  a domain error meets HTTP. Use cases and adapters let errors bubble — see
-  the hexagonal-service error-flow reference.
+  a domain error meets HTTP. Everything upstream lets the error bubble
+  untouched: a driven adapter wraps the foreign error into a typed domain
+  error exactly once, at the source, preserving it as `cause`; no use case,
+  application service or controller re-wraps it, logs it, or catches it to
+  "add context". One failed request therefore produces exactly one ERROR
+  record, with the whole chain visible in it.

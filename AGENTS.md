@@ -10,6 +10,17 @@
   into the skill's `agents/` adapter files or into installer code, never into
   `SKILL.md`.
 - Do not put product- or project-specific decisions into universal skills.
+- **Skills are installed one at a time and must stand alone.** No skill may
+  depend on another being present: a rule is never stated only by pointing at
+  a sibling, and a sibling's rule codes, file paths, section names or pinned
+  versions are never quoted. The same rule restated in two skills is the
+  accepted price of that independence — what is forbidden is the reference,
+  not the duplicate; copies that contradict each other are the real defect.
+  A sibling may be *named* only in the conditional form ("where the host
+  project also declares an architecture standard, apply it on top"), which an
+  agent can act on when both skills happen to be attached and ignore when
+  they are not. Gated by `__test__/skills/test_skill_boundaries.py`; the
+  skill-root `README.md` is exempt because it is never installed.
 - Do not duplicate content between `SKILL.md` and `references/`: `SKILL.md`
   stays short and imperative, details live in `references/` and are loaded on
   demand.
@@ -38,6 +49,13 @@
 - Every observation needs reproducible evidence (test, fixture, commit,
   scenario). Subjective impressions without evidence must not be recorded as
   knowledge.
+- **A new observation names no sibling skill's internals.** A record that
+  mirrors a fix already made elsewhere in this library says so neutrally —
+  "a sibling skill in the same library" — never with that skill's path,
+  version, PR number or commit, for the same reason a consuming project is
+  never named in `CHANGELOG.md`. Accepted records predating this rule are
+  history and stay as they are; the gate covers `observations/INDEX.md`, not
+  the records themselves.
 - `knowledge/` holds only verified, generalizable statements with an explicit
   applicability scope, each linked to its evidence.
 - Agents must not edit `observations/accepted/` or auto-modify `SKILL.md`

@@ -1,15 +1,17 @@
 ---
 name: typescript-nestjs
-description: NestJS-specific rules and conventions for services that follow the hexagonal (ports-and-adapters) architecture — DI tokens as named unique symbols, use cases as plain classes assembled by factory providers, controllers as pure mappers, a global ValidationPipe with class-validator request DTOs, guards via APP_GUARD with @Public metadata, exception filters that log once and map domain errors to HTTP once (RFC 9457, masked 5xx), fail-closed env validation behind @nestjs/config, and @nestjs/testing with overrideProvider for integration tests. Use when writing, reviewing, or refactoring NestJS code — a module, provider, controller, pipe, guard, interceptor, exception filter, config namespace, or NestJS test. Presumes the hexagonal-service skill for layer rules and the typescript-coding skill for language rules.
+description: NestJS-specific rules and conventions for services that follow the hexagonal (ports-and-adapters) architecture — DI tokens as named unique symbols, use cases as plain classes assembled by factory providers, controllers as pure mappers, a global ValidationPipe with class-validator request DTOs, guards via APP_GUARD with @Public metadata, exception filters that log once and map domain errors to HTTP once (RFC 9457, masked 5xx), fail-closed env validation behind @nestjs/config, and @nestjs/testing with overrideProvider for integration tests. Use when writing, reviewing, or refactoring NestJS code — a module, provider, controller, pipe, guard, interceptor, exception filter, config namespace, or NestJS test. Where the host project also declares an architecture or a language standard, apply that on top of this skill.
 ---
 
 # TypeScript + NestJS
 
-NestJS mechanics for a hexagonal service. This skill covers only what is
-specific to NestJS; the layer model and error flow come from the
-`hexagonal-service` skill, and the language discipline from the
-`typescript-coding` skill — apply all three together, with project
-instructions taking precedence over any of them.
+NestJS mechanics for a service built along ports and adapters. This skill
+covers only what is specific to NestJS, and it **stands on its own**: every
+rule below is stated in full here, in terms of the layers a
+ports-and-adapters codebase already carries (`domain`, `application`,
+driving and driven adapters). Where the host project also declares an
+architecture or a language standard, apply that on top of this skill;
+project instructions take precedence over both.
 
 ## Workflow
 
@@ -36,10 +38,15 @@ instructions taking precedence over any of them.
 
    It is a heuristic backstop (path-based layer detection, lexical masking,
    no AST); read every finding in context, then run the project's real
-   `lint` / `typecheck` / `test`. Suppressions follow the same strict
-   contract as `typescript-coding`:
-   `// skill-check-ignore: NEST-DI-TOKEN -- <non-empty reason>`; a bare
-   marker, an unknown code, or an empty justification aborts with exit 2.
+   `lint` / `typecheck` / `test`. A checked false positive may be suppressed
+   only per rule code and only with a written reason:
+
+   ```ts
+   @Inject('LEGACY_TOKEN') // skill-check-ignore: NEST-DI-TOKEN -- third-party module exports a string token
+   ```
+
+   A bare `skill-check-ignore`, an unknown code, or an empty justification
+   aborts the check (exit 2).
 
 ## Routing: what to read when
 
@@ -63,7 +70,8 @@ instructions taking precedence over any of them.
 - `domain/` imports nothing from `@nestjs/*` (or any framework);
   `application/` may use **type-only** imports from the framework base
   package. Raw `throw new Error` in `domain`/`application` is forbidden —
-  typed domain errors only (see hexagonal-service error flow).
+  typed domain errors only; a foreign error is wrapped into one exactly once,
+  in the driven adapter that received it, with the original kept as `cause`.
 - Every request DTO is validated by the global `ValidationPipe({ whitelist:
   true, forbidNonWhitelisted: true, transform: true })` (unknown fields
   rejected, not just stripped); controllers hold no business logic; errors are

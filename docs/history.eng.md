@@ -36,6 +36,586 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## Five skills, one box each — and the four that could not be shipped alone
+
+**Releases:** project `3.4.0` (`typescript-nestjs` `1.1.1 → 1.2.0`,
+`typescript-coding` `1.7.0 → 1.8.0`, `python-coding` `1.5.0 → 1.6.0`,
+`hexagonal-service` `2.1.1 → 2.2.0`, `testing-discipline` `1.3.0 → 1.4.0`)
+**Type:** coupling removed — every skill made complete on its own
+
+### In one sentence
+
+Skills are installed one at a time, but four of the five had grown
+sentences that only work if a *second* skill is installed too — and one of
+them sent readers to a skill that had not held the rule in question for
+three releases.
+
+### The problem, precisely
+
+A consumer installs `typescript-nestjs` and nothing else. That is a normal
+thing to do, and the skill did not survive it:
+
+| What the file said | What the reader got |
+|---|---|
+| "**Presumes** the hexagonal-service skill … and the typescript-coding skill" | a standard that declares itself incomplete |
+| "Universal test hygiene **comes from** the typescript-coding skill" | a pointer to a skill that carries no test rules — they moved out in `3.0.0` |
+| "typed domain errors only (**see** hexagonal-service error flow)" | a rule named but never stated |
+| "never a raw `process.env` read (the typescript-coding checker flags this as **`TS-ENV`**)" | another checker's rule code, meaningless here |
+| "Suppressions follow the **same strict contract as** typescript-coding" | a contract defined by reference |
+
+The other three skills had the milder form of the same thing: a flat
+assertion that some rule "lives in" a named sibling — in `SKILL.md`, in
+the OpenAI adapter prompt, in a reference file, in a checker comment, in a
+dataset contract. Harmless when both skills are attached; a dangling
+pointer the rest of the time.
+
+The reason it kept happening is that the obvious fix looks wrong. Two
+skills both saying "wrap a foreign error once, at the source, keeping the
+cause" reads like duplication to be removed. It is not:
+
+> **Duplication is the price of independence and is fine. A reference is
+> not.** What must never differ is the *content* of the two copies —
+> contradiction is the real defect, and it is what the gates now look for.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart TD
+    A["Consumer installs\none skill"] --> B["Skill states a rule\nby pointing at a sibling"]
+    B --> C{"Is that sibling\ninstalled?"}
+    C -->|"yes"| D["Works — the reason\nnobody noticed"]
+    C -->|"no"| E["Rule named,\nnever stated"]
+    E --> F["Agent improvises\nor drops the rule"]
+    G["Pointer names the\nwrong owner"] --> H["Agent reads a skill\nthat no longer holds it"]
+    H --> F
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    A["Consumer installs\none skill"] --> B["Every rule stated in full,\nin this skill's own terms"]
+    B --> C["Works alone"]
+    C --> D{"Is a sibling\nalso attached?"}
+    D -->|"yes"| E["Conditional sentence fires:\n'where the host project also\ndeclares X, apply it on top'"]
+    D -->|"no"| F["Same sentence reads as\na no-op — nothing dangles"]
+    G["Gate refuses a new\nunconditional mention,\nforeign rule code,\npath or version"] --> B
+```
+
+### Example — the same sentence, before and after
+
+```text
+before:  Raw `throw new Error` in domain/application is forbidden —
+         typed domain errors only (see hexagonal-service error flow).
+
+after:   Raw `throw new Error` in domain/application is forbidden —
+         typed domain errors only; a foreign error is wrapped into one
+         exactly once, in the driven adapter that received it, with the
+         original kept as `cause`.
+```
+
+The rule is now in the box the reader opened. A ports-and-adapters
+standard says the same thing in its own words, and that is fine — what
+would not be fine is the two saying *different* things.
+
+### What the skills now say
+
+- **A sibling may be named in exactly one shape:** a conditional sentence
+  — *"where the host project also declares an architecture standard, apply
+  it on top"* — which an agent acts on when both skills happen to be
+  attached and ignores when they are not.
+- **Never another skill's internals:** no rule codes, no file paths, no
+  section names, no pinned versions.
+- **`typescript-nestjs` decides no test question that belongs to the
+  project.** Its testing file had three restatements of universal test
+  rules and a hardcoded school ("mock ports" in every unit test); which
+  collaborators a unit test replaces is the project's declaration, so the
+  file now says so and keeps only what is genuinely NestJS.
+- **`hexagonal-service` claims language neutrality and now keeps it** — it
+  no longer offers two TypeScript skills as its examples and none for any
+  other language.
+
+### Where the rule stops
+
+- **It does not forbid duplication.** The error-wrapping rule, the
+  environment rule and the logging rule are stated in several skills on
+  purpose; a review checks that the copies agree, not that they are few.
+- **It does not reach the observation records.** An accepted observation
+  is a dated field report that agents may not edit, so records written
+  before this rule keep their wording. What a *new* record may say about a
+  sibling is now in `AGENTS.md`, and the authored `observations/INDEX.md`
+  is gated like everything else.
+- **The gate catches references, not paraphrases.** A rule copied in
+  someone else's words still reads as original text; that is a review
+  question, and the anti-duplication battery is a backstop for it, not a
+  substitute.
+
+---
+
+## A skill that kept growing levels — and the one line it never drew
+
+**Releases:** project `3.3.0` (`testing-discipline` `1.2.0 → 1.3.0`)
+**Type:** scope narrowed — one level removed, and the boundary it was hiding given an owner
+
+### In one sentence
+
+The skill had grown a third level of testing it could not support, while the
+only boundary its readers actually had to decide — *is this a unit test or an
+integration test?* — was described by nobody, so an agent could be told
+confidently how to build a deployment skeleton and left guessing about the
+test in front of it.
+
+### The problem, precisely
+
+Two failures that look unrelated and are the same failure: **the skill's scope
+was set by what got written, not by what it could arbitrate.**
+
+| | What the skill offered | What a reader actually needed |
+|---|---|---|
+| Exercising a deployed system from outside | a level, an outer loop, deployment advice, suite-splitting rules | nothing — different subjects, lifecycles and owners; the skill has no standing here |
+| **Unit versus integration** | three levels each defined by *the question it answers* | **where the line between two of them runs** — which the two schools answer differently |
+| London school | a catalog entry naming its cost, plus an outer loop that was mostly about deployment | the unit-level technique: where the doubled collaborators come from |
+
+The middle row is the load-bearing one. "Never let an integration test grow
+quietly inside the unit suite" was already a rule — and it presupposes a
+boundary the skill never stated. Worse, it *cannot* state one: London draws it
+structurally (a real collaborator makes the test an integration test) and the
+classical school draws it behaviourally (a shared dependency, slowness, or
+more than one unit of behaviour does). A skill that picked one would be
+choosing the school it spends four files refusing to choose.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart TD
+    A["Agent asked:\nis this a unit test?"] --> B["Skill offers three levels,\neach defined by its question"]
+    B --> C{"Which level\nis this test?"}
+    C -->|"'does this object do\nthe right thing?' — fits"| D["Unit"]
+    C -->|"'does our code work against\ncode we cannot change?' — also fits"| E["Integration"]
+    D --> F["Agent picks one\nand states it confidently"]
+    E --> F
+    F --> G["The suite splits on\nan unstated boundary"]
+    H["Agent asked about\ndeployment testing"] --> I["Skill has a level for it"]
+    I --> J["Answers with unit-test\nreasoning: isolate, double,\nrun in milliseconds"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    A["Agent asked:\nis this a unit test?"] --> B{"What school do the\nproject rules declare?"}
+    B -->|"London"| C["Structural line:\nany real collaborator\nmakes it integration"]
+    B -->|"Classical"| D["Behavioural line:\nshared dependency, slow,\nor more than one behaviour"]
+    B -->|"undeclared"| E["Follow the existing suite,\npropose recording the choice"]
+    C --> F["Line is drawn —\nand then enforced"]
+    D --> F
+    E --> F
+    G["Agent asked about\ndeployment testing"] --> H["Out of scope:\nsay so, do not improvise\nfrom unit-test rules"]
+```
+
+### Example — one test, two correct verdicts
+
+```python
+def test_a_promoted_customer_pays_the_reduced_rate():
+    pricer = OrderPricer(DiscountPolicy())     # both ours, both real
+    assert pricer.total_for(an_order().promoted()) == 100 * 0.9
+```
+
+Nothing external is touched, it runs in microseconds, and it exercises two of
+our own classes.
+
+- Under the **classical** school this is a **unit test**: one unit of
+  behaviour, no shared dependency, fast.
+- Under **London** it is an **integration test**: a real collaborator runs, so
+  a red bar has two suspects.
+
+Both verdicts are correct, and they are correct for different projects. Before
+this release a reviewer citing the skill could demand the test be moved out of
+the fast suite, and an author citing the same skill could refuse — each of them
+right, and the skill silent. Now the file says outright that **there is no
+level boundary this skill can hand you**, names both readings, and points at
+the project's declaration; what does not vary is that once the line is drawn,
+it is enforced.
+
+### What the skill now says
+
+- **The scope is unit and integration tests.** It is stated in the
+  `description` a caller reads before loading the skill, restated as a rule
+  that says to *decline* out-of-scope questions rather than improvise, and
+  guarded by a scanner that fails the build if a third level reappears
+  anywhere in the skill — with a second test that plants one, so the scanner
+  cannot silently stop working.
+- **The line between the two levels is the school's, not the skill's.** Each
+  school's reading is written out side by side, the project declares which it
+  draws, and an undeclared project follows its existing suite rather than a
+  guess.
+- **London's unit-level technique gets its own file.** A collaborator that
+  does not exist yet is named from the point of view of the object that needs
+  it — *"if this worked, who would know?"* — and the double in the test is
+  what brings it into being. Interfaces are **pulled into existence from the
+  client, never pushed out from an implementation**; the discovered surface is
+  kept narrow. It ships with the cost it incurs and the rules that pay it
+  down, because a project that declares London and skips those has bought the
+  cost without the benefit.
+- **The cycle narrowed to the test.** The evidence rule, the four-step loop
+  and the refactor step stay. Working a written list, sizing a step, the gears
+  to green and how to end a session were project workflow rather than
+  statements about a unit or integration test, and are gone.
+- **An unfinished red test stays in the working copy** until it passes, and
+  **no red suite is shared** — which is what the removed in-progress-suite
+  carve-out was reaching for, without needing a level to hang it on.
+
+### Where the rule stops
+
+- **Narrowing the scope is not a claim that the removed material was wrong.**
+  Walking skeletons, feature-level acceptance loops and the split between a
+  progress suite and a regression suite are real practices; they belong to a
+  discipline this skill does not carry, and to your project's own rules.
+- **"The school decides" is not "anything goes".** The boundary is declared
+  once and then enforced exactly as before: a unit test that acquires a real
+  connection, file or clock has changed level and is moved, renamed and given
+  the lifecycle its level carries.
+- **Interface discovery is opt-in.** It applies where the project declares
+  London or interaction-based design. Under the classical school the
+  collaborators are mostly real and the file does not apply at all.
+
+---
+
+## A test nobody ever watched fail — and the half of testing the skill never described
+
+**Releases:** project `3.2.0` (`testing-discipline` `1.1.0 → 1.2.0`)
+**Type:** missing axis added — every rule judged the test, none described how it comes to exist
+
+### In one sentence
+
+The standard could tell you everything about a test except when to write it,
+which meant a test that had never once been observed to fail — and therefore
+proved nothing — passed every rule the skill had.
+
+### The gap, precisely
+
+Split what a testing standard can say into two columns. The skill had one of
+them, in depth, and the other not at all.
+
+| Question | Covered before | |
+|---|---|---|
+| What shape must the test have? | yes — structure, naming, one act step | ✔ |
+| What may it touch, what may it assert? | yes — schools, doubles, boundaries | ✔ |
+| Where do its cases come from? | yes — specification, never the artifact | ✔ |
+| **When does the test come into being?** | **no** | ✘ |
+| **How do I know this test can fail at all?** | **no** | ✘ |
+| **Which test do I write next, and how big is the step?** | **no** | ✘ |
+| **What do I do when writing the test hurts?** | **no** | ✘ |
+
+The second block is not a nicety. A test is a claim about behaviour, and the
+only evidence that the claim is *checkable* is having seen the check fail. The
+skill demanded a failing run in exactly one place — a bug fix — and nowhere
+else, so its own rule "a test that cannot fail protects nothing" had no
+procedure attached to it.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Code written"] --> B["Test written after"]
+    B --> C["Suite is green"]
+    C --> D{"Skill's checks"}
+    D -->|"shape ok, naming ok,\ncases from spec"| E["Test accepted"]
+    E --> F["Nobody ever saw it red"]
+    F --> G["A test that cannot fail\ncounts as protection"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Test written"] --> B{"Has it been\nseen red?"}
+    B -->|"written first"| C["The first run\nis the measurement"]
+    B -->|"written after"| D["Break the behaviour\nit names, watch it fail,\nrestore"]
+    C --> E{"Red for its\nown reason?"}
+    D --> E
+    E -->|"yes"| F["Now it is protection"]
+    E -->|"no — arrange blew up,\nor green unexpectedly"| G["Investigate before\ncounting it"]
+```
+
+### Example — a test that passes for a reason nobody chose
+
+```python
+class Expired(Exception):
+    pass
+
+
+class Token:
+    def __init__(self, user, expires_at, now):
+        if expires_at <= now:          # the constructor also validates
+            raise Expired
+        self.user, self.expires_at = user, expires_at
+
+
+def authorize(token, now):
+    if token.expires_at <= now:        # the guard under test
+        raise Expired
+    return Session(token.user)
+
+
+def test_rejects_an_expired_token():
+    with raises(Expired):
+        token = Token("u", expires_at=YESTERDAY, now=TODAY)
+        authorize(token, now=TODAY)
+```
+
+Delete the guard inside `authorize` entirely and this test stays green: the
+exception it catches was raised two lines earlier, in the arrange step. It has
+the right shape, the right name and a case taken straight from the
+specification — every rule the skill had before this release. What exposes it
+is watching it run: written first it goes green immediately, which is now an
+*unexpected green* to be investigated rather than a small victory; written
+last, breaking the guard leaves it green, which is now the missing evidence.
+
+### Four places where the new rules and the old ones look like a contradiction
+
+Adding a process to a standard about artifacts creates collisions. Each pair
+below is now separated by an explicit boundary, and each boundary is pinned by
+a test, because dropping one is a plausible edit that leaves the skill quietly
+self-contradicting.
+
+| The process says | The standard says | Where the line runs |
+|---|---|---|
+| Reach green by returning a constant, then generalize | Never hardcode a value so a test passes | the constant goes in **production** code and is transient; hardcoding happens **in the test** and stays |
+| Write the derivation into the assertion: `100 / 2 * (1 - 0.015)` | Never recompute the expected value with the algorithm under test | it is about *whose* computation: the specification's, in the test's own literals — never the production routine or constant |
+| End a solo session with the last test failing | Nothing broken, focused or skipped is committed | the red test lives in the working copy; anything shared is green |
+| Classical test-driven development runs inside-out | *(the skill said exactly this)* | that is a contrast with London's outside-in, not the school's own account — its sources reject the vertical metaphor for **known-to-unknown** |
+
+### What the skill now says
+
+- **A test that has never been observed to fail for its own reason is not yet
+  evidence.** Free when it is written first; one deliberate break-and-restore
+  otherwise. *Which* failure matters — an arrange step that blew up has
+  demonstrated nothing about the assertion. An unexpected green is
+  investigated, never enjoyed.
+- **The red/green/refactor cycle is the project's declaration**, exactly like
+  the school: a written test list worked one item at a time, never more than
+  one red test at once, the next test chosen for what it teaches against what
+  you can confidently pass, a degenerate first case, four gears to green
+  (obvious implementation → one-to-many → triangulate → fake it) with a rule
+  for changing gear, and step size named as the variable being controlled.
+- **A test that is hard to write, slow, or fragile is a report on the design.**
+  Long arrange, setup that resists sharing, action at a distance, the urge to
+  reach private state — each maps to what it says about the code and the change
+  it asks for, under one rule: change the design first, the test second.
+- **Smaller rules that came with it:** name the expected value rather than a
+  property many wrong answers share; never let one constant mean two things in
+  one case; test only what you wrote, calibrating depth by the cost of being
+  wrong; delete a test only when it is redundant on *both* confidence and
+  communication.
+
+### Where the rule stops
+
+- **The cycle is never imposed.** A project that writes tests immediately after
+  each function, deliberately, is doing nothing the skill objects to. Only the
+  evidence rule applies unconditionally.
+- **The cycle does not reach everywhere.** Security and concurrency cannot be
+  demonstrated by passing tests; performance, stress and usability are separate
+  activities; a design decided in advance keeps being surprised; and legacy
+  code without seams is handled by limiting scope, not by stopping delivery.
+- **A painful test is a symptom, not a diagnosis.** It is usually right that
+  something is wrong and frequently wrong about what. And when the design idea
+  does not come, it does not come — assert the state, record the cost, move on;
+  what is forbidden is doing that silently.
+
+---
+
+## "In isolation" means two different things — and now the project says which
+
+**Releases:** project `3.1.0` (`testing-discipline` `1.0.0 → 1.1.0`)
+**Type:** hidden assumption removed — a strategy choice was being made silently
+
+### In one sentence
+
+*A unit test runs in isolation* has two established readings — isolate the unit
+from its collaborators, or isolate the tests from one another — and the testing
+standard quietly assumed the second one, so any project that had deliberately
+chosen the first was being reviewed against a convention it never adopted.
+
+### The problem, precisely
+
+The standard's isolation reference contained one sentence that looked like a
+clarification and was in fact a decision:
+
+> Isolation is about the *test*, not about purity.
+
+That is the classical (Detroit) school's definition, word for word. Everything a
+reviewer does downstream follows from it:
+
+| Question | London (mockist) answers | Classical (Detroit) answers |
+|---|---|---|
+| What is isolated? | the unit, from its collaborators | the tests, from one another |
+| What is a "unit"? | one class | one unit of behaviour — however many classes |
+| Which dependencies get a test double? | every mutable collaborator | only shared ones (in practice, out-of-process) |
+| What is an integration test? | any test using a real collaborator | one that is slow, shared, or covers two behaviours |
+| Which way does test-driven development run? | outside-in | inside-out |
+
+Both columns are coherent, both are in wide use, and the standard was pinned to
+the right-hand one without ever saying so. A team on the left-hand column got
+advice that contradicted its own convention, and had nothing in the standard to
+argue with — because the choice was never presented as a choice.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Standard says:\nisolation = between tests"] --> B{"The project's own\nconvention"}
+    B -->|"classical"| C["Advice matches\nby luck"]
+    B -->|"mockist"| D["Advice contradicts\nthe project"]
+    D --> E["No way to argue:\nthe choice is invisible"]
+    E --> F["Either the suite drifts\nor the skill is ignored"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Project rules declare\na school"] -->|"declared"| B["Follow it exactly"]
+    A -->|"not declared,\nsuite is consistent"| C["Follow the suite,\npropose recording it"]
+    A -->|"nothing to go on"| D["Propose one,\nget it recorded"]
+    B --> E["Rules that hold under\nboth schools always apply"]
+    C --> E
+    D --> E
+```
+
+### Example — one test, two correct answers
+
+`OrderService` calls `InventoryStore`, a plain in-memory class the team wrote
+itself. What should the unit test do with it?
+
+| The project's declared school | What the test does | Why |
+|---|---|---|
+| London (mockist) | replaces `InventoryStore` with a double | it is a mutable collaborator, and the unit is the class |
+| Classical (Detroit) | uses the real `InventoryStore` | it is private to the test, so it cannot make two tests interfere |
+
+Before this release one of these two answers was silently treated as the wrong
+one. Now both are right, and the only question is which one the project wrote
+down.
+
+### What the skill now says
+
+- **The school is declared by the host project, never by the skill.** The
+  catalog, the vocabulary the choice is made in (shared vs private,
+  in- vs out-of-process, managed vs unmanaged, value vs collaborator) and the
+  resolution order for an undeclared project all live in the skill; the
+  decision does not.
+- **What project rules must declare:** the school (and its boundary, if it
+  varies by layer), what a unit is here, which dependencies get a double,
+  which out-of-process dependencies count as managed and which as unmanaged,
+  where an interaction may be asserted, and the direction of test-driven
+  development.
+- **What holds either way:** never assert an interaction with a stub; an
+  interaction that never leaves the application is an implementation detail;
+  a double for something you do not own is written against an adapter you do
+  own; output verification is preferred by both schools.
+- Alongside the schools, the skill gained the judgement the rest of its rules
+  serve — the four attributes of a test (protection against bugs, resistance
+  to refactoring, feedback speed, maintenance cost, multiplied rather than
+  added), the ranking of the three verification styles, what code deserves a
+  unit test at all, and a catalog of the classic anti-patterns.
+
+### Where the rule stops
+
+The skill still picks no school for a project that has one, and only *proposes*
+one for a project that has none. It says nothing about which runner to use,
+which library builds the doubles, or what coverage number the build demands.
+And nothing in the catalog licenses asserting an interaction with a stub,
+widening a member's visibility for a test, or recomputing an expected value
+with the algorithm under test — those stay wrong under both schools.
+
+---
+
+## One rule, two homes — the test rules become a skill of their own
+
+**Releases:** project `3.0.0` (new skill `testing-discipline` `1.0.0` ·
+`python-coding` `1.4.0 → 1.5.0` · `typescript-coding` `1.6.0 → 1.7.0`)
+**Type:** duplication removed — the same rule was being maintained twice
+
+### In one sentence
+
+How to write a test is a property of tests, not of a programming language —
+but each language standard carried its own full copy of those rules, so every
+fix had to be made twice, by hand, in two separate releases.
+
+### The problem, precisely
+
+The three most recent test-rule fixes each landed in one standard first and
+then had to be mirrored into the other one:
+
+| The rule that was fixed | Landed first | Mirrored later |
+|---|---|---|
+| Where a test's cases, subject and dimensions come from | project `2.5.0` | project `2.6.0` |
+| How a stub's contract for an external system is established | project `2.7.0` | project `2.8.0` |
+| Values substituted on the way out, and who builds the collaborator | project `2.9.0` | project `2.10.0` |
+
+Six releases for three rules. Nothing about any of them was
+language-specific: each one shipped its own universality check, and the
+mirrored copy differed only in which library the example named. The cost was
+not just the duplicated work — it was that the two copies could disagree, and
+that a third language would have needed a third copy of everything.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["A test rule is fixed in\none language standard"] --> B["Someone must remember\nthe other standard"]
+    B --> C["A second release re-states\nthe same rule in other idiom"]
+    C --> D{"Two copies of one rule"}
+    D -->|"one gets edited"| E["Wordings drift apart"]
+    D -->|"a third language arrives"| F["A third copy is needed"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["A test rule is fixed once,\nin the testing standard"] --> B{"One copy"}
+    B --> C["Language standards keep only\na spelling map for their idiom"]
+    C --> D["A new language costs\na spelling map, not a rule set"]
+```
+
+### Example — what moved and what stayed
+
+The rule and its reproduction are language-neutral, so they moved:
+
+> A fake's own return values, when the property under test belongs to an
+> external system, are established by observing that system once, never by
+> reading.
+
+What stayed behind in each language standard is only the vocabulary that
+expresses it — a row in a table, not a rule:
+
+| What the test needs | Stays in the language standard |
+|---|---|
+| A stand-in for a seam the project owns | which construct satisfies the declared interface |
+| Last-resort patching | which patching facility, and that it needs a justification |
+| A skip that must ship | which marker carries the reason |
+| A negative type-level assertion | which suppression the checker itself polices |
+
+### What the skills now say
+
+- `testing-discipline` owns the rules: tests ship with the change, one
+  scenario per test, isolation and injected time, what may be faked and how a
+  fake's contract is justified, evidence collected where the property lives,
+  where cases come from, and suite hygiene.
+- `python-coding` and `typescript-coding` keep a spelling map each and no
+  longer state test rules of their own.
+
+### Where the rule stops
+
+The testing standard says nothing about which runner to use, where test files
+live, or what coverage number the build demands — those belong to the project.
+Which collaborator is faked at which seam in a ports-and-adapters codebase
+still belongs to `hexagonal-service`, and how a rule is written in a given
+language still belongs to that language's standard.
+
+---
+
 ## What a stub still can't see — two more shapes of the same blind spot
 
 **Releases:** project `2.10.0` (`typescript-coding` `1.5.0 → 1.6.0`) · project

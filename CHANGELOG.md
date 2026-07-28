@@ -5,6 +5,428 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.4.0] — 2026-07-28
+
+### Every skill now stands alone (`typescript-nestjs` 1.1.1 → 1.2.0, `typescript-coding` 1.7.0 → 1.8.0, `python-coding` 1.5.0 → 1.6.0, `hexagonal-service` 2.1.1 → 2.2.0, `testing-discipline` 1.3.0 → 1.4.0)
+
+Skills are installed one at a time, but four of the five had grown text
+that only works when a *second* skill is installed too — and one of them
+pointed at the wrong owner entirely.
+
+**`typescript-nestjs` was not usable on its own.** Its `description` said
+it "presumes" two other skills; its body said to "apply all three
+together"; `references/testing.md` sourced universal test hygiene from a
+skill that does not contain any (that content moved out three releases
+ago, in 3.0.0); two files sent the reader to another skill's error-flow
+reference for a rule they never stated themselves; a config rule quoted
+another checker's rule code; and the suppression contract was defined by
+reference instead of written down. A consumer who installed only this
+skill got a standard with holes in it. Every one of those is now stated in
+full, in NestJS's own terms — the wrap-once/log-once/map-once invariant,
+the config rule, the suppression contract with its own worked example.
+
+**The rest was unconditional naming.** `typescript-coding`,
+`python-coding`, `hexagonal-service` and `testing-discipline` each
+asserted that some rule "lives in" a named sibling — in `SKILL.md`, in the
+OpenAI adapter prompts, in a reference file, in a checker comment, in a
+dataset contract. All of it is now either scoped out ("out of this
+skill's scope") or made conditional in the one shape an agent can act on:
+*where the host project also declares an architecture standard, apply it
+on top*. `hexagonal-service`, which claims language neutrality, no longer
+names two TypeScript skills as its examples and none for other languages.
+
+The distinction the whole change turns on: **duplication is the price of
+independence and is fine; a reference is not.** Two skills stating the
+same rule about wrapping an error is correct. One skill telling the reader
+to go find that rule somewhere else is a dependency.
+
+- **Removed from `typescript-nestjs`:** three restatements of universal
+  test rules and a hardcoded school predicate ("mock ports" in every unit
+  test). Which collaborators a unit test replaces is the project's
+  declaration, not a framework's; the file now says so and keeps only what
+  is genuinely NestJS — `Test.createTestingModule`, `overrideProvider` at
+  the token, `app.close()` teardown, the spec-file names.
+- **New gate `__test__/skills/test_skill_boundaries.py`** — a sibling may
+  be named only inside a sentence carrying a conditional marker; another
+  skill's rule codes, file paths and pinned versions are refused
+  everywhere. The skill-root `README.md` is exempt because it is never
+  installed. The existing anti-duplication battery in
+  `test_testing_discipline.py` now covers `typescript-nestjs` as well —
+  the omission through which the restatements above arrived.
+- **Recorded in `AGENTS.md`:** skills stand alone; what a *new*
+  observation may say about a sibling (neutrally — never its path,
+  version, PR number or commit). Observation records accepted before this
+  rule are history and are left as they are.
+
+## [3.3.0] — 2026-07-28
+
+### `testing-discipline` 1.2.0 → 1.3.0: scoped to unit and integration tests, and the London school gets its own half
+
+Two changes with one shape: **the skill now states what it does not
+cover, and covers what it claims to.**
+
+**The scope is unit and integration tests, and the limit is enforced.**
+The skill had been accumulating levels — a third, system-wide one arrived
+with its own outer loop, its own suites and its own deployment advice.
+Those rules have different subjects, lifecycles and owners, and an agent
+reading them under one name applies unit-test reasoning (isolate, double
+the collaborators, run in milliseconds) to a question where every one of
+those moves is wrong. The scope is now part of the contract: it is stated
+in the `description` a caller reads before loading the skill, restated as
+a **rule** that says to decline out-of-scope questions rather than
+improvise from these ones, and pinned by a scanner that fails the build if
+a third level reappears anywhere in the skill.
+
+**Both schools now have an operational half.** The skill declared itself
+neutral between the two unit-testing schools and was not: every
+operational file — the cycle, the value model, the anti-patterns — was
+calibrated against the classical school's primary sources, while London
+appeared only as a catalog entry naming the school's cost ("replacing
+every collaboration binds the tests to *how* the unit reaches its result")
+with nothing to pay it down. The half that was missing and is
+unit-level — where the doubled collaborators come from, and how tightly an
+interaction may be pinned — is now carried, calibrated against Freeman and
+Pryce's *Growing Object-Oriented Software, Guided by Tests*.
+
+The two changes meet in one place: **the line between a unit test and an
+integration test is what the schools disagree about**, so with only two
+levels left the skill has a single axis instead of three parallel ones.
+
+- **New `references/interface-discovery.md`** — London's own technique,
+  applied where the project declares that school. **The collaborator does
+  not exist yet**, and the double is what brings it into existence: name
+  the service in the client's terms (*"if this worked, who would know?"*),
+  **pull interfaces into existence from the client rather than pushing
+  them out from an implementation**, keep the discovered surface narrow,
+  and merge roles that turn out to mean the same thing. It ships with the
+  cost it incurs and the rules elsewhere in the skill that pay it down —
+  a project that declares London and skips those has bought the cost
+  without the benefit.
+- **Removed `references/outside-in-cycle.md`** — feature-level
+  acceptance-driven development, walking skeletons, deployment risk and
+  the progress-versus-regression suite split. All of it is about a level
+  this skill no longer claims. Its one unit-level part became the file
+  above.
+- **Removed `references/types-and-tests.md`** — the division of labour
+  between a static type checker and a test suite is about tooling rather
+  than about a unit or integration test. Its operative parts (a test per
+  narrowing predicate including the near-miss values it must reject,
+  runtime enforcement of a harmful type-level bypass driven from a test,
+  type-level assertions pinned next to the utility) are already spelled
+  out in the language standards, which is where a project meets a type
+  checker at all. This is the one deliberate exception to "the universal
+  test rules have a single home".
+- **`references/test-levels.md` rewritten around two levels.** The
+  interesting half is new: there is **no level boundary this skill can
+  hand you**, because London draws it structurally (a real collaborator
+  makes it an integration test) and the classical school draws it
+  behaviourally (a shared dependency, slowness, or more than one unit of
+  behaviour does). The project declares which line it draws — and what
+  does *not* vary by school is that once drawn, the line is enforced: a
+  unit test that acquires a real connection, file or clock has changed
+  level and is moved.
+- **`references/tdd-cycle.md` narrowed to the test.** The evidence rule,
+  the four-step loop and the refactor step stay; choosing the next item
+  off a written list, sizing a step, the four gears to green and ending a
+  session were project workflow rather than rules about a unit or
+  integration test, and are gone. What the cycle owes the rest of the
+  discipline — a learning test before first use of an unfamiliar facility,
+  and the smallest reproduction for every defect — stays.
+- **`references/test-diagnostics.md`** — **the cycle has four steps, not
+  three**: fail, *report*, pass, refactor. The report step runs before any
+  production code exists, because a failure nobody can read is a test that
+  gets deleted the first time it fires under deadline. Plus self-describing
+  values, obviously canned values, tracer objects, and checking
+  interactions before value assertions so the report names the cause
+  rather than the consequence.
+- **`references/test-data-builders.md`** — when a factory method is
+  enough and when it is not, safe (not realistic) defaults, and two traps
+  the one-line "prefer builders" advice could not carry: a reused
+  chainable builder **silently leaks one object's override into the next**
+  once two uses diverge, and a shared helper that takes *values* grows one
+  overload per variation — pass the builder through instead.
+- **`references/async-and-concurrency.md`** — separating what an object
+  computes from how it schedules; wait for success and time out for
+  failure; sampling versus listening and the **lost update** a poll can
+  miss; the stress-test procedure that requires watching the test fail
+  dependably first; flickering treated as breakage. Its load-bearing rule
+  ships a reproduction: a **runaway test** that waits for a state the
+  system was already in passes before the system has started, and stays
+  green when the work never happens at all.
+- **`references/adapters-and-persistence.md`** — clean persistent state at
+  the *start* of a test (so a failure leaves evidence and the next test
+  still isolates); write transaction boundaries into the test rather than
+  isolating by rollback, which never exercises the commit where
+  constraints fire; round-trip every reflective mapping; and do not
+  exercise generic mapping code with production domain types — the second
+  cost is **silent rot**, where the domain type loses the field the test
+  thought it was covering and nothing fails.
+
+Existing files gained the rules that make the above coherent:
+
+- `unit-test-value.md` — **specify precisely what should happen and no
+  more**: allow queries, expect commands; keep required interactions few;
+  match arguments only as tightly as the scenario constrains them; pin
+  call order only where the order is the contract; ignoring an irrelevant
+  peer is a power tool, and a *chain* of ignored peers is a design smell.
+- `isolation-and-fakes.md` — **peers, not internals** as the substitution
+  boundary, the three kinds of peer (a **dependency** required at
+  construction with no safe default, against **notifications** and
+  **adjustments** that carry defaults), and the case against doubling a
+  concrete type at all: the relationship stays unnamed and the subject is
+  bound to more of that type than it uses.
+- `tests-as-design-feedback.md` — five more symptoms (a hidden dependency,
+  a long construction argument list, an argument list that will not group,
+  a test class that falls into unrelated slices, a test in which every
+  interaction is required), plus **support reporting is a feature and is
+  test-driven; diagnostic tracing is scaffolding and is not**.
+- `structure-and-naming.md` — write the *information*, not its
+  representation; and the other half of "name the expected value": **exact
+  about the claim, silent about the rest**.
+- `hygiene.md` — a flickering test is broken, not mostly working; a test
+  that is red because the behaviour is not built yet **stays in the
+  working copy** until it passes, and **no red suite is ever shared** —
+  which is the resolution both the cycle and the no-committed-skips rule
+  were pointing at.
+- `schools.md`, `anti-patterns.md` — the report step, the routes into the
+  new files, and the round-trip-mapping exception to "never reach into
+  private state", argued and bounded.
+
+Three collisions with the pre-existing rules are written down rather than
+left for a reader to trip over: an unfinished red test against
+no-committed-skips; naming the expected value against not over-asserting;
+and reflective round-tripping against the private-state prohibition.
+`SKILL.md`, the `README.md` and the OpenAI adapter were updated to match.
+`__test__/skills/test_testing_discipline.py` (142 tests) grew a scope
+class that fails if a third level reappears anywhere in the skill —
+including a guard on the scanner itself — and the eval set traded its two
+acceptance-loop cases for four: an unfinished test kept local, an
+out-of-scope system-wide request declined by naming the limit, the
+unit/integration line taken from the declared school, and a London
+collaborator discovered from its client.
+
+## [3.2.0] — 2026-07-28
+
+### `testing-discipline` 1.1.0 → 1.2.0: the process axis, from the classical school's primary source
+
+Every rule the skill carried judged a test that already existed — its
+shape, what it may touch, what it may assert. Nothing said *when* a test
+comes into being relative to the code, how the next one is chosen, how to
+get from red to green, or what to do when writing the test is painful. An
+agent could therefore produce a flawless test that had never once been
+observed to fail, and the skill had no objection. This release adds that
+axis, calibrated against Kent Beck's *Test-Driven Development By Example*
+— the classical (Detroit) school's own primary source — and reconciles it
+with the rules already in place.
+
+- **New `references/tdd-cycle.md`.** Its first section holds in any
+  project whatever its process: **a test that has never been observed to
+  fail for its own reason is not yet evidence of anything** — free when
+  the test is written first, one deliberate break-and-restore of the
+  behaviour otherwise; *which* failure you got matters (a blown-up arrange
+  step demonstrates nothing about the assertion); and an unexpected green
+  is investigated, never enjoyed. The rest describes the cycle itself and
+  is applied **only where the host project declares that it practises
+  it**, exactly as the school is declared: the two generating rules
+  (failing test first, remove duplication), the five-step loop, never more
+  than one red test at once, the written test list worked one item at a
+  time, choosing the next test for what it teaches against what you are
+  confident you can pass, a degenerate first case, replacing an oversized
+  test with a smaller one, the four gears to green (obvious implementation
+  → one-to-many → triangulate → fake it) with the rule for changing gear,
+  step size named as the variable being controlled rather than a virtue,
+  the refactor step including duplication *between the test and the code*,
+  session boundaries, and the limits — security, concurrency, performance,
+  a design decided in advance, and seamless legacy code.
+- **New `references/tests-as-design-feedback.md`.** The inversion the rest
+  of the skill implies but never stated: a long arrange step, setup that
+  resists being shared, a slow test, a fragile test, the urge to reach
+  private state, a two-call act step or a name that will not fit are each
+  a report on the *product*. Each maps to what it says about the code and
+  the change it asks for, under one rule — **change the design first and
+  the test second** — with an explicit escape valve for when the design
+  idea does not come, plus the reasons the loop works (shortest feedback
+  on an interface decision, scope control, isolation as a design force,
+  reusable structure emerging from removed duplication) and what none of
+  it licenses.
+- **Four coexistence boundaries written down**, because each pair reads as
+  a contradiction otherwise and each is now pinned by a test: a
+  deliberately constant *production* implementation is a step in the cycle,
+  not a test tuned to the gate; writing the specification's own derivation
+  into an assertion over the test's literals is the opposite of leaking the
+  algorithm into the test (the question is *whose* computation is reused);
+  a red test left as a bookmark lives in the working copy and never on a
+  shared branch; and the classical school's direction is corrected —
+  "inside-out" is a contrast with London's outside-in, not the school's
+  account of itself, which rejects the vertical metaphor in favour of
+  **known-to-unknown**.
+- **`references/structure-and-naming.md`** gains assertion-first as a
+  writing order and a new *data a test carries* section: make the
+  derivation from input to expected value visible rather than collapsing
+  it to a magic result, never let one constant mean two things in one
+  case, prefer the smallest data that forces the same decisions, and
+  reserve realistic data for replay, parallel-run and bit-exact
+  refactoring. Assertions must name the expected value rather than a
+  property many wrong answers share.
+- **`references/hygiene.md`** gains the evidence rule as a hygiene item
+  and **when a test may be deleted** — only when redundant on *both*
+  confidence and communication, judged against the specification rather
+  than a coverage report, shipped with the change that made it redundant.
+- **`references/unit-test-value.md`** gains *what is on the hook and how
+  deep to go*: the conditionals, loops, operations and dispatch **you**
+  wrote; not a dependency's own behaviour, except to learn a facility
+  before first use or to pin a defect you must work around; and depth
+  calibrated by the cost of being wrong rather than by a case count.
+- **`references/isolation-and-fakes.md`** gains the lifecycle of the live
+  observation the fake-provenance rule already demanded — write it before
+  the first use of an unfamiliar facility, re-run it on every upgrade
+  before anything else, and express the contract as cases the fake and the
+  real dependency can both answer — plus two shapes worth knowing:
+  sabotaging a single operation to reach an error path, and accumulating a
+  record to assert on ordering once.
+- `SKILL.md` grows two workflow steps and two routing rows; `README.md`
+  documents that test-driven development is the project's declaration too;
+  the OpenAI adapter carries the cycle and its conditionality.
+
+## [3.1.0] — 2026-07-28
+
+### `testing-discipline` 1.0.0 → 1.1.0: unit-testing rules and the two schools
+
+- **The unit-testing school is now an explicit project declaration.** Which
+  collaborators are replaced by a test double does not follow from "write
+  good tests" — it follows from what a project means by *isolation*, and
+  there are two coherent answers in wide use. The skill previously assumed
+  one of them in passing ("isolation is about the *test*, not about
+  purity") without ever saying so, which is wrong for half the codebases
+  that install it. `references/schools.md` now carries both schools —
+  **London (mockist)**: isolate the unit, a unit is a class, double every
+  mutable collaborator; **classical (Detroit)**: isolate the tests, a unit
+  is a unit of behaviour, double only shared dependencies — plus the
+  dependency vocabulary the choice is made in (shared/private,
+  in-/out-of-process, managed/unmanaged, value/collaborator), the rules
+  that hold either way, the resolution order for an undeclared project
+  (follow the suite → propose → record; never guess, never mix), and the
+  list of what the host project's rules must declare. The skill never
+  picks; the project's rules do and always take precedence.
+- **New `references/unit-test-value.md`** — how a test is judged, which
+  every other rule serves: the four attributes (protection against bugs,
+  resistance to refactoring, feedback speed, maintenance cost) multiplied
+  rather than added; resistance to refactoring as the one attribute never
+  traded, with coupling to implementation details named as the single cause
+  of false positives; observable behaviour versus implementation detail and
+  the one-call-per-goal heuristic; the three verification styles ranked
+  (output → state → interaction) with the rules for asserting an
+  interaction at the last seam before the call leaves the process, in both
+  directions; and which code deserves a unit test at all (domain and
+  algorithms thoroughly, trivial code never, orchestrators briefly through
+  integration tests, over-complicated code refactored first).
+- **New `references/anti-patterns.md`** — testing a private method
+  directly, exposing private state to enable an assertion, leaking the
+  algorithm into the test, code pollution (production code that exists only
+  for tests), doubling a concrete type to keep part of it, time as ambient
+  context, and sharing the arrange step through a per-test setup hook.
+- `references/isolation-and-fakes.md` gains the stub/mock distinction —
+  a double standing in for an incoming interaction is never asserted on;
+  only an outgoing one may be — the *double only types you own* rule, and a
+  school-aware preamble in place of the sentence that quietly assumed the
+  classical reading. `references/structure-and-naming.md` gains one act
+  step per test, no branching in a test, the act-length signal about the
+  subject's surface, the naming rules (no rigid template, no method name in
+  the test name, state a fact rather than a wish) and guidance on grouping
+  similar cases.
+- `SKILL.md` routes the school decision first, before anything is faked,
+  and adds the value/anti-pattern rows to its routing table; the
+  description, the OpenAI adapter and the user-facing `README.md` all state
+  that the school is declared by the project. `__test__` pins the new rules
+  and the neutrality contract (47 tests in the skill's module); six eval
+  cases cover the school declaration, a declared school being followed,
+  asserting on a stub, recomputing the expected value with the algorithm
+  under test, widening visibility for an assertion, and a declared school
+  not being second-guessed.
+
+## [3.0.0] — 2026-07-28
+
+### New skill: `testing-discipline` 1.0.0 (major: a skill was created)
+
+- The rules for writing and reviewing tests now live in one place, free of
+  any language, runner, framework or platform assumption. Until this
+  release the same rule set was carried twice — once per language standard
+  — and each of the last three test-rule fixes had to be applied to one
+  standard and then mirrored into the other in a separate release
+  (`2.5.0`/`2.6.0`, `2.7.0`/`2.8.0`, `2.9.0`/`2.10.0`), even though every
+  one of them shipped its own universality check. Two copies of one rule
+  can drift, and a third language would have needed a third copy.
+- `SKILL.md` carries the workflow and the rule list and routes to four
+  references: `structure-and-naming.md` (Arrange/Act/Assert, one scenario
+  per test, names that state behaviour and condition, asserting the error
+  *and* its condition, factories over fixture blobs, example-based versus
+  property-based cases); `isolation-and-fakes.md` (nothing external in a
+  unit test, injected clocks and deadlines instead of waiting, faking the
+  seams the code exposes and never someone else's internals, the
+  external-system fake-provenance rule with its two reproductions, the
+  outbound-substitution shape, and the production-wiring rule);
+  `hygiene.md` (no committed focus/skip, no test tuned to the gate,
+  regression test per bug fix, determinism, the case-set/subject/dimension
+  family with its three reproductions, test-only secrets); and
+  `types-and-tests.md` (what a static checker already covers and what it
+  cannot verify).
+- Status is `draft` until the eval-gate
+  (`scripts/run_skill_evals.py` over `__test__/evals/testing-discipline/cases.json`,
+  15 cases: 2 trigger, 6 behavior, 5 negative, plus a trigger case in a
+  language the skill names nowhere) runs against a real harness. Ships an
+  OpenAI adapter and a user-facing `README.md`; no scripts and no optional
+  layers — a language-neutral checker for prose test rules would be
+  guesswork.
+
+### `python-coding` 1.4.0 → 1.5.0 (minor: an existing skill's rules changed)
+
+- `references/testing.md` is now a **spelling map**: which Python
+  construct expresses a test rule (a `Protocol`-satisfying stub,
+  `monkeypatch`/`unittest.mock.patch` as the justified last resort,
+  injected clocks, a real event loop with `asyncio.timeout` deadlines,
+  `pytest.mark.skip` with a reason, the `Any`/`cast`/`print` relaxations
+  scoped to test files, `TypeGuard`/`TypeIs` unit tests,
+  `typing.assert_type` and the `warn_unused_ignores`-policed negative
+  type-level assertion, Hypothesis), plus the checker's behaviour in test
+  paths. The rules themselves — and the observation-backed guidance
+  transferred in `2.5.0`, `2.7.0` and `2.9.0` — moved to
+  `testing-discipline` unchanged in substance.
+- `SKILL.md` drops the "test in the same change" workflow step and the
+  test clause of the suppression rule; the routing row now points at the
+  spelling map. The `description` and the OpenAI adapter prompt no longer
+  claim test rules.
+
+### `typescript-coding` 1.6.0 → 1.7.0 (minor: an existing skill's rules changed)
+
+- Same split, TypeScript side: `references/testing.md` becomes a spelling
+  map (object-literal stubs, module patching as the justified last resort,
+  injected clocks, awaited assertions with deadlines and no floating
+  promises, `it.skip` with a reason and never `.only`, the
+  `any`/non-null/`console` relaxations scoped to spec files, type-guard
+  and assertion-function tests, equality-style type-level assertions and
+  the `@ts-expect-error` negative case, fast-check), plus the checker's
+  behaviour in test paths. The rules transferred in `2.6.0`, `2.8.0` and
+  `2.10.0` moved to `testing-discipline`.
+- `SKILL.md` drops the "test in the same change" workflow step and the
+  test clause of the suppression rule; `description` and the OpenAI
+  adapter prompt updated accordingly.
+
+### Tests and documentation
+
+- The three observation-backed regression classes that pinned the moved
+  rules (case-set provenance/subject/dimension, external-system fake
+  provenance, outbound mutation + wiring level) are relocated into
+  `__test__/skills/test_testing_discipline.py` against the new skill's
+  files, alongside structural, neutrality and adapter pins. Both language
+  test modules gain a guard that their `references/testing.md` stays a
+  spelling map and re-states none of the relocated rule text; the new
+  module carries the same guard for both skills.
+- The ten test-rule eval cases duplicated across the two language
+  manifests collapse into `__test__/evals/testing-discipline/cases.json`;
+  the language manifests keep their language-specific cases.
+- Root `README.md` lists the new skill; `docs/history.{eng,rus}.md` gain
+  the bilingual entry for the split.
+
 ## [2.10.0] — 2026-07-28
 
 ### `typescript-coding` 1.5.0 → 1.6.0 (minor: an existing skill's rules changed)
