@@ -5,6 +5,59 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.4.0] — 2026-07-28
+
+### Every skill now stands alone (`typescript-nestjs` 1.1.1 → 1.2.0, `typescript-coding` 1.7.0 → 1.8.0, `python-coding` 1.5.0 → 1.6.0, `hexagonal-service` 2.1.1 → 2.2.0, `testing-discipline` 1.3.0 → 1.4.0)
+
+Skills are installed one at a time, but four of the five had grown text
+that only works when a *second* skill is installed too — and one of them
+pointed at the wrong owner entirely.
+
+**`typescript-nestjs` was not usable on its own.** Its `description` said
+it "presumes" two other skills; its body said to "apply all three
+together"; `references/testing.md` sourced universal test hygiene from a
+skill that does not contain any (that content moved out three releases
+ago, in 3.0.0); two files sent the reader to another skill's error-flow
+reference for a rule they never stated themselves; a config rule quoted
+another checker's rule code; and the suppression contract was defined by
+reference instead of written down. A consumer who installed only this
+skill got a standard with holes in it. Every one of those is now stated in
+full, in NestJS's own terms — the wrap-once/log-once/map-once invariant,
+the config rule, the suppression contract with its own worked example.
+
+**The rest was unconditional naming.** `typescript-coding`,
+`python-coding`, `hexagonal-service` and `testing-discipline` each
+asserted that some rule "lives in" a named sibling — in `SKILL.md`, in the
+OpenAI adapter prompts, in a reference file, in a checker comment, in a
+dataset contract. All of it is now either scoped out ("out of this
+skill's scope") or made conditional in the one shape an agent can act on:
+*where the host project also declares an architecture standard, apply it
+on top*. `hexagonal-service`, which claims language neutrality, no longer
+names two TypeScript skills as its examples and none for other languages.
+
+The distinction the whole change turns on: **duplication is the price of
+independence and is fine; a reference is not.** Two skills stating the
+same rule about wrapping an error is correct. One skill telling the reader
+to go find that rule somewhere else is a dependency.
+
+- **Removed from `typescript-nestjs`:** three restatements of universal
+  test rules and a hardcoded school predicate ("mock ports" in every unit
+  test). Which collaborators a unit test replaces is the project's
+  declaration, not a framework's; the file now says so and keeps only what
+  is genuinely NestJS — `Test.createTestingModule`, `overrideProvider` at
+  the token, `app.close()` teardown, the spec-file names.
+- **New gate `__test__/skills/test_skill_boundaries.py`** — a sibling may
+  be named only inside a sentence carrying a conditional marker; another
+  skill's rule codes, file paths and pinned versions are refused
+  everywhere. The skill-root `README.md` is exempt because it is never
+  installed. The existing anti-duplication battery in
+  `test_testing_discipline.py` now covers `typescript-nestjs` as well —
+  the omission through which the restatements above arrived.
+- **Recorded in `AGENTS.md`:** skills stand alone; what a *new*
+  observation may say about a sibling (neutrally — never its path,
+  version, PR number or commit). Observation records accepted before this
+  rule are history and are left as they are.
+
 ## [3.3.0] — 2026-07-28
 
 ### `testing-discipline` 1.2.0 → 1.3.0: scoped to unit and integration tests, and the London school gets its own half

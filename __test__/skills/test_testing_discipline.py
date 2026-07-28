@@ -9,7 +9,7 @@ Those rules were pinned against ``references/testing.md`` of the two
 language skills before the split; they are language-independent by their
 own universality checks, so both copies collapse into the single set of
 pins below and the language skills keep only their spelling maps. The
-de-duplication itself is guarded here (``TestRulesAreNotDuplicatedInLanguageSkills``)
+de-duplication itself is guarded here (``TestRulesAreNotDuplicatedInOtherSkills``)
 and in each language skill's own test module.
 """
 
@@ -1747,16 +1747,25 @@ class TestDataDeletionAndScopeRules(unittest.TestCase):
         )
 
 
-class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
+class TestRulesAreNotDuplicatedInOtherSkills(unittest.TestCase):
     """The split is only worth its cost while the rules live in one place.
 
-    Every anchor pinned above must be absent from the language standards:
-    they keep spelling maps ("how a rule is expressed in this language"), not
-    copies of the rules. A silent re-import of any clause into either skill
-    is exactly the drift this skill exists to prevent.
+    Every anchor pinned above must be absent from the standards that also
+    speak about tests: the language ones keep spelling maps ("how a rule is
+    expressed in this language") and the framework one keeps its own seams,
+    not copies of the rules. A silent re-import of any clause into any of
+    them is exactly the drift this skill exists to prevent.
+
+    Verbatim copies are what this catches. A *paraphrase* of a rule reads
+    differently and slips through, so the anchors are a backstop for drift,
+    never the whole review.
     """
 
-    LANGUAGE_SKILLS = ("python-coding", "typescript-coding")
+    SKILLS_THAT_MUST_NOT_RESTATE = (
+        "python-coding",
+        "typescript-coding",
+        "typescript-nestjs",
+    )
 
     ANCHORS = (
         "never copied from — or parametrized over — the artifact under test",
@@ -1793,8 +1802,8 @@ class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
         "out from the implementation.**",
     )
 
-    def test_no_universal_rule_text_remains_in_a_language_skill(self):
-        for skill in self.LANGUAGE_SKILLS:
+    def test_no_universal_rule_text_remains_in_another_skill(self):
+        for skill in self.SKILLS_THAT_MUST_NOT_RESTATE:
             root = ROOT / "skills" / skill
             for rel, _ in skill_texts(root).items():
                 if rel.startswith("observations/"):

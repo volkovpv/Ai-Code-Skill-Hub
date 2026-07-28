@@ -36,6 +36,122 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## Five skills, one box each — and the four that could not be shipped alone
+
+**Releases:** project `3.4.0` (`typescript-nestjs` `1.1.1 → 1.2.0`,
+`typescript-coding` `1.7.0 → 1.8.0`, `python-coding` `1.5.0 → 1.6.0`,
+`hexagonal-service` `2.1.1 → 2.2.0`, `testing-discipline` `1.3.0 → 1.4.0`)
+**Type:** coupling removed — every skill made complete on its own
+
+### In one sentence
+
+Skills are installed one at a time, but four of the five had grown
+sentences that only work if a *second* skill is installed too — and one of
+them sent readers to a skill that had not held the rule in question for
+three releases.
+
+### The problem, precisely
+
+A consumer installs `typescript-nestjs` and nothing else. That is a normal
+thing to do, and the skill did not survive it:
+
+| What the file said | What the reader got |
+|---|---|
+| "**Presumes** the hexagonal-service skill … and the typescript-coding skill" | a standard that declares itself incomplete |
+| "Universal test hygiene **comes from** the typescript-coding skill" | a pointer to a skill that carries no test rules — they moved out in `3.0.0` |
+| "typed domain errors only (**see** hexagonal-service error flow)" | a rule named but never stated |
+| "never a raw `process.env` read (the typescript-coding checker flags this as **`TS-ENV`**)" | another checker's rule code, meaningless here |
+| "Suppressions follow the **same strict contract as** typescript-coding" | a contract defined by reference |
+
+The other three skills had the milder form of the same thing: a flat
+assertion that some rule "lives in" a named sibling — in `SKILL.md`, in
+the OpenAI adapter prompt, in a reference file, in a checker comment, in a
+dataset contract. Harmless when both skills are attached; a dangling
+pointer the rest of the time.
+
+The reason it kept happening is that the obvious fix looks wrong. Two
+skills both saying "wrap a foreign error once, at the source, keeping the
+cause" reads like duplication to be removed. It is not:
+
+> **Duplication is the price of independence and is fine. A reference is
+> not.** What must never differ is the *content* of the two copies —
+> contradiction is the real defect, and it is what the gates now look for.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart TD
+    A["Consumer installs\none skill"] --> B["Skill states a rule\nby pointing at a sibling"]
+    B --> C{"Is that sibling\ninstalled?"}
+    C -->|"yes"| D["Works — the reason\nnobody noticed"]
+    C -->|"no"| E["Rule named,\nnever stated"]
+    E --> F["Agent improvises\nor drops the rule"]
+    G["Pointer names the\nwrong owner"] --> H["Agent reads a skill\nthat no longer holds it"]
+    H --> F
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    A["Consumer installs\none skill"] --> B["Every rule stated in full,\nin this skill's own terms"]
+    B --> C["Works alone"]
+    C --> D{"Is a sibling\nalso attached?"}
+    D -->|"yes"| E["Conditional sentence fires:\n'where the host project also\ndeclares X, apply it on top'"]
+    D -->|"no"| F["Same sentence reads as\na no-op — nothing dangles"]
+    G["Gate refuses a new\nunconditional mention,\nforeign rule code,\npath or version"] --> B
+```
+
+### Example — the same sentence, before and after
+
+```text
+before:  Raw `throw new Error` in domain/application is forbidden —
+         typed domain errors only (see hexagonal-service error flow).
+
+after:   Raw `throw new Error` in domain/application is forbidden —
+         typed domain errors only; a foreign error is wrapped into one
+         exactly once, in the driven adapter that received it, with the
+         original kept as `cause`.
+```
+
+The rule is now in the box the reader opened. A ports-and-adapters
+standard says the same thing in its own words, and that is fine — what
+would not be fine is the two saying *different* things.
+
+### What the skills now say
+
+- **A sibling may be named in exactly one shape:** a conditional sentence
+  — *"where the host project also declares an architecture standard, apply
+  it on top"* — which an agent acts on when both skills happen to be
+  attached and ignores when they are not.
+- **Never another skill's internals:** no rule codes, no file paths, no
+  section names, no pinned versions.
+- **`typescript-nestjs` decides no test question that belongs to the
+  project.** Its testing file had three restatements of universal test
+  rules and a hardcoded school ("mock ports" in every unit test); which
+  collaborators a unit test replaces is the project's declaration, so the
+  file now says so and keeps only what is genuinely NestJS.
+- **`hexagonal-service` claims language neutrality and now keeps it** — it
+  no longer offers two TypeScript skills as its examples and none for any
+  other language.
+
+### Where the rule stops
+
+- **It does not forbid duplication.** The error-wrapping rule, the
+  environment rule and the logging rule are stated in several skills on
+  purpose; a review checks that the copies agree, not that they are few.
+- **It does not reach the observation records.** An accepted observation
+  is a dated field report that agents may not edit, so records written
+  before this rule keep their wording. What a *new* record may say about a
+  sibling is now in `AGENTS.md`, and the authored `observations/INDEX.md`
+  is gated like everything else.
+- **The gate catches references, not paraphrases.** A rule copied in
+  someone else's words still reads as original text; that is a review
+  question, and the anti-duplication battery is a backstop for it, not a
+  substitute.
+
+---
+
 ## A skill that kept growing levels — and the one line it never drew
 
 **Releases:** project `3.3.0` (`testing-discipline` `1.2.0 → 1.3.0`)

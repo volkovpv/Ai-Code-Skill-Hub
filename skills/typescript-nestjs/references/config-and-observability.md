@@ -8,8 +8,9 @@
   variable aborts the boot with a typed error, before any module initializes.
 - Access is typed and key-safe: `configService.get<T>(<key from a registry>)`
   with a documented default — never a magic string key, and never a raw
-  `process.env` read outside the config layer (the `typescript-coding`
-  checker flags this as `TS-ENV`).
+  `process.env` read outside the config layer: a scattered read escapes both
+  the validation schema and the typed accessor, which is exactly what makes
+  it untraceable and untestable.
 - Keep the registries synchronized in one place: env variable names,
   defaults, and config keys each live in their own constants module; adding a
   variable updates the schema, the registries, and the names-only

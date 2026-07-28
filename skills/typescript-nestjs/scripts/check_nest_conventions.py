@@ -27,8 +27,8 @@ Exit codes: ``0`` no findings, ``1`` findings printed, ``2`` an IO error or a
 malformed/forbidden suppression pragma (fail-closed).
 
 The checker shares its lexical masking model and strict suppression contract
-with the ``typescript-coding`` skill's ``check_conventions.py`` (each skill is
-self-contained, so the scanner is deliberately duplicated, not imported):
+with a sibling checker in the same library (each skill is self-contained, so
+the scanner is deliberately duplicated, never imported across skills):
 string/template/regex literals and comments never produce findings, template
 interpolation code is scanned, and a suppression requires a specific known
 code plus a non-empty justification::
@@ -77,7 +77,7 @@ def layer_of(path: str) -> str | None:
     return None
 
 
-# --- Lexical masking (kept identical to typescript-coding's checker) --------
+# --- Lexical masking (kept identical to the sibling checker) -----------------
 
 _REGEX_PREV_KEYWORDS = frozenset(
     "return typeof instanceof in of new void delete case do else yield await throw".split()
@@ -372,7 +372,7 @@ def _line_modules(code_line: str, raw_line: str) -> list[str]:
     return _MODULE_SPEC_RE.findall(raw_line)
 
 
-# --- Suppression pragmas (same strict contract as typescript-coding) ----------
+# --- Suppression pragmas (same strict contract as the sibling checker) --------
 
 _PRAGMA_WORD_RE = re.compile(r"skill-check-ignore")
 _PRAGMA_RE = re.compile(

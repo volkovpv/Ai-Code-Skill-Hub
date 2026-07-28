@@ -10,9 +10,10 @@ boundary exactly once in each direction. This skill is **neutral by
 contract** on three axes:
 
 - **Languages and frameworks** — the rules hold for any stack, DI container,
-  HTTP engine, ORM, or broker. Pair it with a language skill (e.g.
-  `typescript-coding`) and, where relevant, a framework skill (e.g.
-  `typescript-nestjs`) for the concrete mechanics.
+  HTTP engine, ORM, or broker. The concrete mechanics — how a type is
+  spelled, how a container binds a provider, which decorator does what — are
+  out of scope here; where the host project also declares a language or a
+  framework standard, apply that alongside this skill.
 - **Approaches** — the pattern itself fixes only the boundary (inside vs
   outside); how the inside is structured (two-layer, layered, onion/clean,
   DDD) is an approach choice. The skill describes them all; see

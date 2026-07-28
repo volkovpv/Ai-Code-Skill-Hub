@@ -44,5 +44,4 @@ Layout convention:
   - `checked_input.ts` + `checked_input.expected` — a calibrated run of the
     checker over stdin (label `<stdin>`). Note: the `throw new Error(...)`
     line deliberately produces no finding — raw-throw discipline is a
-    layering rule and belongs to the `hexagonal-service` /
-    `typescript-nestjs` skills, not to this universal checker.
+    layering rule, out of this universal checker's scope.

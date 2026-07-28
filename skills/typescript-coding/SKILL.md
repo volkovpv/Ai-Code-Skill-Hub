@@ -1,6 +1,6 @@
 ---
 name: typescript-coding
-description: Universal coding standard and workflow for production TypeScript, free of framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no floating promises, immutable data, no type/lint suppressions, centralized env access; type design (invalid states unrepresentable, discriminated unions with exhaustive switches, `satisfies`, parse-don't-assert boundaries) and generics/type-level discipline (golden rule of generics, type-level DRY, template literal types). Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) — app code, libraries, scripts, or tests. Combine with the hexagonal-service skill for ports-and-adapters layering and typescript-nestjs for NestJS.
+description: Universal coding standard and workflow for production TypeScript, free of framework, architecture, or library assumptions — strict compiler configuration, `as const` registries instead of native enums, branded identifiers, readonly-by-default, `unknown` in catch with narrowing, no floating promises, immutable data, no type/lint suppressions, centralized env access; type design (invalid states unrepresentable, discriminated unions with exhaustive switches, `satisfies`, parse-don't-assert boundaries) and generics/type-level discipline (golden rule of generics, type-level DRY, template literal types). Writes code that passes a strict lint stack (typescript-eslint strictTypeChecked, airbnb, SonarJS, functional, jsdoc) with zero errors and zero warnings. Use whenever writing, reviewing, or refactoring TypeScript (.ts/.mts/.cts) — app code, libraries, scripts, or tests. Where the host project also declares an architecture or a framework standard, apply that on top of this skill.
 ---
 
 # TypeScript coding (universal)
@@ -117,6 +117,6 @@ has been promoted into `knowledge/` or this workflow.
   `eslint-disable-next-line <rule> -- <reason>` — see
   [references/typing-and-style.md](references/typing-and-style.md).
 - Keep this skill universal: framework, architecture, and project-specific
-  choices belong to the host project or to the dedicated skills
-  (`hexagonal-service`, `typescript-nestjs`) — never here. Project
-  instructions always take precedence over this skill.
+  choices belong to the host project or to whatever dedicated standard it
+  declares — never here. Project instructions always take precedence over
+  this skill.

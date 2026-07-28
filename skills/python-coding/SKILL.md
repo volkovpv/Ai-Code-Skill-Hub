@@ -1,6 +1,6 @@
 ---
 name: python-coding
-description: Universal coding standard and workflow for production Python with no framework or architecture assumptions. Strict typing (mypy/pyright strict, no Any), closed sets as enums or Literal unions closed by assert_never, NewType ids, frozen dataclasses, read-only parameters; secure by default (parameterized SQL, no shell=True, no eval/exec or pickle on untrusted data, yaml.safe_load, path containment, secrets + constant-time compare, TLS verification always on); structured concurrency (TaskGroup, timeouts, no fire-and-forget); aware-UTC datetimes, Decimal money, context-managed resources; narrow except with `raise ... from` once at the source; explicit boolean expressions over or-defaults; centralized os.environ; no print, no suppressions; version-gated modern features (PEP 695, TypeIs, t-strings, lazy annotations). Use whenever writing, reviewing, or refactoring Python (.py) — app code, libraries, scripts, or tests. Combine with hexagonal-service for ports-and-adapters layering.
+description: Universal coding standard and workflow for production Python with no framework or architecture assumptions. Strict typing (mypy/pyright strict, no Any), closed sets as enums or Literal unions closed by assert_never, NewType ids, frozen dataclasses, read-only parameters; secure by default (parameterized SQL, no shell=True, no eval/exec or pickle on untrusted data, yaml.safe_load, path containment, secrets + constant-time compare, TLS verification always on); structured concurrency (TaskGroup, timeouts, no fire-and-forget); aware-UTC datetimes, Decimal money, context-managed resources; narrow except with `raise ... from` once at the source; explicit boolean expressions over or-defaults; centralized os.environ; no print, no suppressions; version-gated modern features (PEP 695, TypeIs, t-strings, lazy annotations). Use whenever writing, reviewing, or refactoring Python (.py) — app code, libraries, scripts, or tests. Where the project also declares an architecture standard, apply it on top.
 ---
 
 # Python coding (universal)
@@ -186,6 +186,6 @@ has been promoted into `knowledge/` or this workflow.
   `# noqa: <RULE> -- <reason>` naming exactly one rule — see
   [references/typing-and-style.md](references/typing-and-style.md).
 - Keep this skill universal: framework, architecture, and project-specific
-  choices belong to the host project or to the dedicated skills
-  (`hexagonal-service`) — never here. Project instructions always take
-  precedence over this skill.
+  choices belong to the host project or to whatever dedicated standard it
+  declares — never here. Project instructions always take precedence over
+  this skill.

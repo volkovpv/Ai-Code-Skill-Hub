@@ -24,7 +24,7 @@ skills:
   # executed against a real harness) and are promoted to stable.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.7.0
+    version: 1.8.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -40,7 +40,7 @@ skills:
       observation_review_required: true
   - name: hexagonal-service
     path: skills/hexagonal-service
-    version: 2.1.1
+    version: 2.2.0
     status: stable
     summary: Language-, framework- and project-neutral ports-and-adapters canon - invariant core, major approaches, domain modeling, and a catalog of adoption strategies declared per project.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -52,7 +52,7 @@ skills:
       observation_review_required: true
   - name: typescript-nestjs
     path: skills/typescript-nestjs
-    version: 1.1.1
+    version: 1.2.0
     status: stable
     summary: NestJS-specific rules for hexagonal services - DI tokens, providers, HTTP boundary, config, testing - with a layer-aware checker.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -67,7 +67,7 @@ skills:
       observation_review_required: true
   - name: python-coding
     path: skills/python-coding
-    version: 1.5.0
+    version: 1.6.0
     status: stable
     summary: Universal strictly-typed, secure-by-default Python coding standard (typing, security, structured concurrency, runtime correctness, version-gated 3.12-3.14 features) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -85,7 +85,7 @@ skills:
   # __test__/evals/testing-discipline/cases.json) runs against a real harness.
   - name: testing-discipline
     path: skills/testing-discipline
-    version: 1.3.0
+    version: 1.4.0
     status: draft
     summary: Rules for writing and reviewing unit and integration tests, and nothing beyond those two levels - the two unit-testing schools (London/mockist and classical/Detroit) declared per project and drawing the unit/integration line, interface discovery where London is declared, the red/green/refactor cycle declared the same way, the evidence rule that a test counts only once seen red and its failure message is legible, tests read as design feedback, structure, naming, data and builders, test value, verification styles and interaction precision, isolation, peers versus internals, fake provenance, wiring-level evidence, asynchrony and concurrency, adapters and persistence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
