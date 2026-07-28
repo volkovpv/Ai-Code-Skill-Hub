@@ -5,6 +5,104 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [2.10.0] — 2026-07-28
+
+### `typescript-coding` 1.5.0 → 1.6.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260728-001 (mirrored from `python-coding` OBS-20260728-001,
+  commit 33d6380, itself a field report from a consuming project,
+  reviewer-confirmed class C3, `occurrences: 6` across two consecutive
+  tasks, at least three of them after the sibling fix for the adjacent
+  external-system-fake class was already pinned and active; universality
+  threshold met on both limbs, both claimed minimal reproductions
+  independently re-executed by that reviewer, re-confirmed unchanged at a
+  second review pass): `references/testing.md` already said a fake's own
+  return values, for a property belonging to an external system, must be
+  pinned by a live observation rather than by reading — but its scope
+  sentence named only "return values", an output-side property, and stayed
+  silent on two adjacent shapes. (1) Outbound-mutation: a value a
+  third-party client substitutes on the way OUT of a call (a header, id, or
+  default the caller does not fully control) has no return value to inspect
+  at all, so a fake bound at exactly the layer performing that substitution
+  cannot show whether it happened, and a reader keying on "return values"
+  would not recognise the shape as covered. (2) Wiring-level: a test that
+  constructs its own copy of a third-party collaborator to assert *how* it
+  is built (which constructor or options-object arguments, which
+  interceptors) proves the property achievable, never that the product's
+  own production factory achieves it — a materially different code path
+  that, left uncovered, can carry a defect the sibling test suite stays
+  fully green on. The same language-independent gap already fixed in
+  `python-coding`, ported here in TypeScript idiom. Widened the existing
+  guidance's scope sentence and added both sub-shapes as their own guidance
+  block, each with a deterministic, project-independent minimal
+  reproduction (an outbound header/id substitution the caller does not
+  control, performed by an SDK's own interceptor; a `createClient(...)`
+  factory whose `interceptors` / `hooks` option has zero test coverage
+  because every test builds its own client).
+- Added a regression in `__test__/skills/test_typescript_coding.py`
+  (`TestOutboundMutationAndWiringLevelFakeGuidance`): pins the two new
+  rules' load-bearing clauses, both minimal reproductions, and negative
+  guards that the pre-existing OBS-20260727-001 rule with its two
+  reproductions and the distinct "mock interfaces and seams the code
+  exposes, never someone else's internals" rule survive untouched.
+  Confirmed genuinely red before the delta (6 of 8 tests failing against
+  the pre-change text; the 2 negative guards passed throughout) and green
+  after.
+- Added four eval cases to `__test__/evals/typescript-coding/cases.json`
+  (two `behavior`, two `negative` — one pair per sub-shape) guarding
+  against over-applying either rule onto a project-owned interface with no
+  outbound call, or onto a test that already exercises the real production
+  factory. Schema-validated (`run_skill_evals.py --validate-only`); the
+  LLM-backed execution is the Hub's opt-in eval runner, not part of this
+  local run.
+- Transferred the observation via `skillctl observation add/approve` (Hub id
+  OBS-20260728-001 in `skills/typescript-coding/observations/accepted/`),
+  citing the mirrored `python-coding` observation, the consumer observation
+  id and the reviewer verdict as evidence; `observations/INDEX.md` updated.
+- `docs/history.{eng,rus}.md`: the existing "What a stub still can't see"
+  entry gains this release on its **Releases** line and a short TypeScript
+  restating of both shapes — one story, one entry, per the history-docs
+  discipline.
+
+`uv run skillctl validate` && `uv run skillctl test`: 719/719 passed, no
+regressions. Non-main branch; no push to `main`, no tag, no release — PR
+only.
+
+## [2.9.0] — 2026-07-28
+
+### `python-coding` 1.3.0 → 1.4.0 (minor: an existing skill's rules changed)
+
+- Fixed OBS-20260728-001 (field report from a consuming project, reviewer-
+  confirmed class C3, `occurrences: 6` across two consecutive tasks, at
+  least three of them after the sibling fix `OBS-20260727-001`/PR #13 for
+  the adjacent external-system-fake class was already pinned and active;
+  universality threshold met on both limbs, both claimed minimal
+  reproductions independently re-executed by that reviewer, re-confirmed
+  unchanged at a second review pass): `references/testing.md` already said
+  a fake's own return values, for a property belonging to an external
+  system, must be pinned by a live observation rather than by reading —
+  but its scope sentence named only "return values", an output-side
+  property, and stayed silent on two adjacent shapes. (1) Outbound-mutation:
+  a value a third-party client substitutes on the way OUT of a call (a
+  header, id, or default the caller does not fully control) has no return
+  value to inspect at all, so a fake bound at exactly the layer performing
+  that substitution cannot show whether it happened, and a reader keying on
+  "return values" would not recognise the shape as covered. (2)
+  Wiring-level: a test that constructs its own copy of a third-party
+  collaborator to assert *how* it is built (which constructor arguments,
+  which interceptors) proves the property achievable, never that the
+  product's own production factory achieves it — a materially different
+  code path that, left uncovered, can carry a defect the sibling test
+  suite stays fully green on. Widened the existing guidance's scope
+  sentence and added both sub-shapes as their own guidance block, each with
+  a deterministic, project-independent minimal reproduction (an outbound
+  header/id substitution the caller does not control; a factory whose
+  interceptor argument has zero test coverage because every test builds
+  its own client). Added one `behavior` and one `negative` eval case per
+  sub-shape guarding against over-application onto a project-owned seam
+  with no outbound call, and onto a test that already exercises the real
+  production factory.
+
 ## [2.8.0] — 2026-07-27
 
 ### `typescript-coding` 1.4.0 → 1.5.0 (minor: an existing skill's rules changed)

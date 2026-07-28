@@ -45,6 +45,14 @@ Reading rules for agents:
   behaviour (mirrored from `python-coding@1.2.0->1.3.0`, PR #13; source
   consumer occurrence: news-intel-docs RM-TASK-017; reviewed by
   HC-AGENT-010, 2026-07-27).
+- [OBS-20260728-001](accepted/OBS-20260728-001.md) — the same rule's scope
+  sentence named only a fake's *return values*, leaving two adjacent shapes
+  unrecognisable: a value the real layer substitutes on the way **out** of a
+  call (no return value to inspect at all), and a construction/wiring
+  assertion taken at a hand-built collaborator instead of the production
+  factory (mirrored from `python-coding@1.3.0->1.4.0`, commit 33d6380;
+  source consumer occurrence: news-intel-docs RM-TASK-019; reviewed by
+  HC-AGENT-010, 2026-07-28).
 
 ## Candidates awaiting review
 

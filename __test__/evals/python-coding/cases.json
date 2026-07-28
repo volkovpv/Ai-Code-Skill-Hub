@@ -171,6 +171,48 @@
         "exit_code": 0,
         "stdout_not_contains": ["you must probe a live external system", "requires a live observation of a third-party system"]
       }
+    },
+    {
+      "id": "outbound-header-fake-needs-live-observation-not-only-return-values",
+      "kind": "behavior",
+      "requirement": "A fake for a third-party client seam must also be verified for a value the real layer substitutes on the way OUT of a call (a header, id, or default the caller does not fully control), not only for the fake's own return values, because there is no return value to inspect for that shape (OBS-20260727-001).",
+      "prompt": "I am unit-testing an adapter that calls a third-party SDK client. My test monkeypatches the SDK method the adapter calls with a fake that records the arguments it was given, and I assert the fake received the trace id my adapter passed in. The real SDK actually overwrites that value with its own generated id before the request leaves the process, unconditionally, on every call. Does my test, as described, establish that the trace id reaches the outgoing request?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|does not|cannot|will not)"],
+        "stdout_not_contains": ["yes, that establishes it", "your test confirms the trace id is sent"]
+      }
+    },
+    {
+      "id": "test-must-exercise-production-factory-not-hand-built-collaborator",
+      "kind": "behavior",
+      "requirement": "A test asserting how a third-party client is constructed (e.g. which interceptors are wired) must exercise the actual production factory, not a client object the test assembles itself, or it proves nothing about what the product wires (OBS-20260727-001).",
+      "prompt": "I want to unit-test that our production client factory wires a logging interceptor onto the SDK client it builds. In my test I construct a new instance of the SDK client directly, pass the interceptor to its constructor myself, and assert the interceptor is present on that instance. Does this test establish that the production factory wires the interceptor?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|does not|factory|production)"],
+        "stdout_not_contains": ["yes, this test is sufficient"]
+      }
+    },
+    {
+      "id": "return-value-only-fake-not-flagged-when-no-outbound-mutation-exists",
+      "kind": "negative",
+      "requirement": "Do not demand outbound-mutation verification for a fake whose only job is to return a value from a project-owned Protocol with no outgoing substitution involved (OBS-20260727-001 must not overreach the OBS-20260726-002 scope).",
+      "prompt": "My repository class depends on a small in-project Repository Protocol with a single find_by_id() method. I write a plain stub implementing it that returns a fixed, hardcoded record for a unit test. There is no third-party client and no outgoing call involved. Do I need to verify some header or id substitution happening on the way out of a call before I can trust this fake?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["you must verify an outbound header substitution", "check what the real layer substitutes on the way out"]
+      }
+    },
+    {
+      "id": "test-exercising-the-real-factory-directly-not-flagged-as-wiring-gap",
+      "kind": "negative",
+      "requirement": "A test that calls the actual production factory function itself (not a hand-built parallel instance) and asserts on its result is the correct seam and must not be flagged as the wiring-level gap (OBS-20260727-001).",
+      "prompt": "I am testing our create_client(...) production factory function directly: I call create_client(interceptors=[MyInterceptor()]) — the real factory, not a hand-rolled substitute — and assert the returned client carries the interceptor. Is this test still an example of the wiring-level gap where a test proves nothing about the product's own construction?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["yes, this is still the wiring gap", "this still proves nothing about production wiring"]
+      }
     }
   ]
 }

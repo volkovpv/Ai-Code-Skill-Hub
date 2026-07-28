@@ -36,6 +36,128 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## What a stub still can't see — two more shapes of the same blind spot
+
+**Releases:** project `2.10.0` (`typescript-coding` `1.5.0 → 1.6.0`) · project
+`2.9.0` (`python-coding` `1.3.0 → 1.4.0`)
+**Type:** a gap widened — the previous fix's own scope sentence was too narrow
+
+### In one sentence
+
+The rule about faking a third-party seam said "the stub's **return values** are
+established by observing the real system" — but a stub can also miss a value the
+real system changes on the way **out** of a call, and it can also miss whether the
+*product itself* ever builds the collaborator the way the stub assumed.
+
+### The gap, precisely
+
+The previous entry fixed *how a stub's return values become known to be true*.
+Its own wording, read literally, only covers a stub computing the wrong **output**
+for a given input. Two adjacent shapes fall outside that wording on a first read:
+
+1. **Nothing comes back at all.** Some third-party clients substitute a value the
+   caller does not fully control — a request id, a retry token, a default header —
+   on the way *out* of a call, before anything returns. A stub bound at exactly
+   that layer has no return value to check, so the "check the return value" framing
+   does not put a reader on notice.
+2. **The stub built the thing itself.** A test asserting *how* a collaborator is
+   constructed — which arguments, which hooks — sometimes builds that collaborator
+   by hand inside the test, instead of calling the one production factory that
+   really builds it. The test can prove the property is *possible*; it proves
+   nothing about whether the *product* does it.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Adapter passes a value to\nthe third-party client"] --> B["Client silently substitutes\nits own value on the way out"]
+    B --> C["Test fakes the client method\nthat performs the substitution"]
+    C --> D{"Unit test"}
+    D -->|"green"| E["Value never verified\nto reach the wire"]
+
+    F["Production factory wires\nan argument onto the client"] --> G["Test builds its own\nclient instance instead"]
+    G --> H{"Unit test"}
+    H -->|"green"| I["Factory's own wiring\nnever exercised"]
+```
+
+Both loops share one shape: the evidence the test collects is gathered somewhere
+other than where the property under test actually lives.
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Ask: is there a return\nvalue to check at all?"] -->|"no — it's substituted on the way out"| B["Probe the real client once;\npin what actually reaches the wire"]
+    A -->|"yes"| C["Existing rule applies:\nprobe, then reuse as a fixture"]
+
+    D["Ask: does the test build\nthe collaborator itself?"] -->|"yes"| E["Exercise the production\nfactory instead"]
+    D -->|"no — factory is exercised"| F["Test is measuring\nthe right code path"]
+```
+
+### Example you can run in your head
+
+A test faking a third-party client:
+
+```python
+monkeypatch.setattr(sdk.chat, "completions", fake_domain)
+assert request.trace_id == "t-1"          # true — but never observed
+```
+
+This only checks what the caller *passed in*. It says nothing about what the SDK
+did with it after that — and the SDK in question regenerated its own id on every
+call, unconditionally. The fake stood in for exactly the code that would have
+shown that.
+
+The wiring case is shorter still: a factory function is the only place a client
+gets built for real use; every test builds a parallel client of its own. Delete
+the argument from the factory call, and the whole suite — every test file — stays
+green, because none of them ever call the factory.
+
+### The same two shapes, in another language
+
+Neither shape belongs to Python. Both rules ship in the TypeScript standard too,
+restated in the tools a Node project uses:
+
+```ts
+const send = jest.fn();
+client.send = send;
+expect(send.mock.calls[0][0].traceId).toBe("t-1");  // what was passed in — never what left
+```
+
+```ts
+createClient({ interceptors: [logging] });     // the one place the product builds a client
+new SdkClient({ interceptors: [logging] });    // what every test builds instead
+```
+
+An options object instead of keyword arguments, an interceptor array instead of a
+list — the same construction seam, and the same question: is the thing under test
+the one that ships?
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Outbound substitution counts too | A fake must also be checked for a value the real layer changes on the way out, not only for what it returns — there may be no return value to inspect at all |
+| Construction is a code path too | A test asserting how a collaborator is built must exercise the production factory, never a hand-built copy — a hand-built copy proves the property achievable, not that the product achieves it |
+
+### Where the rule stops
+
+Neither addition reaches further than its own shape. A fake for a project-owned
+seam with no outbound call is unaffected by the first rule. A test that calls the
+real production factory directly — not a substitute — already satisfies the
+second rule; it is not asked to do anything more. Both additions ship a dedicated
+negative test to keep them from being over-applied.
+
+### How the change was made
+
+Test first: a regression pinning the two new rules and their two reproductions
+was written and confirmed genuinely red against the pre-change text → the minimal
+guidance was added → the regression went green → two behavior and two negative
+evaluation cases were added, one pair per shape → the full suite ran with no
+regressions.
+
+---
+
 ## Where a stub gets its truth from
 
 **Releases:** project `2.8.0` (`typescript-coding` `1.4.0 → 1.5.0`) · project

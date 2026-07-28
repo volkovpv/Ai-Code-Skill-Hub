@@ -44,7 +44,36 @@ ports-and-adapters service, DI seams) live in the `hexagonal-service` and
   `SELECT true AS a, false AS b` returns both — a two-property object fake
   for that row, the ordinary expectation, is exactly wrong, and only a live
   query against the real database (or the driver's array row mode) exposes
-  it.
+  it. Third reproduction, the outbound-mutation shape: any third-party
+  client whose outgoing call sets its own request-id, retry token, or
+  default identity header regardless of what the caller passes — e.g. an
+  HTTP or gRPC SDK whose own interceptor regenerates a client-supplied
+  trace/correlation id before the request leaves the process — mutates an
+  argument the caller does not fully control on the way OUT of the call;
+  there is no return value to inspect and the fake stands in for the very
+  code that would decide the outcome, so a reader who checks only "the
+  fake's return values are true of the real system" and stops there would
+  still miss it. The belief that needs a live observation here is that the
+  caller's argument reaches the wire unmodified, not that the fake computed
+  the right output for a given input.
+- **A test that constructs the collaborator itself establishes nothing
+  about the construction the product performs.** When the property under
+  test is *how* a third-party client gets built — which constructor or
+  options-object arguments are passed, which interceptors, hooks, or
+  middleware are wired — the seam exercised must be the actual production
+  factory, provider, or module that performs that construction, never a
+  hand-assembled instance built inside the test. A test that instantiates
+  the client itself, wires its own interceptor/hook array onto it, and then
+  asserts a property of that hand-built object proves only that the property
+  is achievable, never that the product's own wiring achieves it. Minimal
+  reproduction: a `createClient(...)` factory is the sole place the
+  `interceptors` / `hooks` option is assembled for production use; if every
+  test builds its own client with its own interceptor array, removing that
+  option from the factory call can leave the suite fully green while the
+  running product wires no interceptors at all — a mutation any coverage
+  tool would flag as "removed, no test failed," which is exactly the signal
+  to route the test through the factory instead of adding another
+  hand-built-client test.
 - Prefer factories/builders over copy-pasted fixture blobs. Use
   property-based tests for pure functions whose invariants you can state.
 
