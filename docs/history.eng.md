@@ -36,6 +36,111 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## "In isolation" means two different things — and now the project says which
+
+**Releases:** project `3.1.0` (`testing-discipline` `1.0.0 → 1.1.0`)
+**Type:** hidden assumption removed — a strategy choice was being made silently
+
+### In one sentence
+
+*A unit test runs in isolation* has two established readings — isolate the unit
+from its collaborators, or isolate the tests from one another — and the testing
+standard quietly assumed the second one, so any project that had deliberately
+chosen the first was being reviewed against a convention it never adopted.
+
+### The problem, precisely
+
+The standard's isolation reference contained one sentence that looked like a
+clarification and was in fact a decision:
+
+> Isolation is about the *test*, not about purity.
+
+That is the classical (Detroit) school's definition, word for word. Everything a
+reviewer does downstream follows from it:
+
+| Question | London (mockist) answers | Classical (Detroit) answers |
+|---|---|---|
+| What is isolated? | the unit, from its collaborators | the tests, from one another |
+| What is a "unit"? | one class | one unit of behaviour — however many classes |
+| Which dependencies get a test double? | every mutable collaborator | only shared ones (in practice, out-of-process) |
+| What is an integration test? | any test using a real collaborator | one that is slow, shared, or covers two behaviours |
+| Which way does test-driven development run? | outside-in | inside-out |
+
+Both columns are coherent, both are in wide use, and the standard was pinned to
+the right-hand one without ever saying so. A team on the left-hand column got
+advice that contradicted its own convention, and had nothing in the standard to
+argue with — because the choice was never presented as a choice.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Standard says:\nisolation = between tests"] --> B{"The project's own\nconvention"}
+    B -->|"classical"| C["Advice matches\nby luck"]
+    B -->|"mockist"| D["Advice contradicts\nthe project"]
+    D --> E["No way to argue:\nthe choice is invisible"]
+    E --> F["Either the suite drifts\nor the skill is ignored"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Project rules declare\na school"] -->|"declared"| B["Follow it exactly"]
+    A -->|"not declared,\nsuite is consistent"| C["Follow the suite,\npropose recording it"]
+    A -->|"nothing to go on"| D["Propose one,\nget it recorded"]
+    B --> E["Rules that hold under\nboth schools always apply"]
+    C --> E
+    D --> E
+```
+
+### Example — one test, two correct answers
+
+`OrderService` calls `InventoryStore`, a plain in-memory class the team wrote
+itself. What should the unit test do with it?
+
+| The project's declared school | What the test does | Why |
+|---|---|---|
+| London (mockist) | replaces `InventoryStore` with a double | it is a mutable collaborator, and the unit is the class |
+| Classical (Detroit) | uses the real `InventoryStore` | it is private to the test, so it cannot make two tests interfere |
+
+Before this release one of these two answers was silently treated as the wrong
+one. Now both are right, and the only question is which one the project wrote
+down.
+
+### What the skill now says
+
+- **The school is declared by the host project, never by the skill.** The
+  catalog, the vocabulary the choice is made in (shared vs private,
+  in- vs out-of-process, managed vs unmanaged, value vs collaborator) and the
+  resolution order for an undeclared project all live in the skill; the
+  decision does not.
+- **What project rules must declare:** the school (and its boundary, if it
+  varies by layer), what a unit is here, which dependencies get a double,
+  which out-of-process dependencies count as managed and which as unmanaged,
+  where an interaction may be asserted, and the direction of test-driven
+  development.
+- **What holds either way:** never assert an interaction with a stub; an
+  interaction that never leaves the application is an implementation detail;
+  a double for something you do not own is written against an adapter you do
+  own; output verification is preferred by both schools.
+- Alongside the schools, the skill gained the judgement the rest of its rules
+  serve — the four attributes of a test (protection against bugs, resistance
+  to refactoring, feedback speed, maintenance cost, multiplied rather than
+  added), the ranking of the three verification styles, what code deserves a
+  unit test at all, and a catalog of the classic anti-patterns.
+
+### Where the rule stops
+
+The skill still picks no school for a project that has one, and only *proposes*
+one for a project that has none. It says nothing about which runner to use,
+which library builds the doubles, or what coverage number the build demands.
+And nothing in the catalog licenses asserting an interaction with a stub,
+widening a member's visibility for a test, or recomputing an expected value
+with the algorithm under test — those stay wrong under both schools.
+
+---
+
 ## One rule, two homes — the test rules become a skill of their own
 
 **Releases:** project `3.0.0` (new skill `testing-discipline` `1.0.0` ·

@@ -81,12 +81,24 @@ class TestStructure(unittest.TestCase):
         self.assertIn("no language, runner, framework, or platform assumptions", description)
         self.assertIn("in any language", description)
 
+    def test_description_declares_the_school_neutrality_contract(self):
+        fm, _ = split_frontmatter((SKILL / "SKILL.md").read_text(encoding="utf-8"))
+        description = fm["description"]
+        # A caller reads only the description before deciding to load the
+        # skill; if it does not say the school is the project's call, an
+        # agent can apply the wrong one without ever opening schools.md.
+        self.assertIn("London (mockist) or classical (Detroit)", description)
+        self.assertIn("declared by the host project's rules, never here", description)
+
     def test_skill_md_routes_to_every_reference(self):
         body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         expected = {
+            "schools.md",
             "structure-and-naming.md",
+            "unit-test-value.md",
             "isolation-and-fakes.md",
             "hygiene.md",
+            "anti-patterns.md",
             "types-and-tests.md",
         }
         self.assertEqual(
@@ -365,6 +377,219 @@ class TestOutboundMutationAndWiringLevelFakeGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestSchoolsAreCatalogedButNeverChosen(unittest.TestCase):
+    """The skill carries both unit-testing schools and picks neither.
+
+    Which collaborators are replaced by a test double is not a property of
+    tests in general — it follows from what a project means by *isolation*.
+    Both readings are coherent and in wide use, so a universal skill that
+    silently assumed one would be wrong in half the codebases that install
+    it. The pins below hold three things at once: both schools are actually
+    described (not merely named), the choice is routed to the host project's
+    rules, and the fallback for an undeclared project is a proposal rather
+    than a guess.
+    """
+
+    DOC = REFERENCES / "schools.md"
+
+    RULE_PROJECT_DECLARES = (
+        "The school is a project decision: it is declared in the host "
+        "project's rules"
+    )
+    RULE_LONDON = (
+        "**Isolation means: the unit under test is isolated from its "
+        "collaborators.**"
+    )
+    RULE_CLASSICAL = (
+        "**Isolation means: unit tests are isolated from each other**"
+    )
+    RULE_UNDECLARED_FALLBACK = (
+        "Anything a project leaves undeclared falls back to the rules above "
+        "that hold under both schools"
+    )
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_the_project_declares_the_school(self):
+        self.assertIn(self.RULE_PROJECT_DECLARES, self._text())
+
+    def test_both_schools_are_described_by_their_reading_of_isolation(self):
+        text = self._text()
+        self.assertIn(self.RULE_LONDON, text)
+        self.assertIn(self.RULE_CLASSICAL, text)
+
+    def test_each_school_carries_its_unit_and_its_doubling_line(self):
+        # Naming the schools is not enough: an agent has to be able to act on
+        # the declaration, which needs the unit granularity and the rule for
+        # which dependencies get a double.
+        text = self._text()
+        self.assertIn("| **London (mockist)** | units | a class |", text)
+        self.assertIn(
+            "| **Classical (Detroit)** | tests | a class or a cluster of classes |",
+            text,
+        )
+
+    def test_resolution_order_ends_in_a_proposal_not_a_guess(self):
+        text = self._text()
+        self.assertIn("The project's rules declare a school → follow it exactly.", text)
+        self.assertIn("follow the suite, and propose recording the school", text)
+        self.assertIn(self.RULE_UNDECLARED_FALLBACK, text)
+
+    def test_the_reference_lists_what_project_rules_must_declare(self):
+        text = self._text()
+        self.assertIn("## What the project rules must declare", text)
+        for item in (
+            "**The school**",
+            "**What a unit is**",
+            "**Which dependencies get a double**",
+            "**Which out-of-process dependencies count as managed and which as unmanaged**",
+            "**Where an interaction is asserted**",
+        ):
+            self.assertIn(item, text)
+
+    def test_the_school_independent_rules_are_stated_as_such(self):
+        # Guards against the catalog turning into a licence: the rules that
+        # hold either way must stay attached to the schools file, or a reader
+        # who adopted London could read the whole file as permission.
+        text = self._text()
+        self.assertIn("## What holds whichever school is declared", text)
+        self.assertIn("Never assert an interaction with a stub.", text)
+
+    def test_skill_md_routes_the_school_decision_before_faking_anything(self):
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn("**Find the project's declared school.**", body)
+        self.assertIn("**The school belongs to the project, not to this skill.**", body)
+
+    def test_user_facing_readme_documents_the_choice(self):
+        # The library's consumer, not the agent, is the one who has to write
+        # the declaration into the project rules — so it has to be documented
+        # where a person reads.
+        readme = flat(SKILL / "README.md")
+        self.assertIn("## The unit-testing school is your project's decision", readme)
+        self.assertIn("**The skill never picks one.**", readme)
+
+    def test_openai_adapter_carries_the_school_neutrality(self):
+        data = yamlio.load_file(SKILL / "agents" / "openai.yaml")
+        prompt = data["interface"]["default_prompt"]
+        self.assertIn("neutral on the unit-testing school", prompt)
+        self.assertIn("do not pick the school yourself", prompt)
+
+    def test_no_school_is_prescribed_outside_the_undeclared_fallback(self):
+        # False-positive guard: the single recommendation in the whole skill
+        # is the greenfield tie-break, and it must stay inside the resolution
+        # order — a second one anywhere would make the skill choose.
+        recommendation = "recommend the **classical** one"
+        occurrences = sum(
+            flat(path).count(recommendation)
+            for path in sorted(SKILL.rglob("*.md"))
+        )
+        self.assertEqual(occurrences, 1)
+
+
+class TestUnitTestValueAndAntiPatterns(unittest.TestCase):
+    """A test is judged, and the known ways of failing that judgement named.
+
+    The pre-existing references said how to shape a test, what it may touch
+    and where its cases come from, but never how to tell a valuable test
+    from a worthless one — the judgement every other rule serves. These pins cover the evaluation
+    framework, the ordering of the three verification styles, and the
+    anti-pattern catalog that the ordering implies.
+    """
+
+    VALUE = REFERENCES / "unit-test-value.md"
+    ANTI = REFERENCES / "anti-patterns.md"
+
+    RULE_PRODUCT = "A test's value is the **product** of the four, not their sum"
+    RULE_RESISTANCE_NOT_TRADED = (
+        "Resistance to refactoring is the attribute you do not trade"
+    )
+    RULE_SINGLE_CAUSE = (
+        "**Coupling to implementation details is the single cause of false "
+        "positives.**"
+    )
+    RULE_BOUNDARY = (
+        "**Interactions inside the application are implementation details; "
+        "interactions that cross the application boundary are not.**"
+    )
+
+    def test_the_four_attributes_are_multiplied_not_added(self):
+        self.assertIn(self.RULE_PRODUCT, flat(self.VALUE))
+
+    def test_resistance_to_refactoring_is_the_one_not_traded(self):
+        text = flat(self.VALUE)
+        self.assertIn(self.RULE_RESISTANCE_NOT_TRADED, text)
+        self.assertIn(self.RULE_SINGLE_CAUSE, text)
+
+    def test_the_three_styles_are_ranked(self):
+        text = flat(self.VALUE)
+        for style in (
+            "| **Output verification** |",
+            "| **State verification** |",
+            "| **Communication verification** |",
+        ):
+            self.assertIn(style, text)
+        self.assertIn("**Prefer output verification.**", text)
+        self.assertIn("**Communication verification is the last resort.**", text)
+
+    def test_where_an_interaction_may_be_asserted_is_pinned(self):
+        text = flat(self.VALUE)
+        self.assertIn(self.RULE_BOUNDARY, text)
+        self.assertIn(
+            "**Assert at the last point before the call leaves your process**", text
+        )
+
+    def test_what_deserves_a_unit_test_is_pinned(self):
+        text = flat(self.VALUE)
+        self.assertIn(
+            "the more important or complex the code, the fewer collaborators "
+            "it should have",
+            text,
+        )
+        self.assertIn("**Better no test than a bad one.**", text)
+
+    def test_every_anti_pattern_of_the_catalog_is_present(self):
+        text = flat(self.ANTI)
+        for heading in (
+            "## Testing a private method directly",
+            "## Exposing private state to enable an assertion",
+            "## Leaking the algorithm into the test",
+            "## Code pollution — production code that exists only for tests",
+            "## Doubling a concrete type to keep part of it",
+            "## Time as ambient context",
+            "## Sharing the arrange step through a per-test setup hook",
+        ):
+            self.assertIn(heading, text)
+
+    def test_stub_versus_mock_decides_what_may_be_asserted(self):
+        text = flat(REFERENCES / "isolation-and-fakes.md")
+        self.assertIn("**Never assert an interaction with a stub.**", text)
+        self.assertIn("**Double only types you own.**", text)
+
+    def test_structure_rules_gained_the_act_and_naming_constraints(self):
+        text = flat(REFERENCES / "structure-and-naming.md")
+        self.assertIn("**One act step per test.**", text)
+        self.assertIn("**No branching in a test.**", text)
+        self.assertIn(
+            "**Do not put the name of the method under test in the test's name.**",
+            text,
+        )
+        self.assertIn("**State a fact, not a wish**", text)
+
+    def test_negative_pre_existing_isolation_rules_survive_untouched(self):
+        # False-positive guard: the school-aware rewrite of the isolation
+        # preamble must not have dropped or duplicated the rules that were
+        # already there.
+        text = flat(REFERENCES / "isolation-and-fakes.md")
+        for needle in (
+            "never someone else's internals",
+            "A unit test touches nothing external",
+            "no fake, and no re-reading of a project norm, an RFC, or vendor "
+            "documentation, can establish what that system actually does",
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
     """The split is only worth its cost while the rules live in one place.
 
@@ -390,6 +615,10 @@ class TestRulesAreNotDuplicatedInLanguageSkills(unittest.TestCase):
         "A test that constructs the collaborator itself establishes nothing "
         "about the construction the product performs",
         'never hardcode an expected value "so it passes"',
+        "The school is a project decision: it is declared in the host "
+        "project's rules",
+        "**Isolation means: unit tests are isolated from each other**",
+        "A test's value is the **product** of the four, not their sum",
     )
 
     def test_no_universal_rule_text_remains_in_a_language_skill(self):

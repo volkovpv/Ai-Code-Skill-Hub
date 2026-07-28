@@ -4,6 +4,11 @@ Every fake is a claim about something the test does not run. The rules
 below are about keeping that claim true — and about noticing the cases
 where no fake can make it true at all.
 
+*Which* collaborators are replaced at all is a school decision the host
+project declares; this file is about what a fake may stand for and how its
+claim is justified once the decision is made. See
+[schools.md](schools.md).
+
 ## What a unit test may touch
 
 - A unit test touches nothing external — no network, disk, database,
@@ -13,9 +18,40 @@ where no fake can make it true at all.
 - A test that needs a real external system is an integration test. Say so,
   put it where the suite expects it, and give it its own lifecycle — do
   not let one quietly grow inside the unit suite.
-- Isolation is about the *test*, not about purity: a fast in-memory
-  implementation the project owns is a fine collaborator; a shared staging
-  environment is not.
+- An in-process collaborator the project owns and constructs fresh per test
+  is never the thing that breaks test isolation; a dependency two tests
+  share — a mutable global, a database, a staging environment — always is.
+  Whether such a collaborator is nonetheless replaced is the school's call.
+
+## The two kinds of double, and what each may be used for
+
+Whatever a runtime calls them — dummy, stub, fake, spy, mock — every double
+falls into one of two kinds, and the distinction decides what a test is
+allowed to assert.
+
+| Kind | Stands in for | May the test assert the call? |
+|------|---------------|-------------------------------|
+| **Stub** (also dummy, fake) | an **incoming** interaction: a call the subject makes to *obtain* data — a query | **No** |
+| **Mock** (also spy) | an **outgoing** interaction: a call the subject makes to *change* something — a command | Yes, under the conditions below |
+
+- **Never assert an interaction with a stub.** A call that fetches input is
+  a step on the way to the result, not the result; asserting it pins an
+  implementation detail and is the most easily spotted form of
+  over-specification.
+- A double can be both at once — configured to answer one call and asserted
+  on a *different* one. That is not a violation; asserting the same call
+  that was configured to return data is.
+- The kinds map onto the command/query split: a method that produces a side
+  effect and returns nothing is a command, a method that returns a value
+  and changes nothing is a query. Code that keeps them separate is code
+  whose doubles classify themselves.
+- An outgoing interaction is worth asserting only when its effect is
+  visible outside the application — see
+  [unit-test-value.md](unit-test-value.md) for where and how to assert it.
+- **Double only types you own.** Wrap a third-party surface in an adapter of
+  your own and double the adapter: you cannot vouch for a double of code
+  whose behaviour you have not observed, and the adapter also confines the
+  blast radius of an upstream API change to one file.
 
 ## Control time, never wait for it
 

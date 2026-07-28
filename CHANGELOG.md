@@ -5,6 +5,62 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.1.0] — 2026-07-28
+
+### `testing-discipline` 1.0.0 → 1.1.0: unit-testing rules and the two schools
+
+- **The unit-testing school is now an explicit project declaration.** Which
+  collaborators are replaced by a test double does not follow from "write
+  good tests" — it follows from what a project means by *isolation*, and
+  there are two coherent answers in wide use. The skill previously assumed
+  one of them in passing ("isolation is about the *test*, not about
+  purity") without ever saying so, which is wrong for half the codebases
+  that install it. `references/schools.md` now carries both schools —
+  **London (mockist)**: isolate the unit, a unit is a class, double every
+  mutable collaborator; **classical (Detroit)**: isolate the tests, a unit
+  is a unit of behaviour, double only shared dependencies — plus the
+  dependency vocabulary the choice is made in (shared/private,
+  in-/out-of-process, managed/unmanaged, value/collaborator), the rules
+  that hold either way, the resolution order for an undeclared project
+  (follow the suite → propose → record; never guess, never mix), and the
+  list of what the host project's rules must declare. The skill never
+  picks; the project's rules do and always take precedence.
+- **New `references/unit-test-value.md`** — how a test is judged, which
+  every other rule serves: the four attributes (protection against bugs,
+  resistance to refactoring, feedback speed, maintenance cost) multiplied
+  rather than added; resistance to refactoring as the one attribute never
+  traded, with coupling to implementation details named as the single cause
+  of false positives; observable behaviour versus implementation detail and
+  the one-call-per-goal heuristic; the three verification styles ranked
+  (output → state → interaction) with the rules for asserting an
+  interaction at the last seam before the call leaves the process, in both
+  directions; and which code deserves a unit test at all (domain and
+  algorithms thoroughly, trivial code never, orchestrators briefly through
+  integration tests, over-complicated code refactored first).
+- **New `references/anti-patterns.md`** — testing a private method
+  directly, exposing private state to enable an assertion, leaking the
+  algorithm into the test, code pollution (production code that exists only
+  for tests), doubling a concrete type to keep part of it, time as ambient
+  context, and sharing the arrange step through a per-test setup hook.
+- `references/isolation-and-fakes.md` gains the stub/mock distinction —
+  a double standing in for an incoming interaction is never asserted on;
+  only an outgoing one may be — the *double only types you own* rule, and a
+  school-aware preamble in place of the sentence that quietly assumed the
+  classical reading. `references/structure-and-naming.md` gains one act
+  step per test, no branching in a test, the act-length signal about the
+  subject's surface, the naming rules (no rigid template, no method name in
+  the test name, state a fact rather than a wish) and guidance on grouping
+  similar cases.
+- `SKILL.md` routes the school decision first, before anything is faked,
+  and adds the value/anti-pattern rows to its routing table; the
+  description, the OpenAI adapter and the user-facing `README.md` all state
+  that the school is declared by the project. `__test__` pins the new rules
+  and the neutrality contract (47 tests in the skill's module); six eval
+  cases cover the school declaration, a declared school being followed,
+  asserting on a stub, recomputing the expected value with the algorithm
+  under test, widening visibility for an assertion, and a declared school
+  not being second-guessed.
+
 ## [3.0.0] — 2026-07-28
 
 ### New skill: `testing-discipline` 1.0.0 (major: a skill was created)

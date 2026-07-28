@@ -153,6 +153,71 @@
       }
     },
     {
+      "id": "school-is-declared-by-the-project-not-by-the-skill",
+      "kind": "behavior",
+      "requirement": "The unit-testing school (London/mockist vs classical/Detroit) is a project declaration; the skill never picks one behind the project's back.",
+      "prompt": "In our service OrderService calls InventoryStore, a plain in-memory class we wrote ourselves. Should my unit test for OrderService replace InventoryStore with a test double, or use the real one? Our project rules say nothing about how we test.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(school|london|mockist|classical|detroit)", "(?i)(project rule|declare|record|existing (suite|test))"],
+        "stdout_not_contains": ["always mock", "never use the real"]
+      }
+    },
+    {
+      "id": "declared-school-is-followed-not-overridden",
+      "kind": "behavior",
+      "requirement": "Where the project rules declare a school, that declaration is followed instead of the skill's own preference.",
+      "prompt": "Our project rules state: 'Unit testing follows the London school: every mutable collaborator is replaced by a test double, and a unit is one class.' I am writing a test for Basket, which collaborates with PriceCalculator, a mutable class of ours. What do I do with PriceCalculator in the test?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(double|stub|mock|replace)", "(?i)(london|declar|project rule)"],
+        "stdout_not_contains": ["use the real PriceCalculator"]
+      }
+    },
+    {
+      "id": "no-assertion-on-a-stub-that-only-supplies-input",
+      "kind": "behavior",
+      "requirement": "An interaction with a stub - a call made only to obtain input - is never asserted, under either school.",
+      "prompt": "My test stubs UserRepository.get_count() to return 10, then asserts the report says 10 users, and also asserts that get_count() was called exactly once. Is that second assertion worth keeping?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(stub|input|implementation detail|over.specif|fragile|brittle)"],
+        "stdout_not_contains": ["keep both assertions"]
+      }
+    },
+    {
+      "id": "expected-value-is-not-recomputed-by-the-algorithm-under-test",
+      "kind": "behavior",
+      "requirement": "A test must not recompute its expected value with the algorithm under test; expected results come from something other than the code under test.",
+      "prompt": "Here is my test for the pricing engine: expected = base_price - compute_discount(customer, items) + compute_tax(items); actual = engine.total(customer, items); assert actual == expected. Those helpers are the same ones the engine calls. Is this a good test?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(hardcode|hard-code|duplicat|same (algorithm|implementation)|itself|specification)"],
+        "stdout_not_contains": ["this is a good test"]
+      }
+    },
+    {
+      "id": "no-widening-of-visibility-to-enable-an-assertion",
+      "kind": "behavior",
+      "requirement": "Private members and private state are not exposed to make an assertion possible; the behaviour they produce is asserted instead.",
+      "prompt": "Customer.promote() sets a private _status field and nothing public returns it. I want to make _status public so my test can assert it flipped to PREFERRED. Reasonable?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(observable behaviour|observable behavior|discount|implementation detail|do not (expose|widen))"],
+        "stdout_not_contains": ["make it public"]
+      }
+    },
+    {
+      "id": "declared-school-is-not-second-guessed",
+      "kind": "negative",
+      "requirement": "A project that has declared a school is not told to reconsider it; the skill applies the declaration rather than arguing for its own preference.",
+      "prompt": "Our project rules declare the classical school, with doubles only for unmanaged dependencies. I am adding a unit test for a domain object that has two in-process collaborators. Anything to flag about our choice of school?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["you should switch to", "the London school is better", "reconsider your school"]
+      }
+    },
+    {
       "id": "unrelated-request-does-not-activate-the-skill",
       "kind": "negative",
       "requirement": "The skill does not force test discipline onto a request that is not about tests.",

@@ -5,4 +5,4 @@ validation, installation, provenance and lockfile management for skills
 stored in the canonical ``skills/`` directory.
 """
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
