@@ -9,10 +9,14 @@ claims to protect is unprotected.
 - **No focused or skipped tests committed.** A focus marker silently
   disables every other test in its file; a skip marker disables itself. A
   skip that must ship carries a written reason and a tracking reference —
-  never a bare marker. A test for a feature still being built is not an
-  exception to this: it belongs to a **separate in-progress suite**, not
-  to a suite that is supposed to be green with the test silenced — see
-  [outside-in-cycle.md](outside-in-cycle.md).
+  never a bare marker. A test for behaviour still being built is not an
+  exception to this: **while it is red it stays in the working copy**, and
+  it reaches a shared branch only once it passes — never as a silenced
+  test inside a suite that is supposed to be green.
+- **Never share a red suite.** A failing test is a bookmark for the person
+  who wrote it; anything shared — a commit, a push, a review — starts from
+  certainty about what works, or the next reader cannot tell your failure
+  from theirs.
 - No commented-out tests, no conditional assertions, no empty tests, no
   duplicate test names. Each of them reports success without checking
   anything.

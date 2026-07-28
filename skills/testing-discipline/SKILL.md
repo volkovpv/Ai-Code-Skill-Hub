@@ -1,6 +1,6 @@
 ---
 name: testing-discipline
-description: Test discipline with no language, runner, framework, or platform assumptions. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here. No change without its tests; a bug fix ships a regression test that fails first; a test is not evidence until seen red, its failure message made legible before the code; red/green/refactor and the outside-in loop where declared; levels kept apart; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and replace peers, never internals; an external fake is pinned by live observation; construction and outbound calls go through production wiring; exact about the claim, silent about the rest; queries allowed, commands expected; async tests wait for success, never run ahead of it; a hard-to-write test reports a design defect; hygiene — no committed focus/skip, no tuning to the gate, determinism, test-only secrets. Use when writing or reviewing tests, in any language.
+description: Discipline for unit and integration tests, with no language, runner, framework, or platform assumptions; testing a whole deployed system from outside is out of scope. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here, and it also draws the line between a unit test and an integration test. No change without its tests; a bug fix ships a regression test that fails first; a test is not evidence until seen red, its failure message made legible before the code; the two levels kept apart; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and replace peers, never internals; under London each role is discovered from its client; an external fake is pinned by live observation; exact about the claim, silent about the rest; async tests wait for success; hygiene — no focus/skip, no tuning to the gate, determinism. Use when writing or reviewing unit or integration tests, in any language.
 ---
 
 # Testing discipline (universal)
@@ -12,13 +12,18 @@ library, no architectural style. *How* a rule is spelled in a given
 language (which marker, which assertion helper, which patching facility)
 belongs to that language's own standard.
 
+It is **scoped to two levels: unit and integration.** Testing a whole
+deployed system from outside it — its packaging, its environment, its
+release process, its users — is a different discipline with different
+subjects and owners, and nothing here should be read as advice about it.
+
 It is also **neutral on the unit-testing school**. Whether "isolation"
 means isolating the unit from its collaborators (London / mockist) or
 isolating the tests from one another (classical / Detroit) is a project
-decision that decides which collaborators get a test double, what counts as
-a unit, and what counts as an integration test. The host project's rules
-declare it and always take precedence; this skill carries the catalog and
-the rules that hold either way — see
+decision that decides which collaborators get a test double, what counts
+as a unit, and where the line between a unit test and an integration test
+runs. The host project's rules declare it and always take precedence;
+this skill carries the catalog and the rules that hold either way — see
 [references/schools.md](references/schools.md). Wiring conventions for a
 ports-and-adapters codebase — which collaborator sits at which seam, where
 the DI boundary is — live in the `hexagonal-service` skill; when the host
@@ -28,15 +33,16 @@ project uses it, apply that skill on top of this one.
 
 1. **Find the project's declared school.** Read the host project's rules
    for it before deciding what to fake — and while there, find whether the
-   project declares test-driven development and an outside-in outer loop.
-   No declaration but a consistent suite → follow the suite and propose
-   recording the choice; neither → propose one, get it recorded, then
-   write tests — see [references/schools.md](references/schools.md).
-2. **Know which level you are writing at.** A test that answers "does the
-   whole system do this?", one that answers "does our code work against
-   code we cannot change?", and one that answers "does this object do the
-   right thing?" have different subjects, speeds and lifecycles; never
-   let one grow quietly inside another — see
+   project declares test-driven development. No declaration but a
+   consistent suite → follow the suite and propose recording the choice;
+   neither → propose one, get it recorded, then write tests — see
+   [references/schools.md](references/schools.md).
+2. **Know which of the two levels you are writing at.** A test that
+   answers "does our code work against code we cannot change?" and one
+   that answers "does this object do the right thing?" have different
+   subjects, speeds and lifecycles — and *where the line between them
+   falls is the school's decision*, not a constant. Never let one grow
+   quietly inside the other — see
    [references/test-levels.md](references/test-levels.md).
 3. **Ship the tests with the change, and see each one red before trusting
    it.** A code change without its tests is not done; every bug fix ships
@@ -50,16 +56,15 @@ project uses it, apply that skill on top of this one.
    tell a stranger what is wrong, fix the test until it would — see
    [references/test-diagnostics.md](references/test-diagnostics.md).
 5. **Where the project practises test-driven development, work the
-   cycle.** One test at a time off a written list, never more than one red
-   at once, the shortest route to green, then remove the duplication —
-   including the duplication between the test and the code — see
+   cycle.** Never more than one red test at once, the smallest change that
+   reaches green, then remove the duplication — including the duplication
+   between the test and the code — see
    [references/tdd-cycle.md](references/tdd-cycle.md).
-6. **Where the project works outside-in, open each feature with a failing
-   acceptance test and grow inward.** Simplest success case first, from
-   the inputs toward the outputs, naming each collaborator from its
-   client's point of view as the tests reach it; progress-measuring tests
-   are kept in a suite of their own — see
-   [references/outside-in-cycle.md](references/outside-in-cycle.md).
+6. **Where the project declares London, discover each collaborator from
+   its client.** The role is named from the point of view of the object
+   that needs it, before any implementation exists, and the double in the
+   test is what brings it into being — see
+   [references/interface-discovery.md](references/interface-discovery.md).
 7. **Structure and name each test so it reads as a claim.**
    Arrange/Act/Assert, one act step, no branching, a name that states the
    behaviour and the condition, assertions that pin the error *and* its
@@ -107,10 +112,6 @@ project uses it, apply that skill on top of this one.
 16. **Keep the suite honest.** No committed focus/skip markers, no test
     tuned to the gate, no flickering tolerated, no real credentials — see
     [references/hygiene.md](references/hygiene.md).
-17. **Let the static checks and the tests divide the work.** Where the
-    project has a type checker, do not test what it already forbids, and do
-    test the guards, bypasses and type-level utilities it cannot verify —
-    see [references/types-and-tests.md](references/types-and-tests.md).
 
 ## Routing: what to read when
 
@@ -119,9 +120,9 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Situation | Read |
 |-----------|------|
 | Deciding what "isolation" means here, which collaborators get a double, what a unit is, what the project rules must declare | [references/schools.md](references/schools.md) |
-| Deciding which level a test belongs to, what an integration test is for, where a test that reaches outside the process goes | [references/test-levels.md](references/test-levels.md) |
-| Deciding when a test gets written, what makes it verified, which test to write next, how to reach green, how big a step to take, how to end a session | [references/tdd-cycle.md](references/tdd-cycle.md) |
-| Starting a feature, deciding what its first test is, kick-starting testing on a new or existing system, discovering the collaborators a unit needs | [references/outside-in-cycle.md](references/outside-in-cycle.md) |
+| Deciding whether a test is a unit or an integration test, where that line runs for this project, what an integration test is for, where a test that reaches outside the process goes | [references/test-levels.md](references/test-levels.md) |
+| Deciding when a test gets written, what makes it verified, how to reach green, what the refactor step owes | [references/tdd-cycle.md](references/tdd-cycle.md) |
+| Under a declared London school: needing a collaborator that does not exist yet, naming the role, deciding how wide its surface should be | [references/interface-discovery.md](references/interface-discovery.md) |
 | The test failed and the message does not say why; choosing values that explain their own role in a report | [references/test-diagnostics.md](references/test-diagnostics.md) |
 | The test is painful to write, slow, fragile, wants access it should not have, or its subject is reached only through a global — and you are deciding whether the test or the code is wrong | [references/tests-as-design-feedback.md](references/tests-as-design-feedback.md) |
 | Laying out a test, naming it, asserting an error, choosing its data, grouping similar cases, choosing between example-based and property-based cases | [references/structure-and-naming.md](references/structure-and-naming.md) |
@@ -132,10 +133,12 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Testing a persistence mapper, a serializer, or anything else that maps your objects onto infrastructure you do not own | [references/adapters-and-persistence.md](references/adapters-and-persistence.md) |
 | Choosing the case set, judging whether coverage or a mutation score means anything, deciding whether a test may be deleted, reviewing suite hygiene | [references/hygiene.md](references/hygiene.md) |
 | A test wants to reach a private member, private state, a partially replaced type, the clock, or a shared setup hook | [references/anti-patterns.md](references/anti-patterns.md) |
-| The project has a static type checker and you are deciding what still needs a test | [references/types-and-tests.md](references/types-and-tests.md) |
 
 ## Rules
 
+- **The scope is unit and integration tests.** Questions about exercising
+  a whole deployed system from outside it are outside this skill; say so
+  rather than answering them from these rules.
 - **The school belongs to the project, not to this skill.** Follow the
   declared one; where none is declared, follow the existing suite and
   propose recording the choice — never mix the two by accident.
@@ -146,23 +149,18 @@ Do not preload the whole skill; open a file only when its trigger fires.
   it go red; an unexpected green is investigated, never enjoyed. Read the
   failure message and make it legible **before** writing the code that
   turns it green.
-- Where the project practises test-driven development: work a written test
-  list one item at a time, never hold more than one red test, pick the next
-  test for what it teaches against what you can make pass, take the
-  shortest route to green (a deliberately constant implementation is a step
-  in the cycle, not a tuned test), then remove the duplication — including
-  between the test and the code. Step size is chosen deliberately, not by
-  habit. Leave a shared branch green; a bookmark left red stays local.
-- Where the project works outside-in: a feature opens with a failing
-  acceptance test written in the domain's vocabulary and closes when it
-  passes; the first test of a feature is its simplest *success* case;
-  development runs from the inputs toward the outputs; collaborators are
-  named from the client's point of view before they exist. Tests that
-  measure progress live in a suite of their own — never as silenced tests
-  in a suite that must be green.
-- Keep the levels apart: a unit test that acquires a real connection, file
-  or clock has changed level and must be moved, renamed and given the
-  lifecycle its level carries.
+- Where the project practises test-driven development: never hold more
+  than one red test, take the shortest route to green (a deliberately
+  constant implementation is a step in the cycle, not a tuned test), then
+  remove the duplication — including between the test and the code.
+- Keep the two levels apart: a unit test that acquires a real connection,
+  file or clock has changed level and must be moved, renamed and given the
+  lifecycle its level carries. *Where* that line falls is what the project
+  declared, not what this skill decides.
+- Where the project declares London: a collaborator is named from its
+  client's point of view before any implementation of it exists, its
+  surface is kept narrow, and roles that turn out to mean the same thing
+  are merged rather than left to drift apart.
 - One scenario per test, one act step, no branching, Arrange/Act/Assert (or
   Given/When/Then), a name that states the behaviour and the condition as a
   fact — never `test_2`, `works`, or the name of the method under test.
@@ -241,7 +239,8 @@ Do not preload the whole skill; open a file only when its trigger fires.
   reader would otherwise miss — and the deletion ships with the change that
   made it redundant.
 - No focused or skipped tests committed, no commented-out tests, no
-  conditional assertions, no empty tests, no duplicate test names.
+  conditional assertions, no empty tests, no duplicate test names, and no
+  red suite shared.
 - Never tune a test to the gate: no expected value hardcoded "so it
   passes", no check disabled, no snapshot refreshed without understanding
   the cause.

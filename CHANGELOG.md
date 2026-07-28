@@ -7,40 +7,78 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
 ## [3.3.0] — 2026-07-28
 
-### `testing-discipline` 1.2.0 → 1.3.0: the London school gets its process, from *Growing Object-Oriented Software, Guided by Tests*
+### `testing-discipline` 1.2.0 → 1.3.0: scoped to unit and integration tests, and the London school gets its own half
 
-The skill declared itself neutral between the two unit-testing schools and
-was not. Every operational file it carried — the cycle, the value model,
-the anti-patterns — was calibrated against the classical school's primary
-sources. London appeared only as a catalog entry that named the school's
-cost ("replacing every collaboration binds the tests to *how* the unit
-reaches its result") and then offered nothing to pay it down with: no
-outer loop, no account of where the doubled collaborators come from, and
-no rule for how tightly an interaction may be pinned. This release adds
-the missing half, calibrated against Freeman and Pryce's *Growing
-Object-Oriented Software, Guided by Tests* — the London school's own
-primary source — and writes down the boundaries where its rules meet the
-classical ones already in place.
+Two changes with one shape: **the skill now states what it does not
+cover, and covers what it claims to.**
 
-Six new reference files:
+**The scope is unit and integration tests, and the limit is enforced.**
+The skill had been accumulating levels — a third, system-wide one arrived
+with its own outer loop, its own suites and its own deployment advice.
+Those rules have different subjects, lifecycles and owners, and an agent
+reading them under one name applies unit-test reasoning (isolate, double
+the collaborators, run in milliseconds) to a question where every one of
+those moves is wrong. The scope is now part of the contract: it is stated
+in the `description` a caller reads before loading the skill, restated as
+a **rule** that says to decline out-of-scope questions rather than
+improvise from these ones, and pinned by a scanner that fails the build if
+a third level reappears anywhere in the skill.
 
-- **`references/outside-in-cycle.md`** — the outer loop, applied where the
-  project declares London or outside-in development. A **walking
-  skeleton** built and deployed end-to-end before the first feature; each
-  feature opened by a failing acceptance test written in the domain's
-  vocabulary; the suite that **measures progress kept separate from the
-  suite that catches regressions**; the first test of a feature being its
-  simplest *success* case; development running **from the inputs toward
-  the outputs**; and **interface discovery** — the mechanism the school's
-  heavy use of doubles actually serves, in which a collaborator is named
-  from its client's point of view (*"if this worked, who would know?"*)
-  before any implementation of it exists.
-- **`references/test-levels.md`** — acceptance, integration and unit as
-  three different questions, with the asymmetry that decides why none
-  substitutes for another (*running* end-to-end tests reports external
-  quality; *writing* unit tests reports internal quality). A unit test
-  that acquires a real connection, file or clock has changed level and is
-  moved rather than tolerated.
+**Both schools now have an operational half.** The skill declared itself
+neutral between the two unit-testing schools and was not: every
+operational file — the cycle, the value model, the anti-patterns — was
+calibrated against the classical school's primary sources, while London
+appeared only as a catalog entry naming the school's cost ("replacing
+every collaboration binds the tests to *how* the unit reaches its result")
+with nothing to pay it down. The half that was missing and is
+unit-level — where the doubled collaborators come from, and how tightly an
+interaction may be pinned — is now carried, calibrated against Freeman and
+Pryce's *Growing Object-Oriented Software, Guided by Tests*.
+
+The two changes meet in one place: **the line between a unit test and an
+integration test is what the schools disagree about**, so with only two
+levels left the skill has a single axis instead of three parallel ones.
+
+- **New `references/interface-discovery.md`** — London's own technique,
+  applied where the project declares that school. **The collaborator does
+  not exist yet**, and the double is what brings it into existence: name
+  the service in the client's terms (*"if this worked, who would know?"*),
+  **pull interfaces into existence from the client rather than pushing
+  them out from an implementation**, keep the discovered surface narrow,
+  and merge roles that turn out to mean the same thing. It ships with the
+  cost it incurs and the rules elsewhere in the skill that pay it down —
+  a project that declares London and skips those has bought the cost
+  without the benefit.
+- **Removed `references/outside-in-cycle.md`** — feature-level
+  acceptance-driven development, walking skeletons, deployment risk and
+  the progress-versus-regression suite split. All of it is about a level
+  this skill no longer claims. Its one unit-level part became the file
+  above.
+- **Removed `references/types-and-tests.md`** — the division of labour
+  between a static type checker and a test suite is about tooling rather
+  than about a unit or integration test. Its operative parts (a test per
+  narrowing predicate including the near-miss values it must reject,
+  runtime enforcement of a harmful type-level bypass driven from a test,
+  type-level assertions pinned next to the utility) are already spelled
+  out in the language standards, which is where a project meets a type
+  checker at all. This is the one deliberate exception to "the universal
+  test rules have a single home".
+- **`references/test-levels.md` rewritten around two levels.** The
+  interesting half is new: there is **no level boundary this skill can
+  hand you**, because London draws it structurally (a real collaborator
+  makes it an integration test) and the classical school draws it
+  behaviourally (a shared dependency, slowness, or more than one unit of
+  behaviour does). The project declares which line it draws — and what
+  does *not* vary by school is that once drawn, the line is enforced: a
+  unit test that acquires a real connection, file or clock has changed
+  level and is moved.
+- **`references/tdd-cycle.md` narrowed to the test.** The evidence rule,
+  the four-step loop and the refactor step stay; choosing the next item
+  off a written list, sizing a step, the four gears to green and ending a
+  session were project workflow rather than rules about a unit or
+  integration test, and are gone. What the cycle owes the rest of the
+  discipline — a learning test before first use of an unfamiliar facility,
+  and the smallest reproduction for every defect — stays.
 - **`references/test-diagnostics.md`** — **the cycle has four steps, not
   three**: fail, *report*, pass, refactor. The report step runs before any
   production code exists, because a failure nobody can read is a test that
@@ -92,22 +130,27 @@ Existing files gained the rules that make the above coherent:
 - `structure-and-naming.md` — write the *information*, not its
   representation; and the other half of "name the expected value": **exact
   about the claim, silent about the rest**.
-- `hygiene.md` — a flickering test is broken, not mostly working; an
-  in-progress acceptance test is a separate suite, never a silenced test
-  in one that must be green.
-- `tdd-cycle.md`, `schools.md`, `anti-patterns.md` — the report step, the
-  routes into the new files, and the round-trip-mapping exception to
-  "never reach into private state", argued and bounded.
+- `hygiene.md` — a flickering test is broken, not mostly working; a test
+  that is red because the behaviour is not built yet **stays in the
+  working copy** until it passes, and **no red suite is ever shared** —
+  which is the resolution both the cycle and the no-committed-skips rule
+  were pointing at.
+- `schools.md`, `anti-patterns.md` — the report step, the routes into the
+  new files, and the round-trip-mapping exception to "never reach into
+  private state", argued and bounded.
 
-Four collisions with the pre-existing rules are written down rather than
-left for a reader to trip over: *degenerate first case* (first test of an
-**operation**) against *simplest success case* (first test of a
-**feature**); the in-progress acceptance suite against no-committed-skips;
-naming the expected value against not over-asserting; and reflective
-round-tripping against the private-state prohibition. `SKILL.md`, the
-`README.md` and the OpenAI adapter were updated to match, and
-`__test__/skills/test_testing_discipline.py` grew eight test classes
-pinning the new rules, their reproductions and their boundaries.
+Three collisions with the pre-existing rules are written down rather than
+left for a reader to trip over: an unfinished red test against
+no-committed-skips; naming the expected value against not over-asserting;
+and reflective round-tripping against the private-state prohibition.
+`SKILL.md`, the `README.md` and the OpenAI adapter were updated to match.
+`__test__/skills/test_testing_discipline.py` (142 tests) grew a scope
+class that fails if a third level reappears anywhere in the skill —
+including a guard on the scanner itself — and the eval set traded its two
+acceptance-loop cases for four: an unfinished test kept local, an
+out-of-scope system-wide request declined by naming the limit, the
+unit/integration line taken from the declared school, and a London
+collaborator discovered from its client.
 
 ## [3.2.0] — 2026-07-28
 

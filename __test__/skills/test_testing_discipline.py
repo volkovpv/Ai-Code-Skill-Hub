@@ -96,7 +96,7 @@ class TestStructure(unittest.TestCase):
             "schools.md",
             "test-levels.md",
             "tdd-cycle.md",
-            "outside-in-cycle.md",
+            "interface-discovery.md",
             "test-diagnostics.md",
             "tests-as-design-feedback.md",
             "structure-and-naming.md",
@@ -107,7 +107,6 @@ class TestStructure(unittest.TestCase):
             "adapters-and-persistence.md",
             "hygiene.md",
             "anti-patterns.md",
-            "types-and-tests.md",
         }
         self.assertEqual(
             expected,
@@ -167,6 +166,77 @@ class TestNeutrality(unittest.TestCase):
         # Guards the guard: a neutrality check that cannot fail is not a check.
         planted = "Mark it with @pytest.mark.skip and move on."
         self.assertTrue(any(token in planted.lower() for token in self.FORBIDDEN))
+
+
+class TestScopeIsUnitAndIntegrationOnly(unittest.TestCase):
+    """The skill covers two levels and says so; a third would dilute both.
+
+    A test-writing standard that also advises on exercising a deployed
+    system carries rules with different subjects, lifecycles and owners
+    under one name — and an agent reading it applies unit-test reasoning
+    (isolate, double the collaborators, run in milliseconds) to a question
+    where every one of those moves is wrong. The limit is therefore part
+    of the contract, stated where a caller reads it, and enforced here.
+    """
+
+    # Tokens that can only appear if a level beyond the two is being taught.
+    # The exclusion itself is phrased without them ("a whole deployed system
+    # from outside it"), so their absence is a real signal rather than a
+    # vocabulary ban.
+    OUT_OF_SCOPE = (
+        "acceptance",
+        "end-to-end",
+        "end to end",
+        "e2e",
+        "walking skeleton",
+    )
+
+    def test_no_third_level_is_taught_anywhere_in_the_skill(self):
+        for rel, text in skill_texts(SKILL).items():
+            lowered = text.lower()
+            for token in self.OUT_OF_SCOPE:
+                self.assertNotIn(token, lowered, f"{rel} mentions {token!r}")
+
+    def test_the_scanner_itself_detects_a_planted_third_level(self):
+        # Guards the guard, exactly as the neutrality scanner does.
+        planted = "Open each feature with a failing acceptance test."
+        self.assertTrue(any(token in planted.lower() for token in self.OUT_OF_SCOPE))
+
+    def test_the_description_states_the_limit(self):
+        # The description is all a caller reads before loading the skill, so
+        # the limit has to survive there or it is not part of the contract.
+        fm, _ = split_frontmatter((SKILL / "SKILL.md").read_text(encoding="utf-8"))
+        description = fm["description"]
+        self.assertIn("Discipline for unit and integration tests", description)
+        self.assertIn(
+            "testing a whole deployed system from outside is out of scope",
+            description,
+        )
+
+    def test_the_limit_is_a_rule_not_only_a_preamble(self):
+        # Stated only in prose, an agent reads the scope as a description of
+        # the contents rather than as an instruction about what to decline.
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn("**The scope is unit and integration tests.**", body)
+        self.assertIn(
+            "say so rather than answering them from these rules", body
+        )
+
+    def test_the_levels_file_carries_exactly_two_levels_and_names_the_exclusion(self):
+        text = flat(REFERENCES / "test-levels.md")
+        self.assertIn(
+            "This skill covers exactly two kinds of test: **unit** and "
+            "**integration**.",
+            text,
+        )
+        self.assertIn("It is **out of scope here**", text)
+
+    def test_the_adapter_carries_the_limit_too(self):
+        prompt = yamlio.load_file(SKILL / "agents" / "openai.yaml")["interface"][
+            "default_prompt"
+        ]
+        self.assertIn("Its scope is unit and integration tests and nothing else", prompt)
+        self.assertIn("say the skill does not cover it", prompt)
 
 
 class TestCaseProvenanceSubjectAndDimensionGuidance(unittest.TestCase):
@@ -601,11 +671,16 @@ class TestUnitTestValueAndAntiPatterns(unittest.TestCase):
 class TestCycleAndEvidenceGuidance(unittest.TestCase):
     """The process axis: when a test exists relative to the code it covers.
 
-    Every rule the skill carried before this addition judged a test that
-    already existed. Nothing said when it comes into being, how to choose
-    the next one, how to reach green, or how big a step to take — so an
-    agent applying the skill could write a flawless test that had never
-    been seen to fail, and nothing in the skill objected.
+    Every other file in the skill judges a test that already exists.
+    Nothing said when it comes into being — so an agent applying the skill
+    could write a flawless test that had never been seen to fail, and
+    nothing in the skill objected.
+
+    The file is deliberately narrow: it carries the cycle as it bears on
+    the test, not the surrounding development process. Choosing the next
+    item off a list, sizing a step and ending a session are project
+    workflow, and a skill scoped to unit and integration tests does not
+    legislate them.
 
     The pins below split into two groups, and the split is the point:
     ``test_evidence_rule_*`` covers what holds in any project whatever its
@@ -657,43 +732,29 @@ class TestCycleAndEvidenceGuidance(unittest.TestCase):
         self.assertIn("**Never more than one red test at a time.**", text)
         self.assertIn("**A green bar is a place you can stand.**", text)
 
-    def test_the_test_list_is_the_planning_unit(self):
+    def test_the_refactor_step_removes_the_test_to_code_duplication(self):
+        # Without this the cycle is just "write the test first"; the second
+        # generating rule is what turns a constant into the general case.
         text = self._text()
-        self.assertIn("## The test list", text)
-        self.assertIn("**Implement one at a time.**", text)
-        self.assertIn("**New ideas go on the list, not into the current change.**", text)
-
-    def test_choosing_and_sizing_the_next_test_is_pinned(self):
-        text = self._text()
-        self.assertIn("**One step at a time.**", text)
-        self.assertIn("**Start with a degenerate case.**", text)
+        self.assertIn("## The refactor step", text)
         self.assertIn(
-            "**When a test turns out to be too big, replace it with a smaller "
-            "one.**",
+            "**Duplication between the test and the production code counts.**",
             text,
         )
 
-    def test_all_four_gears_to_green_are_present_and_ordered(self):
-        text = self._text()
-        for gear in (
-            "| **Obvious implementation** |",
-            "| **One to many** |",
-            "| **Triangulate** |",
-            "| **Fake it** |",
-        ):
-            self.assertIn(gear, text, gear)
-        # A gearbox with no rule for changing gear is a list of tricks.
-        self.assertIn("**Downshift on surprise.**", text)
-
-    def test_step_size_is_named_as_the_controlled_variable(self):
+    def test_the_cycle_owes_the_learning_test_and_the_regression_test(self):
+        # The two places the cycle reaches into rules that hold regardless of
+        # it: pinning an unfamiliar facility, and reproducing every defect.
         text = self._text()
         self.assertIn(
-            "**awareness of the gap between a decision and the feedback on "
-            "it, and deliberate control of that gap.**",
+            "**Before the first use of an unfamiliar external facility, write "
+            "a test against it**",
             text,
         )
         self.assertIn(
-            "**the harder the problem, the less ground each test covers.**", text
+            "**Every defect starts with the smallest test that reproduces "
+            "it**",
+            text,
         )
 
     def test_the_cycle_is_scoped_to_a_project_declaration(self):
@@ -725,12 +786,6 @@ class TestCycleAndEvidenceGuidance(unittest.TestCase):
             "is not yet evidence.",
             body,
         )
-
-    def test_the_limits_of_the_cycle_are_stated(self):
-        text = self._text()
-        self.assertIn("## Where the cycle does not reach", text)
-        self.assertIn("**Security and concurrency.**", text)
-        self.assertIn("**Existing code with no seams.**", text)
 
     def test_rules_are_not_accidentally_duplicated(self):
         text = self._text()
@@ -846,94 +901,88 @@ class TestDesignFeedbackGuidance(unittest.TestCase):
         self.assertEqual(self._text().count(self.RULE_DESIGN_FIRST), 1)
 
 
-class TestOutsideInCycleGuidance(unittest.TestCase):
-    """The London school's process axis, which the skill previously lacked.
+class TestInterfaceDiscoveryGuidance(unittest.TestCase):
+    """The London school's own technique, kept when its outer loop went.
 
     ``schools.md`` catalogued London and named its cost — replacing every
     collaboration binds the tests to *how* the unit reaches its result —
     while every operational file in the skill was calibrated against the
     classical school's primary source. An agent told to follow a declared
-    London project therefore had a catalog entry and nothing to act on:
-    no outer loop, no account of where the doubled collaborators come
-    from, and no discipline for paying the cost the catalog warned about.
+    London project therefore had a catalog entry and nothing to act on: no
+    account of where the doubled collaborators come from, and no
+    discipline for paying the cost the catalog warned about.
+
+    The account of it that lives here is the unit-test half. Its former
+    home also carried a feature-level outer loop driven by tests of a
+    deployed system, which is outside this skill's two levels and is not
+    replaced by anything.
     """
 
-    DOC = REFERENCES / "outside-in-cycle.md"
+    DOC = REFERENCES / "interface-discovery.md"
 
-    RULE_WALKING_SKELETON = (
-        "**The first thing built is the thinnest slice of real "
-        "functionality that can be automatically built, deployed and "
-        "exercised from outside**"
-    )
-    RULE_PROGRESS_VS_REGRESSION = (
-        "**A new acceptance test is expected to fail for as long as the "
-        "feature takes.**"
-    )
-    RULE_INPUTS_TO_OUTPUTS = (
-        "**Start from the events that enter the system and work through to "
-        "the externally visible response**"
-    )
+    RULE_NOT_YET = "**The collaborator does not exist yet**"
     RULE_PULL_NOT_PUSH = (
         "**Pull interfaces into existence from the client, do not push them "
         "out from the implementation.**"
     )
+    RULE_NARROW = "**Keep the discovered surface narrow.**"
 
     def _text(self) -> str:
         return flat(self.DOC)
 
-    def test_the_two_loops_are_described_as_answering_different_questions(self):
-        text = self._text()
-        self.assertIn("## Two nested loops", text)
-        self.assertIn("| | Outer loop | Inner loop |", text)
-        self.assertIn("does the whole system do this?", text)
-
-    def test_the_walking_skeleton_rule_is_present(self):
-        text = self._text()
-        self.assertIn(self.RULE_WALKING_SKELETON, text)
-        # The deployment half is the part teams skip, and the part that
-        # exposes organisational risk while there is still time.
-        self.assertIn('**"End-to-end" covers the process, not only the system.**', text)
-        self.assertIn("**Expose uncertainty early.**", text)
-
-    def test_progress_and_regression_suites_are_separated(self):
-        text = self._text()
-        self.assertIn(self.RULE_PROGRESS_VS_REGRESSION, text)
-        self.assertIn("| **In progress** | red until the feature lands |", text)
-        self.assertIn("| **Regression** | always green |", text)
-
-    def test_development_runs_from_the_inputs_to_the_outputs(self):
-        self.assertIn(self.RULE_INPUTS_TO_OUTPUTS, self._text())
-
-    def test_interface_discovery_is_the_source_of_the_doubles(self):
+    def test_discovery_is_presented_as_the_source_of_the_doubles(self):
         # Without this, London's heavy use of doubles looks like a taste for
         # mocking rather than the mechanism by which collaborators are found.
         text = self._text()
-        self.assertIn("## Interface discovery: where collaborators come from", text)
-        self.assertIn("**The collaborator does not exist yet.**", text)
+        self.assertIn(self.RULE_NOT_YET, text)
         self.assertIn('**"If this worked, who would know?"**', text)
         self.assertIn(self.RULE_PULL_NOT_PUSH, text)
+        self.assertIn(self.RULE_NARROW, text)
 
-    def test_the_split_between_unit_and_integration_is_revisited(self):
+    def test_the_loop_names_the_role_before_any_implementation_exists(self):
         text = self._text()
-        self.assertIn("## Tuning the cycle", text)
-        self.assertIn(
-            "**a decision the team revisits, not a constant.**", text
-        )
+        self.assertIn("## The loop, per object", text)
+        self.assertIn("**Name the service in the client's terms**", text)
 
-    def test_the_file_is_scoped_to_a_project_declaration(self):
-        # Same contract as the cycle: universal skill, opt-in process.
+    def test_the_technique_is_scoped_to_a_project_declaration(self):
+        # Same contract as the cycle: universal skill, opt-in technique. Under
+        # the classical school the collaborators are real and none of this
+        # applies.
         text = self._text()
         self.assertIn(
-            "it applies where the host project declares that school", text
+            "it applies where the host project declares the London school",
+            text,
         )
         self.assertIn(
-            "**Where the project works outside-in, open each feature with a "
-            "failing",
+            "Under the classical school the collaborators are mostly real, "
+            "and this file does not apply.",
+            text,
+        )
+        self.assertIn(
+            "**Where the project declares London, discover each collaborator "
+            "from its client.**",
             flat(SKILL / "SKILL.md"),
         )
+
+    def test_the_cost_of_discovery_is_named_with_what_pays_it_down(self):
+        # A technique that manufactures doubles, offered without the rules
+        # that keep a double-heavy suite survivable, is the cost alone.
+        text = self._text()
+        self.assertIn("## What discovery costs, and the discipline that pays it", text)
         self.assertIn(
-            "**Whether features are started with a failing acceptance test**",
-            flat(REFERENCES / "schools.md"),
+            "**A project that declares London and skips these has bought the "
+            "cost without the benefit.**",
+            text,
+        )
+
+    def test_the_file_states_what_discovery_cannot_establish(self):
+        # False-positive guard: naming collaborators well says nothing about
+        # whether the assembled product runs — and that question is out of
+        # this skill's scope rather than answered by it.
+        text = self._text()
+        self.assertIn("## Where this does not reach", text)
+        self.assertIn(
+            "whether the entry point reaches your objects at all", text
         )
 
     def test_schools_file_routes_london_to_its_discipline(self):
@@ -944,26 +993,27 @@ class TestOutsideInCycleGuidance(unittest.TestCase):
             "this school**",
             text,
         )
-        self.assertIn("outside-in-cycle.md", text)
+        self.assertIn("interface-discovery.md", text)
 
     def test_rules_are_not_accidentally_duplicated(self):
         text = self._text()
-        for needle in (
-            self.RULE_WALKING_SKELETON,
-            self.RULE_PROGRESS_VS_REGRESSION,
-            self.RULE_INPUTS_TO_OUTPUTS,
-            self.RULE_PULL_NOT_PUSH,
-        ):
+        for needle in (self.RULE_NOT_YET, self.RULE_PULL_NOT_PUSH, self.RULE_NARROW):
             self.assertEqual(text.count(needle), 1, needle)
 
 
 class TestLevelsGuidance(unittest.TestCase):
-    """Three levels, three questions, and the rule against blurring them.
+    """Two levels, two questions, and a line the schools draw differently.
 
     The skill judged tests without ever saying which kind of test it was
     judging, so nothing objected when a unit test quietly acquired a real
     connection: it kept being run and trusted as a fast, isolated test
     while being neither.
+
+    The second half is what makes the rule enforceable rather than
+    rhetorical. "Move it to the integration suite" presupposes a boundary,
+    and the two schools put it in different places — so a file that stated
+    one would be legislating the school the rest of the skill refuses to
+    pick.
     """
 
     DOC = REFERENCES / "test-levels.md"
@@ -979,27 +1029,51 @@ class TestLevelsGuidance(unittest.TestCase):
     def test_each_level_is_defined_by_the_question_it_answers(self):
         text = self._text()
         self.assertIn(
-            "| **Acceptance / end-to-end** | does the whole system do this? |", text
+            "| **Unit** | do our objects do the right thing, and are they "
+            "convenient to work with? |",
+            text,
         )
         self.assertIn(
             "| **Integration** | does our code work against code we cannot "
             "change? |",
             text,
         )
+
+    def test_the_line_between_them_is_owned_by_the_declared_school(self):
+        text = self._text()
         self.assertIn(
-            "| **Unit** | do our objects do the right thing, and are they "
-            "convenient to work with? |",
+            "## The line between them is what the schools disagree about", text
+        )
+        self.assertIn(
+            "There is no level boundary this skill can hand you", text
+        )
+        # Each school's own answer, or the section names a disagreement it
+        # never resolves for either reader.
+        self.assertIn(
+            "| **London (mockist)** | every collaborator is a double | any "
+            "real collaborator runs |",
             text,
         )
+        self.assertIn("| **Classical (Detroit)** |", text)
+        self.assertIn("**The project declares which line it draws**", text)
 
-    def test_running_and_writing_report_on_different_qualities(self):
-        # The asymmetry is why no level substitutes for another.
+    def test_the_boundary_is_enforced_however_it_was_drawn(self):
+        # False-positive guard for the test above: "the school decides" must
+        # not read as "so anything goes".
         text = self._text()
-        self.assertIn("**external quality**", text)
-        self.assertIn("**internal quality**", text)
+        self.assertIn(
+            "What does *not* vary by school: once the line is drawn, it is "
+            "enforced.",
+            text,
+        )
+        self.assertIn(self.RULE_NO_QUIET_PROMOTION, text)
 
-    def test_a_test_may_not_change_level_silently(self):
-        self.assertIn(self.RULE_NO_QUIET_PROMOTION, self._text())
+    def test_writing_a_unit_test_is_what_reports_on_internal_quality(self):
+        # The asymmetry is why neither level substitutes for the other.
+        text = self._text()
+        self.assertIn("**internal quality**", text)
+        self.assertIn("**configuration and assumptions**", text)
+        self.assertIn("Neither substitutes for the other.", text)
 
     def test_the_integration_level_doubles_only_the_callback_you_own(self):
         text = self._text()
@@ -1007,6 +1081,15 @@ class TestLevelsGuidance(unittest.TestCase):
             "### The one thing you do double in an integration test", text
         )
         self.assertIn("**Doubles are of limited use here by construction.**", text)
+
+    def test_the_split_between_the_two_levels_is_revisited(self):
+        text = self._text()
+        self.assertIn(
+            "**The split between what is unit-tested with doubles and what is "
+            "left to integration is a decision the project revisits, not a "
+            "constant.**",
+            text,
+        )
 
     def test_fidelity_trades_are_named_rather_than_assumed(self):
         text = self._text()
@@ -1547,53 +1630,16 @@ class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
         # The anti-pattern's own prescription survives, exactly once.
         self.assertEqual(anti.count("**Hardcode the expected results**"), 1)
 
-    def test_a_local_bookmark_is_distinguished_from_a_shared_red_suite(self):
-        cycle = flat(REFERENCES / "tdd-cycle.md")
-        hygiene = flat(REFERENCES / "hygiene.md")
-        self.assertIn("with the last test written and **failing**", cycle)
-        self.assertIn(
-            "The broken test above lives in the working copy and nowhere else.",
-            cycle,
-        )
-        self.assertIn("is the hygiene rule and it always wins", cycle)
-        self.assertEqual(hygiene.count("**No focused or skipped tests committed.**"), 1)
-
-    def test_a_degenerate_first_case_is_scoped_apart_from_a_first_feature_test(self):
-        # Read without their scopes, "start with a degenerate case" and
-        # "start with the simplest success case" are a straight
-        # contradiction, and an agent meeting either one alone applies it to
-        # the other's case.
-        cycle = flat(REFERENCES / "tdd-cycle.md")
-        outside_in = flat(REFERENCES / "outside-in-cycle.md")
-        self.assertIn("**Start with a degenerate case.**", cycle)
-        self.assertIn(
-            "**This is about the first test of a new operation, not the first "
-            "test of a new feature**",
-            cycle,
-        )
-        self.assertIn(
-            "**The first test of a new feature is the simplest case that "
-            "succeeds**",
-            outside_in,
-        )
-        self.assertIn(
-            "**This does not contradict \"start with a degenerate case\" in "
-            "[tdd-cycle.md](tdd-cycle.md); the two are scoped differently.**",
-            outside_in,
-        )
-
-    def test_an_in_progress_acceptance_suite_is_not_a_committed_skip(self):
-        outside_in = flat(REFERENCES / "outside-in-cycle.md")
+    def test_an_unfinished_test_is_kept_local_rather_than_silenced(self):
+        # "Never more than one red test at a time" tells you to leave one
+        # red; "no committed skip markers" forbids the obvious way to carry
+        # it. Without the boundary between them an agent silences the test,
+        # which is the one resolution both rules reject.
         hygiene = flat(REFERENCES / "hygiene.md")
         self.assertIn(
-            "**This is not an exemption from the no-committed-skips rule.**",
-            outside_in,
+            "**while it is red it stays in the working copy**", hygiene
         )
-        self.assertIn(
-            "it belongs to a **separate in-progress suite**, not to a suite "
-            "that is supposed to be green with the test silenced",
-            hygiene,
-        )
+        self.assertIn("**Never share a red suite.**", hygiene)
         # And the rule it is being distinguished from survives, exactly once.
         self.assertEqual(hygiene.count("**No focused or skipped tests committed.**"), 1)
 
@@ -1631,8 +1677,11 @@ class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
             "The direction that predicts anything is **known-to-unknown**",
             schools,
         )
-        # London's outside-in is a live claim of that school and stays.
-        self.assertIn("**Test-driven development runs outside-in**", schools)
+        # London's outside-in direction is a live claim of that school and
+        # stays — as a statement about how its collaborators are discovered,
+        # which is a unit-level technique, not about a feature-level loop.
+        self.assertIn("**Development runs outside-in**", schools)
+        self.assertIn("interface-discovery.md", schools)
 
 
 class TestDataDeletionAndScopeRules(unittest.TestCase):
@@ -1786,8 +1835,9 @@ class TestOpenAiAdapter(unittest.TestCase):
             "persistent state cleaned at the start of a test rather than at "
             "the end",
             "no flickering test tolerated",
-            "Where the project declares that it works outside-in",
-            "tests that measure progress live in a suite of their own",
+            "Where the project declares the London school",
+            "the role is named from the point of view of the object that "
+            "needs it before any implementation of it exists",
         ):
             self.assertIn(needle, prompt, needle)
 
@@ -1797,8 +1847,8 @@ class TestOpenAiAdapter(unittest.TestCase):
         ]
         self.assertIn("do not impose the cycle on a project that has not declared it", prompt)
         self.assertIn(
-            "do not impose the outer acceptance loop on a project that has "
-            "not declared that either",
+            "do not impose interface discovery on a project that has not "
+            "declared London",
             prompt,
         )
 

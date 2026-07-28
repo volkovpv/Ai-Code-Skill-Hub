@@ -60,13 +60,12 @@ red test has exactly one suspect.
   on which collaborator, with which arguments, how many times.
 - **An integration test is any test that runs a real collaborator.** Most
   tests the classical school calls unit tests are integration tests here.
-- **Test-driven development runs outside-in**: start from a high-level test
-  stating the expectation of the whole operation, express the collaborators
-  it needs as doubles, then walk down the object graph implementing each.
-  The doubles are heavy in this school because **the collaborators do not
-  exist yet** — naming them in a test is how they come into existence.
-  That process, and the outer loop it lives in, is
-  [outside-in-cycle.md](outside-in-cycle.md).
+- **Development runs outside-in**: start from the object that receives the
+  request, express the collaborators it needs as doubles, then walk down
+  the object graph implementing each. The doubles are heavy in this school
+  because **the collaborators do not exist yet** — naming them in a test is
+  how they come into existence. That mechanism is
+  [interface-discovery.md](interface-discovery.md).
 - Its claimed benefits: fine granularity; a large object graph becomes
   testable without constructing it; a failure names the defective class
   directly instead of cascading through its clients.
@@ -83,8 +82,11 @@ red test has exactly one suspect.
   expect only commands, keep the expectations few, match arguments only
   as precisely as the scenario requires, and constrain call order only
   where the order is part of the contract
-  ([unit-test-value.md](unit-test-value.md)). A project that declares
-  London and skips these has bought the cost without the benefit.
+  ([unit-test-value.md](unit-test-value.md)); and discover each role from
+  its client rather than extracting it from an implementation
+  ([interface-discovery.md](interface-discovery.md)). A project that
+  declares London and skips these has bought the cost without the
+  benefit.
 
 ## The classical (Detroit) school
 
@@ -112,7 +114,7 @@ results.
   that a suite grown this way looks top-down from one angle and bottom-up
   from another. The direction that predicts anything is
   **known-to-unknown** — and a first test at application level is
-  compatible with it. See [tdd-cycle.md](tdd-cycle.md).
+  compatible with it.
 - Its claimed benefit: far fewer doubles, so far less coupling to
   implementation detail; tests survive a class being split, merged or
   renamed, because they were never addressed to the class.
@@ -194,15 +196,14 @@ then the split itself is what gets declared, with its boundary named.
   so its direction. The cycle itself is only imposed where this is
   declared — see [tdd-cycle.md](tdd-cycle.md), whose evidence rule (a test
   is not evidence until it has been seen red) applies either way.
-- **Whether features are started with a failing acceptance test**, and
-  where the in-progress acceptance suite lives relative to the regression
-  suite — see [outside-in-cycle.md](outside-in-cycle.md). Declaring
-  London normally implies this; declaring the classical school does not
-  settle it either way.
-- **Which levels the suite has and what each is allowed to touch** — see
-  [test-levels.md](test-levels.md). The schools disagree about where the
-  line between unit and integration falls, so the project has to say
-  where *its* line is.
+  Declaring London normally implies discovering each collaborator from its
+  client — see [interface-discovery.md](interface-discovery.md); declaring
+  the classical school does not settle it either way.
+- **Where the line between a unit test and an integration test runs, and
+  what each side may touch** — see [test-levels.md](test-levels.md). This
+  is the school's disagreement restated, so the project has to say where
+  *its* line is; without that, "move it to the integration suite" is an
+  opinion rather than an instruction.
 - The mechanics: what the doubles are built with, where tests live, how
   they are named.
 

@@ -134,4 +134,4 @@ suite**: define the persistence interface in your own domain's terms,
 unit-test everything above it against a double, and let this layer of
 tests cover the implementation of that one interface. That is the
 arrangement described in [test-levels.md](test-levels.md), and this is
-what the middle layer of it looks like in practice.
+what its integration side looks like in practice.

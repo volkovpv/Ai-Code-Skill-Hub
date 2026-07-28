@@ -36,6 +36,135 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A skill that kept growing levels — and the one line it never drew
+
+**Releases:** project `3.3.0` (`testing-discipline` `1.2.0 → 1.3.0`)
+**Type:** scope narrowed — one level removed, and the boundary it was hiding given an owner
+
+### In one sentence
+
+The skill had grown a third level of testing it could not support, while the
+only boundary its readers actually had to decide — *is this a unit test or an
+integration test?* — was described by nobody, so an agent could be told
+confidently how to build a deployment skeleton and left guessing about the
+test in front of it.
+
+### The problem, precisely
+
+Two failures that look unrelated and are the same failure: **the skill's scope
+was set by what got written, not by what it could arbitrate.**
+
+| | What the skill offered | What a reader actually needed |
+|---|---|---|
+| Exercising a deployed system from outside | a level, an outer loop, deployment advice, suite-splitting rules | nothing — different subjects, lifecycles and owners; the skill has no standing here |
+| **Unit versus integration** | three levels each defined by *the question it answers* | **where the line between two of them runs** — which the two schools answer differently |
+| London school | a catalog entry naming its cost, plus an outer loop that was mostly about deployment | the unit-level technique: where the doubled collaborators come from |
+
+The middle row is the load-bearing one. "Never let an integration test grow
+quietly inside the unit suite" was already a rule — and it presupposes a
+boundary the skill never stated. Worse, it *cannot* state one: London draws it
+structurally (a real collaborator makes the test an integration test) and the
+classical school draws it behaviourally (a shared dependency, slowness, or
+more than one unit of behaviour does). A skill that picked one would be
+choosing the school it spends four files refusing to choose.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart TD
+    A["Agent asked:\nis this a unit test?"] --> B["Skill offers three levels,\neach defined by its question"]
+    B --> C{"Which level\nis this test?"}
+    C -->|"'does this object do\nthe right thing?' — fits"| D["Unit"]
+    C -->|"'does our code work against\ncode we cannot change?' — also fits"| E["Integration"]
+    D --> F["Agent picks one\nand states it confidently"]
+    E --> F
+    F --> G["The suite splits on\nan unstated boundary"]
+    H["Agent asked about\ndeployment testing"] --> I["Skill has a level for it"]
+    I --> J["Answers with unit-test\nreasoning: isolate, double,\nrun in milliseconds"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    A["Agent asked:\nis this a unit test?"] --> B{"What school do the\nproject rules declare?"}
+    B -->|"London"| C["Structural line:\nany real collaborator\nmakes it integration"]
+    B -->|"Classical"| D["Behavioural line:\nshared dependency, slow,\nor more than one behaviour"]
+    B -->|"undeclared"| E["Follow the existing suite,\npropose recording the choice"]
+    C --> F["Line is drawn —\nand then enforced"]
+    D --> F
+    E --> F
+    G["Agent asked about\ndeployment testing"] --> H["Out of scope:\nsay so, do not improvise\nfrom unit-test rules"]
+```
+
+### Example — one test, two correct verdicts
+
+```python
+def test_a_promoted_customer_pays_the_reduced_rate():
+    pricer = OrderPricer(DiscountPolicy())     # both ours, both real
+    assert pricer.total_for(an_order().promoted()) == 100 * 0.9
+```
+
+Nothing external is touched, it runs in microseconds, and it exercises two of
+our own classes.
+
+- Under the **classical** school this is a **unit test**: one unit of
+  behaviour, no shared dependency, fast.
+- Under **London** it is an **integration test**: a real collaborator runs, so
+  a red bar has two suspects.
+
+Both verdicts are correct, and they are correct for different projects. Before
+this release a reviewer citing the skill could demand the test be moved out of
+the fast suite, and an author citing the same skill could refuse — each of them
+right, and the skill silent. Now the file says outright that **there is no
+level boundary this skill can hand you**, names both readings, and points at
+the project's declaration; what does not vary is that once the line is drawn,
+it is enforced.
+
+### What the skill now says
+
+- **The scope is unit and integration tests.** It is stated in the
+  `description` a caller reads before loading the skill, restated as a rule
+  that says to *decline* out-of-scope questions rather than improvise, and
+  guarded by a scanner that fails the build if a third level reappears
+  anywhere in the skill — with a second test that plants one, so the scanner
+  cannot silently stop working.
+- **The line between the two levels is the school's, not the skill's.** Each
+  school's reading is written out side by side, the project declares which it
+  draws, and an undeclared project follows its existing suite rather than a
+  guess.
+- **London's unit-level technique gets its own file.** A collaborator that
+  does not exist yet is named from the point of view of the object that needs
+  it — *"if this worked, who would know?"* — and the double in the test is
+  what brings it into being. Interfaces are **pulled into existence from the
+  client, never pushed out from an implementation**; the discovered surface is
+  kept narrow. It ships with the cost it incurs and the rules that pay it
+  down, because a project that declares London and skips those has bought the
+  cost without the benefit.
+- **The cycle narrowed to the test.** The evidence rule, the four-step loop
+  and the refactor step stay. Working a written list, sizing a step, the gears
+  to green and how to end a session were project workflow rather than
+  statements about a unit or integration test, and are gone.
+- **An unfinished red test stays in the working copy** until it passes, and
+  **no red suite is shared** — which is what the removed in-progress-suite
+  carve-out was reaching for, without needing a level to hang it on.
+
+### Where the rule stops
+
+- **Narrowing the scope is not a claim that the removed material was wrong.**
+  Walking skeletons, feature-level acceptance loops and the split between a
+  progress suite and a regression suite are real practices; they belong to a
+  discipline this skill does not carry, and to your project's own rules.
+- **"The school decides" is not "anything goes".** The boundary is declared
+  once and then enforced exactly as before: a unit test that acquires a real
+  connection, file or clock has changed level and is moved, renamed and given
+  the lifecycle its level carries.
+- **Interface discovery is opt-in.** It applies where the project declares
+  London or interaction-based design. Under the classical school the
+  collaborators are mostly real and the file does not apply at all.
+
+---
+
 ## A test nobody ever watched fail — and the half of testing the skill never described
 
 **Releases:** project `3.2.0` (`testing-discipline` `1.1.0 → 1.2.0`)

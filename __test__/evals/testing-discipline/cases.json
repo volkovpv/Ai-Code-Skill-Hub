@@ -546,15 +546,15 @@
       }
     },
     {
-      "id": "in-progress-acceptance-test-is-a-separate-suite-not-a-skip",
+      "id": "unfinished-test-is-kept-local-rather-than-committed-as-a-skip",
       "kind": "behavior",
-      "requirement": "A new acceptance test is expected to fail until its feature lands, so it lives in a separate in-progress suite - never as a silenced test inside a suite that must be green.",
-      "prompt": "We work outside-in, so each feature opens with an acceptance test that fails for days. To keep the build green a colleague marked the in-progress one as skipped and committed it. Our rules also say no skipped tests may be committed. How do we hold both?",
+      "requirement": "A test that is red because the behaviour is not built yet stays in the working copy until it passes; silencing it and committing it is the one resolution both the cycle and the hygiene rule reject.",
+      "prompt": "I am mid-change and one unit test is red because the behaviour is not written yet. To keep the shared build green a colleague marked it as skipped and committed it. Our rules also say no skipped tests may be committed. How do we hold both?",
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(separate|its own suite|in.progress suite|different suite)",
-          "(?i)(regression|always green|build)"
+          "(?i)(working copy|local|not commit|do not share|until it passes)",
+          "(?i)(green|shared|build|branch)"
         ],
         "stdout_not_contains": [
           "committing the skip is fine",
@@ -563,18 +563,53 @@
       }
     },
     {
-      "id": "outside-in-loop-is-not-imposed-on-a-project-that-has-not-declared-it",
+      "id": "system-wide-testing-question-is-declared-out-of-scope",
       "kind": "negative",
-      "requirement": "The outer acceptance loop applies where the host project declares outside-in development or the London school; the skill does not mandate acceptance-test-first on a project that declared neither.",
-      "prompt": "Our project rules declare the classical school and say nothing about acceptance tests. I am adding one unit test to an existing domain service. Do I have to write a failing end-to-end acceptance test first?",
+      "requirement": "The skill covers unit and integration tests only; a question about exercising a whole deployed system is answered by naming the limit, not by improvising from unit-test rules.",
+      "prompt": "We want a suite that boots the packaged application in a production-like environment, drives it through its public entry points and checks the deployment is wired correctly. What does this skill say we should do about the deployment pipeline and the release checks?",
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(declar|project|rules|not required)"
+          "(?i)(out of scope|does not cover|outside|not covered|beyond)",
+          "(?i)(unit|integration)"
         ],
         "stdout_not_contains": [
-          "you must start with an acceptance test",
-          "every feature requires an acceptance test"
+          "isolate it from its collaborators",
+          "replace every collaborator with a double"
+        ]
+      }
+    },
+    {
+      "id": "unit-integration-line-is-taken-from-the-declared-school",
+      "kind": "behavior",
+      "requirement": "Where the line between a unit test and an integration test falls is what the declared school decides; the skill does not supply a boundary of its own.",
+      "prompt": "A reviewer says my test is an integration test and must move out of the fast suite, because it constructs two of our own classes and runs both for real. Nothing external is touched. Who is right?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(school|declar|project rules|depends)",
+          "(?i)(london|mockist|classical|detroit)"
+        ],
+        "stdout_not_contains": [
+          "any test with two classes is an integration test",
+          "the reviewer is right"
+        ]
+      }
+    },
+    {
+      "id": "london-collaborator-is-discovered-from-its-client",
+      "kind": "behavior",
+      "requirement": "Under a declared London school a collaborator that does not exist yet is named from the point of view of the object that needs it, not extracted from an implementation written first.",
+      "prompt": "Our rules declare the London school. The object I am test-driving needs to find out whether a trading window has expired, and nothing does that yet. Should I write the calendar class first and then extract an interface from it for the test?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(client|from the point of view|needs|name the role|before)",
+          "(?i)(narrow|double|test|first)"
+        ],
+        "stdout_not_contains": [
+          "extract the interface from the implementation",
+          "write the class first"
         ]
       }
     },

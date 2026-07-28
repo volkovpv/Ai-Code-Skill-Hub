@@ -1,40 +1,58 @@
-# Levels of testing: what each one can tell you
+# The two levels, and the line between them
 
-A suite is a hierarchy of feedback loops, and each level answers a
-question the others cannot. Mixing them up produces tests that are slow
-without being thorough, or thorough about the wrong thing.
+This skill covers exactly two kinds of test: **unit** and **integration**.
+Each answers a question the other cannot, and mixing them up produces
+tests that are slow without being thorough, or thorough about the wrong
+thing.
 
-This file is school-neutral: both schools run all three levels and
-disagree only about where the line between the bottom two falls — see
-[schools.md](schools.md).
+Testing a whole deployed system from outside it — its packaging, its
+environment, its operators, its users — is a different discipline with
+different subjects, lifecycles and owners. It is **out of scope here**,
+and nothing in this skill should be read as advice about it.
 
-## The three questions
+## The two questions
 
 | Level | The question it answers | Runs against |
 |---|---|---|
-| **Acceptance / end-to-end** | does the whole system do this? | the system as deployed, driven from outside |
-| **Integration** | does our code work against code we cannot change? | our abstraction plus the real third-party thing |
 | **Unit** | do our objects do the right thing, and are they convenient to work with? | our own code, in memory |
+| **Integration** | does our code work against code we cannot change? | our abstraction plus the real third-party thing |
+
+## The line between them is what the schools disagree about
+
+There is no level boundary this skill can hand you, because the two
+schools draw it in different places — and that disagreement is the whole
+of their disagreement, restated. See [schools.md](schools.md).
+
+| | A test is a **unit** test when… | …and an **integration** test when… |
+|---|---|---|
+| **London (mockist)** | every collaborator is a double | any real collaborator runs |
+| **Classical (Detroit)** | it is fast, isolated from other tests, and covers one unit of behaviour | it reaches a shared dependency, or is slow, or spans more than one unit of behaviour |
+
+- Under London the boundary is **structural**: it is drawn by what was
+  doubled, so it is visible in the test's own text.
+- Under the classical school it is **behavioural**: two of your classes
+  running for real is still one unit test, and the boundary is crossed by
+  the dependency, not by the object count.
+- **The project declares which line it draws**, and that declaration is
+  what makes "move it to the integration suite" an instruction rather
+  than an opinion. Absent a declaration, follow the existing suite.
+
+What does *not* vary by school: once the line is drawn, it is enforced.
 
 ## What each level reports on
 
-**Running** acceptance tests reports on **external quality** — whether the
-system meets the need. **Writing** unit tests reports on **internal
-quality** — whether the code is loosely coupled and cohesive, because a
-unit that is awkward to construct, arrange and interrogate in a test is a
-unit that will be awkward to change. Integration tests sit in between and
-report on neither very well; what they report on is *configuration and
-assumptions*.
+**Writing** unit tests reports on **internal quality** — whether the code
+is loosely coupled and cohesive, because a unit that is awkward to
+construct, arrange and interrogate in a test is a unit that will be
+awkward to change. That report is produced by writing the test; a passing
+run does not carry it. See
+[tests-as-design-feedback.md](tests-as-design-feedback.md).
 
-That asymmetry is the reason none of the three substitutes for another:
-
-- End-to-end tests passing says nothing about whether the code inside can
-  be changed next month.
-- Unit tests passing says nothing about whether the pieces work together,
-  are configured correctly, or are reached at all.
-- The pain of writing a unit test is information you only get by writing
-  it; a passing run does not carry it. See
-  [tests-as-design-feedback.md](tests-as-design-feedback.md).
+Integration tests report on something else entirely: **configuration and
+assumptions**. They say nothing about whether the code inside can be
+changed next month, and unit tests say nothing about whether the pieces
+are configured correctly or reached at all. Neither substitutes for the
+other.
 
 ## The integration level exists because you do not own the other side
 
@@ -56,6 +74,10 @@ library from another team.
   [isolation-and-fakes.md](isolation-and-fakes.md).
 - There are legitimately few of these tests relative to unit tests, and
   they are allowed to be slower and to require an environment.
+- What such a test looks like in practice — cleaning persistent state on
+  the way in, writing transaction boundaries into the test, round-tripping
+  each mapped type — is in
+  [adapters-and-persistence.md](adapters-and-persistence.md).
 
 ### The one thing you do double in an integration test
 
@@ -78,9 +100,9 @@ is part of what this test is exercising; see
 ## Order the suite by cost, and keep the levels apart
 
 ```
- fast, in memory ────────────────────────────────► slow, deployed
-   unit tests        focused integration          end-to-end
-   (many)            (few, need an environment)   (fewest)
+ fast, in memory ──────────────────────────► slow, needs an environment
+   unit tests                                  integration tests
+   (many)                                      (few)
 ```
 
 - **Never let an integration test grow quietly inside the unit suite.** A
@@ -91,9 +113,16 @@ is part of what this test is exercising; see
 - Naming, location and invocation should make the level obvious from the
   outside, so that the fast suite can be run without a thought — which is
   the only condition under which it actually gets run.
-- Each level should be able to fail on its own. When a defect turns the
-  whole pyramid red at once, the level that pinpoints it is the cheapest
-  one that caught it; that is the value of having the lower levels at all.
+- Each level should be able to fail on its own. When one defect turns
+  both suites red, the level that pinpoints it is the cheaper one; that
+  is the value of having the unit level at all.
+- **The split between what is unit-tested with doubles and what is left
+  to integration is a decision the project revisits, not a constant.**
+  Test only at the coarse grain and the combinations explode while
+  obscure failure paths stay unreachable; test only at the fine grain and
+  every unit passes while the assembly does not work. Reflect on which
+  failures are getting through: fiddly logic wants more unit tests (or
+  simplification), unhandled failures want more integration coverage.
 
 ## Fidelity is a deliberate trade, and it is stated
 

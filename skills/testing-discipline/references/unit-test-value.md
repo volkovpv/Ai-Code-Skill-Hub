@@ -39,7 +39,7 @@ three at once. The extremes make it visible:
 
 | Extreme | Protection | Resistance | Feedback |
 |---------|-----------|------------|----------|
-| End-to-end test through every real dependency | excellent | excellent | far too slow |
+| Integration test through every real dependency | excellent | excellent | far too slow |
 | Trivial test over a one-line accessor | none | excellent | instant |
 | Test asserting the exact statement the subject emitted | good | none | instant |
 
