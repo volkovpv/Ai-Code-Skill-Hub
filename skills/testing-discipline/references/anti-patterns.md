@@ -39,6 +39,16 @@ promoted customer now receives, not the status field the promotion set. If
 production code later starts reading that state, it becomes part of the
 observable behaviour and may be asserted then, for that reason.
 
+**The one sanctioned exception is a round-trip test of a reflective
+mapping** — an object/relational mapping, a serializer, a wire format.
+There the subject is the mapping's configuration rather than the object's
+design, and the mapper itself reaches the state reflectively, so a test
+that does the same is checking the thing under test rather than bypassing
+it. Asserting through the public surface would verify the accessors
+instead. The argument bounds the exception: it licenses round-tripping a
+mapped type and nothing else — see
+[adapters-and-persistence.md](adapters-and-persistence.md).
+
 ## Leaking the algorithm into the test
 
 A test that recomputes the expected value with the same algorithm as the
@@ -89,6 +99,11 @@ worth replacing.
 **Split it** instead: an adapter that talks to the external dependency, and
 a collaborator-free unit that computes. The double then stands for a whole
 seam, and nothing about it is partial.
+
+Doubling a concrete type *at all* — even wholly — carries its own costs:
+the relationship between the two objects never gets a name, and the
+subject ends up declared to depend on far more of the type than it uses.
+See [isolation-and-fakes.md](isolation-and-fakes.md).
 
 ## Time as ambient context
 

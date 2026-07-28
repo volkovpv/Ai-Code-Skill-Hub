@@ -139,6 +139,54 @@ importance justifies it, not everywhere.
   diagnostic logging is the usual case — asserting at a higher-level,
   domain-shaped seam is enough.
 
+### Specify precisely what should happen, and no more
+
+Every interaction a test pins is a constraint on the implementation. The
+constraints you *meant* to state are the contract; the ones you stated by
+accident are what turns a behaviour-preserving change into a red suite.
+This applies under both schools, and it is what makes a London-school
+suite survivable at all — see [schools.md](schools.md).
+
+- **Allow queries; expect commands.** A call that only asks a question
+  changes nothing, so how many times it happens is not part of the
+  contract: permit it any number of times, including none. A call that
+  changes something outside the subject is a different matter — the
+  system's state depends on how often it happens, so require it exactly
+  as often as the contract says. Pinning a query's call count means the
+  test breaks when a cache is introduced or an algorithm reorganised,
+  which changed no behaviour anyone can observe. (Where the *subject* is
+  a cache, the call count is the behaviour, and then you do pin it.)
+- **Write few expectations.** When everything in a test is required,
+  nothing in it is emphasised, and a reader cannot tell what is under
+  test from what is scaffolding. More than a handful of required
+  interactions usually means the unit is too large or the test is pinning
+  interactions it does not care about.
+- **Match arguments only as precisely as the scenario constrains them.**
+  Where the scenario turns on one field of an argument, constrain that
+  field and leave the rest free; where a message must merely carry
+  certain information, assert that the information is present rather than
+  pinning the exact rendering. An argument matched exactly when the test
+  only cared about part of it is a false positive waiting for the next
+  unrelated change.
+- **Constrain call order only where the order is part of the contract.**
+  Most orderings are incidental, and pinning them locks down the
+  implementation for nothing. Where order genuinely matters — a result
+  may not arrive after the "finished" signal — express the constraint
+  that actually holds rather than a full sequence: "not after the
+  terminal event" leaves the results free to arrive in any order, while a
+  strict sequence forbids a reordering nobody promised was forbidden. One
+  practical form is to have the double append a marker per call and
+  assert once against the accumulated record, which fails with the whole
+  sequence in the message.
+- **Ignoring a collaborator wholesale is a power tool.** Declaring that a
+  peer is irrelevant to this scenario keeps the test focused, and it does
+  not contradict *assert in both directions* above: that rule governs the
+  dependency the test is about, this one governs the ones it is not. Two
+  cautions — the ignored behaviour must be covered by some other test,
+  and a *chain* of ignored objects is a design smell rather than a
+  convenience, saying that the subject is reaching through one
+  collaborator to get at another.
+
 ## What deserves a unit test at all
 
 Classify production code on two axes: how complex or domain-important it

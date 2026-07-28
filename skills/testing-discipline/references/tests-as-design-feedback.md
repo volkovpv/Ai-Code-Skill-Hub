@@ -21,11 +21,71 @@ hard?*
 | **The urge to reach private state** — the assertion you want needs a member the client cannot see | the goal you are asserting has no public expression | give it one: the state you want to inspect should be reachable as behaviour. See [anti-patterns.md](anti-patterns.md) |
 | **An act step of more than one call** | the subject lets a caller stop halfway through one logical operation | move the second step inside. See [structure-and-naming.md](structure-and-naming.md) |
 | **No name fits** — you cannot describe the scenario without "and" | the test covers more than one behaviour, or the operation does | split the test; if it will not split, the operation is the thing that needs splitting |
+| **You cannot replace a collaborator without special machinery** — the subject reaches it through a global, a static accessor, an ambient registry, or constructs it itself | the dependency is hidden, not absent | pass it in. See *implicit dependencies* below |
+| **A long construction argument list** | several of those arguments together are an unnamed concept | look for arguments that are always used together, or that share a lifetime, and give the group a name; the extraction usually names a missing domain object |
+| **A long argument list that will not group** | not all of them are dependencies | separate the dependencies (required, no safe default) from the notifications and adjustments (defaulted, overridden per test) — see [isolation-and-fakes.md](isolation-and-fakes.md) |
+| **The test class for one type falls into slices that share nothing** | the type has unrelated responsibilities | split the type along the same lines the tests already split along; the tests have done the analysis for you |
+| **Every interaction in the test is required, so none stands out** | the test is pinning things it does not care about, or the unit is too large | separate what must happen from what is merely permitted — see [unit-test-value.md](unit-test-value.md) — and if few things remain required, the unit was the problem |
 
 **Wanting to test a private member is a design problem wearing a testing
 problem's clothes.** Every time a variable looks like the only way to
 check that code ran correctly, there is an opportunity to improve the
 design; taking the shortcut spends it.
+
+## Implicit dependencies are still dependencies
+
+A dependency reached through a global, a static accessor or an ambient
+registry has not gone away — it has become inaccessible. The test then
+needs machinery to intercept it, and that machinery is the problem.
+
+- **Tools that break such dependencies without touching the code spend
+  the feedback.** They are sometimes genuinely necessary, and they always
+  cost the signal the test was trying to give you. The design weakness
+  stays, other code accumulates around it, and by the time an urgent
+  change forces the issue nobody remembers what was intended. Use the
+  same techniques to break dependencies in tests that you would use in
+  production code.
+- **Passing the dependency in makes it visible, which is the point.** The
+  objection that this exposes an internal is real and is usually worth
+  paying: a subject that cannot be constructed without a clock is a
+  subject whose dependence on time is impossible to overlook, and that
+  dependence has a way of mattering later.
+- **The seam is often not the end of the improvement.** Having injected
+  the awkward thing, ask what the subject actually wanted from it. A
+  subject that takes a clock and then does date arithmetic on the result
+  is doing work that belongs to something else; the question it really
+  wants answered ("has this window expired?") names a collaborator, and
+  once it exists the subject stops knowing about calendars at all. Each
+  step leaves both objects easier to test on their own.
+
+## Support reporting is a feature; diagnostic tracing is scaffolding
+
+Two things are usually written through the same facility and are not the
+same thing:
+
+| | **Support reporting** | **Diagnostic tracing** |
+|---|---|---|
+| Audience | operators, support staff, auditors — and the tools they built | the programmer writing the code, now |
+| In production | on, and depended upon | off |
+| Driven by | somebody's requirement | curiosity |
+| Therefore | **test-driven, like any other output** | not test-driven; free to be inconsistent |
+
+- Once support reporting is understood as an output of the application,
+  its awkwardness in tests resolves itself: it goes through a
+  notification seam you own — reported as objects, in domain terms — and
+  the test substitutes a double for it like any other notification. The
+  alternative, asserting formatted text produced by a global facility,
+  requires managing shared state across tests, cleaning it up, and
+  matching strings.
+- Writing a test per report is what stops the reporting from being noise:
+  it forces the question of who the message is for and what they will do
+  with it, and it protects the tools other people wrote to parse it.
+- **"I would have to pass a reporter everywhere"** is itself the signal.
+  Either much of that reporting is really diagnostic tracing, or the
+  domain code has enough duplication that the few places worth reporting
+  from have not emerged yet.
+- A system that logs so much that the logs are unusable would have been
+  better off logging nothing.
 
 ## The rule, and its escape valve
 

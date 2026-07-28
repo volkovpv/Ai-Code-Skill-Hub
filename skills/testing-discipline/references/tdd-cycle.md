@@ -2,7 +2,10 @@
 
 Every other file in this skill judges a test once it exists. This one is
 about *when* it exists, and about the loop that produces the test and the
-code together.
+code together. It is the **inner** loop — one test, one unit. The loop
+around it, which starts and ends a whole feature, is in
+[outside-in-cycle.md](outside-in-cycle.md) and is applied where the
+project declares it.
 
 Its first section holds in any project, whatever process it follows. The
 rest describes **test-driven development** and applies where the host
@@ -46,9 +49,17 @@ The loop that follows from them:
 |------|---|----------------|
 | 1 | Add one small test | it is written, not yet run |
 | 2 | Run every test | the new one fails, for its own reason |
-| 3 | Make the smallest change that passes it | nothing else changed |
-| 4 | Run every test | all green |
-| 5 | Refactor to remove duplication | green after each step |
+| 3 | **Read the failure message; improve it if it does not explain itself** | it would tell a stranger what is wrong |
+| 4 | Make the smallest change that passes it | nothing else changed |
+| 5 | Run every test | all green |
+| 6 | Refactor to remove duplication | green after each step |
+
+**Step 3 is not optional and does not belong later.** It happens while
+the failure is in front of you and before any production code exists,
+because a failure you cannot read is a test that will be deleted the
+first time it fires under deadline — and because an intention you cannot
+state in a failure message is one you have not finished forming. See
+[test-diagnostics.md](test-diagnostics.md).
 
 Three constraints on the loop itself:
 
@@ -93,7 +104,11 @@ write.** Then work the list instead of holding it in your head.
   outputs that are trivially easy to know: the empty input, the single
   element, the case where the output equals the input. A realistic first
   test asks you to solve placement, input and expected output at once,
-  and leaves you without feedback for far too long.
+  and leaves you without feedback for far too long. **This is about the
+  first test of a new operation, not the first test of a new feature** —
+  a feature opens with its simplest *success* case, because its first
+  test has to validate the idea rather than place it; see
+  [outside-in-cycle.md](outside-in-cycle.md).
 - **When a test turns out to be too big, replace it with a smaller one.**
   Delete (or park) the oversized test, write the test that covers the one
   part that is broken, get that green, then reintroduce the larger test.
@@ -195,7 +210,11 @@ hygiene rule and it always wins — see [hygiene.md](hygiene.md).
 
 - **Security and concurrency.** Passing tests cannot demonstrate that the
   goal was met: security rests on human judgment about the method chosen,
-  and a subtle race is not reliably reproduced by running the code.
+  and a subtle race is not reliably reproduced by running the code. A
+  stress test raises the odds of provoking a race enough to be worth
+  writing, and still buys a degree of reassurance rather than a
+  guarantee — see
+  [async-and-concurrency.md](async-and-concurrency.md).
 - **Performance, stress and usability.** The suite this loop produces is
   worth keeping for as long as the system runs, and it replaces none of
   these.

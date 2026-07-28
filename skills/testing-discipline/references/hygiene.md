@@ -9,7 +9,10 @@ claims to protect is unprotected.
 - **No focused or skipped tests committed.** A focus marker silently
   disables every other test in its file; a skip marker disables itself. A
   skip that must ship carries a written reason and a tracking reference —
-  never a bare marker.
+  never a bare marker. A test for a feature still being built is not an
+  exception to this: it belongs to a **separate in-progress suite**, not
+  to a suite that is supposed to be green with the test silenced — see
+  [outside-in-cycle.md](outside-in-cycle.md).
 - No commented-out tests, no conditional assertions, no empty tests, no
   duplicate test names. Each of them reports success without checking
   anything.
@@ -35,6 +38,14 @@ claims to protect is unprotected.
   wall-clock time, random seeds you did not pin, network availability, or
   test execution order. A test that passes only when the whole file runs
   is already broken.
+- **A test that fails intermittently is a broken test, not a mostly
+  working one.** It masks genuine intermittent defects — which become
+  indistinguishable from its own noise and get re-run away — and it
+  scales badly, since the odds that *some* unreliable test fails on a
+  given run approach one as the suite grows. Diagnose the cause before
+  deciding anything; if one really must be tolerated for now, it carries
+  a written reason and a date like any other exception. See
+  [async-and-concurrency.md](async-and-concurrency.md).
 - Coverage is a floor, not evidence. A line executed by a test that
   asserts nothing about it is covered and unprotected.
 

@@ -30,6 +30,7 @@ is unreadable without agreed names for kinds of dependency.
 | **Out-of-process dependency** | one that lives outside the process: database, broker, mail server, third-party API. Usually shared, but not necessarily — a per-test container instance, or a read-only service, is out-of-process and private |
 | **Value / value object** | an immutable dependency with no identity, interchangeable with any other of equal content |
 | **Collaborator** | a dependency that is mutable, or is a proxy for data not yet in memory. This is the thing the schools argue about |
+| **Peer** | a collaborator the subject talks to directly, as opposed to something *inside* it. Only peers are ever replaced; the three kinds of peer, and why the distinction decides what a double may stand for, are in [isolation-and-fakes.md](isolation-and-fakes.md) |
 | **Managed dependency** | an out-of-process dependency reachable *only* through your application, so interactions with it are invisible outside and are an implementation detail — typically your own database |
 | **Unmanaged dependency** | an out-of-process dependency whose side effects other applications can see, so interactions with it are part of your observable behaviour — a broker, a mail server, a shared table |
 
@@ -62,6 +63,10 @@ red test has exactly one suspect.
 - **Test-driven development runs outside-in**: start from a high-level test
   stating the expectation of the whole operation, express the collaborators
   it needs as doubles, then walk down the object graph implementing each.
+  The doubles are heavy in this school because **the collaborators do not
+  exist yet** — naming them in a test is how they come into existence.
+  That process, and the outer loop it lives in, is
+  [outside-in-cycle.md](outside-in-cycle.md).
 - Its claimed benefits: fine granularity; a large object graph becomes
   testable without constructing it; a failure names the defective class
   directly instead of cascading through its clients.
@@ -71,6 +76,15 @@ red test has exactly one suspect.
   so tests that assert them go red on refactorings that changed no
   behaviour — see
   [unit-test-value.md](unit-test-value.md).
+- **The discipline that pays that cost down is not optional under this
+  school**, and it is specific: replace peers and never internals, and
+  double only roles you named yourself
+  ([isolation-and-fakes.md](isolation-and-fakes.md)); allow queries and
+  expect only commands, keep the expectations few, match arguments only
+  as precisely as the scenario requires, and constrain call order only
+  where the order is part of the contract
+  ([unit-test-value.md](unit-test-value.md)). A project that declares
+  London and skips these has bought the cost without the benefit.
 
 ## The classical (Detroit) school
 
@@ -180,6 +194,15 @@ then the split itself is what gets declared, with its boundary named.
   so its direction. The cycle itself is only imposed where this is
   declared — see [tdd-cycle.md](tdd-cycle.md), whose evidence rule (a test
   is not evidence until it has been seen red) applies either way.
+- **Whether features are started with a failing acceptance test**, and
+  where the in-progress acceptance suite lives relative to the regression
+  suite — see [outside-in-cycle.md](outside-in-cycle.md). Declaring
+  London normally implies this; declaring the classical school does not
+  settle it either way.
+- **Which levels the suite has and what each is allowed to touch** — see
+  [test-levels.md](test-levels.md). The schools disagree about where the
+  line between unit and integration falls, so the project has to say
+  where *its* line is.
 - The mechanics: what the doubles are built with, where tests live, how
   they are named.
 

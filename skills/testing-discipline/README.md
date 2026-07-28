@@ -16,6 +16,12 @@ The core discipline it enforces:
   regression test that fails before the fix;
 - **a test is not evidence until it has been seen red for its own reason** —
   free if it was written first, one deliberate break-and-restore otherwise;
+- **and the failure message is made legible before the code that turns it
+  green is written**: the cycle has four steps — fail, *report*, pass,
+  refactor;
+- the three levels — acceptance, integration, unit — answer different
+  questions and are kept apart; a unit test that acquires a real
+  connection, file or clock has changed level and is moved;
 - a test that is hard to write, slow or fragile is treated as a **report on
   the design**, answered by changing the code rather than bending the test;
 - Arrange/Act/Assert, one act step, no branching, one scenario per test,
@@ -27,10 +33,18 @@ The core discipline it enforces:
 - output verification before state verification before asserting an
   interaction, and an interaction is asserted only where it crosses the
   application boundary;
+- **exact about the claim, silent about the rest** — queries may be called
+  any number of times, commands exactly as often as the contract says,
+  arguments are matched only as tightly as the scenario constrains them,
+  and call order is pinned only where the order *is* the contract;
 - unit tests touch nothing external; time is injected rather than slept
   through, and every awaited assertion carries a deadline;
-- fakes are bound to the seams the code exposes, never to someone else's
-  internals; patching is a justified last resort;
+- an asynchronous test **waits for success and times out for failure**, and
+  never asserts a state the system could already have been in before it
+  started;
+- fakes are bound to the seams the code exposes — **peers, never
+  internals** — and to a role you named rather than a concrete type;
+  patching is a justified last resort;
 - a fake standing in for a system the project does not own has its
   contract pinned by a **live observation** of that system — never by
   re-reading a project norm, an RFC, or vendor documentation;
@@ -43,11 +57,15 @@ The core discipline it enforces:
   missing dimension;
 - the expected value is named exactly and its derivation from the inputs is
   visible in the test; no constant means two things in one case;
+- generic mapping code is exercised with purpose-built types, persistent
+  state is cleaned at the *start* of a test, and transaction boundaries are
+  written into the test rather than replaced by a rollback;
 - only code you wrote is on the hook, depth follows the cost of being
   wrong, and a test is deleted only when it is redundant *both* on
   confidence and on communication;
 - suite hygiene: no committed focus/skip markers, no test tuned to the
-  gate, deterministic runs, test-only secrets.
+  gate, no flickering test tolerated, deterministic runs, test-only
+  secrets.
 
 ## Test-driven development is your project's decision too
 
@@ -62,6 +80,16 @@ habit — in [`references/tdd-cycle.md`](references/tdd-cycle.md).
 it**, the same way the school is. What holds either way, and is never
 optional, is the evidence rule: a test that has never been seen to fail is
 not yet protection.
+
+The **outer** loop — one failing acceptance test per feature, a walking
+skeleton before the first feature, development from the inputs toward the
+outputs, and collaborators discovered by naming them from their client's
+point of view before they exist — is in
+[`references/outside-in-cycle.md`](references/outside-in-cycle.md) and is
+declared the same way. It is the London school's process, and it is what
+the skill previously lacked: the catalog named London's cost (replacing
+every collaboration binds the tests to *how* the unit works) without
+carrying the discipline that pays it down.
 
 ## The unit-testing school is your project's decision
 
@@ -103,14 +131,17 @@ test-driven development if you practise it.
   skill.
 - **Evidence-backed rules.** The load-bearing rules (external-system fake
   provenance, outbound substitution, wiring-level construction, case-set
-  provenance) each ship a minimal, deterministic reproduction — they were
-  written because a green suite hid a real defect, not because they sound
-  prudent.
-- **Progressive disclosure.** `SKILL.md` stays short and routes to nine
-  reference files: the two schools, the test-first cycle, tests as design
-  feedback, structure and naming, what makes a test worth having,
-  isolation and fakes, suite hygiene and case provenance, the anti-pattern
-  catalog, and the division of labour between static checks and tests.
+  provenance, the runaway asynchronous test, silent rot in a mapping test)
+  each ship a minimal, deterministic reproduction — they were written
+  because a green suite hid a real defect, not because they sound prudent.
+- **Progressive disclosure.** `SKILL.md` stays short and routes to fifteen
+  reference files: the two schools, the levels of testing, the inner
+  test-first cycle, the outside-in outer loop, test diagnostics, tests as
+  design feedback, structure and naming, test data builders, what makes a
+  test worth having, isolation and fakes, asynchrony and concurrency,
+  adapters and persistence, suite hygiene and case provenance, the
+  anti-pattern catalog, and the division of labour between static checks
+  and tests.
 
 ## How to install
 
@@ -134,12 +165,14 @@ cover the mechanics of your suite. Effective split:
 
 - **Put in project rules:** the **unit-testing school** and everything that
   follows from it (see above); **whether you practise test-driven
-  development** and in which direction; the runner and its invocation,
-  where tests live and how they are named for discovery, which
-  fixtures/factories the project ships, how integration tests get their
-  environment, the coverage or mutation thresholds the build enforces, and
-  any deliberate deviations. Project instructions always take precedence
-  over the skill.
+  development** and in which direction; **whether features open with a
+  failing acceptance test**, and where the in-progress suite lives relative
+  to the regression suite; **which levels your suite has and what each may
+  touch**; the runner and its invocation, where tests live and how they are
+  named for discovery, which fixtures/factories the project ships, how
+  integration tests get their environment, the coverage or mutation
+  thresholds the build enforces, and any deliberate deviations. Project
+  instructions always take precedence over the skill.
 - **Leave to the skill:** what a test must establish, how a test is judged,
   what may be faked and how a fake's contract is justified, where cases
   come from, and the hygiene rules — no need to restate them in your rules;

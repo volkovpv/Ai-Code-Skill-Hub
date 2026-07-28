@@ -1,6 +1,6 @@
 ---
 name: testing-discipline
-description: Test discipline with no language, runner, framework, or platform assumptions. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here. No change without its tests; a test is not evidence until seen red; every bug fix ships a regression test that fails first; red/green/refactor where declared; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and fake only the seams the code exposes; an external fake is pinned by live observation, not reading; construction and outbound substitution go through production wiring; judged by protection, refactoring resistance, speed, maintenance cost; assert observable behaviour, never implementation detail; cases come from the specification, not the artifact tested; a hard-to-write test reports a design defect; hygiene — no committed focus/skip, no tuning to the gate, determinism, test-only secrets. Use when writing, reviewing or reworking tests, in any language.
+description: Test discipline with no language, runner, framework, or platform assumptions. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here. No change without its tests; a bug fix ships a regression test that fails first; a test is not evidence until seen red, its failure message made legible before the code; red/green/refactor and the outside-in loop where declared; levels kept apart; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and replace peers, never internals; an external fake is pinned by live observation; construction and outbound calls go through production wiring; exact about the claim, silent about the rest; queries allowed, commands expected; async tests wait for success, never run ahead of it; a hard-to-write test reports a design defect; hygiene — no committed focus/skip, no tuning to the gate, determinism, test-only secrets. Use when writing or reviewing tests, in any language.
 ---
 
 # Testing discipline (universal)
@@ -28,58 +28,86 @@ project uses it, apply that skill on top of this one.
 
 1. **Find the project's declared school.** Read the host project's rules
    for it before deciding what to fake — and while there, find whether the
-   project declares test-driven development. No declaration but a
-   consistent suite → follow the suite and propose recording the choice;
-   neither → propose one, get it recorded, then write tests — see
-   [references/schools.md](references/schools.md).
-2. **Ship the tests with the change, and see each one red before trusting
+   project declares test-driven development and an outside-in outer loop.
+   No declaration but a consistent suite → follow the suite and propose
+   recording the choice; neither → propose one, get it recorded, then
+   write tests — see [references/schools.md](references/schools.md).
+2. **Know which level you are writing at.** A test that answers "does the
+   whole system do this?", one that answers "does our code work against
+   code we cannot change?", and one that answers "does this object do the
+   right thing?" have different subjects, speeds and lifecycles; never
+   let one grow quietly inside another — see
+   [references/test-levels.md](references/test-levels.md).
+3. **Ship the tests with the change, and see each one red before trusting
    it.** A code change without its tests is not done; every bug fix ships
    a regression test that reproduces the defect and fails before the fix;
-   and a test that has never been observed to fail for its own reason has
-   not yet been verified — see
+   a test that has never been observed to fail for its own reason has not
+   yet been verified — see
    [references/tdd-cycle.md](references/tdd-cycle.md).
-3. **Where the project practises test-driven development, work the
+4. **Read the failure before writing the code that fixes it.** The cycle
+   has four steps — fail, *report*, pass, refactor — and the report step
+   happens while the failure is in front of you: if the message would not
+   tell a stranger what is wrong, fix the test until it would — see
+   [references/test-diagnostics.md](references/test-diagnostics.md).
+5. **Where the project practises test-driven development, work the
    cycle.** One test at a time off a written list, never more than one red
    at once, the shortest route to green, then remove the duplication —
    including the duplication between the test and the code — see
    [references/tdd-cycle.md](references/tdd-cycle.md).
-4. **Structure and name each test so it reads as a claim.**
+6. **Where the project works outside-in, open each feature with a failing
+   acceptance test and grow inward.** Simplest success case first, from
+   the inputs toward the outputs, naming each collaborator from its
+   client's point of view as the tests reach it; progress-measuring tests
+   are kept in a suite of their own — see
+   [references/outside-in-cycle.md](references/outside-in-cycle.md).
+7. **Structure and name each test so it reads as a claim.**
    Arrange/Act/Assert, one act step, no branching, a name that states the
    behaviour and the condition, assertions that pin the error *and* its
    condition, data whose expected value visibly follows from the inputs —
    see
    [references/structure-and-naming.md](references/structure-and-naming.md).
-5. **Assert observable behaviour, never implementation detail.** Judge the
+8. **Keep the arrange step from swallowing the test.** State only the
+   fields the scenario depends on and default the rest; move the
+   mechanics into builders and helpers that take a builder rather than
+   its arguments — see
+   [references/test-data-builders.md](references/test-data-builders.md).
+9. **Assert observable behaviour, never implementation detail.** Judge the
    test by protection against bugs, resistance to refactoring, feedback
    speed and maintenance cost; prefer output verification to state
-   verification and state verification to asserting interactions — see
+   verification and state verification to asserting interactions; where
+   you do assert an interaction, specify precisely what must happen and
+   no more — see
    [references/unit-test-value.md](references/unit-test-value.md).
-6. **Isolate the unit and fake only the seams the code exposes.** No
-   network, disk, database or wall-clock dependence; time is injected, not
-   slept through; a stub is never asserted on — see
-   [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
-7. **Pin an external system's behaviour by observing it, not by reading
-   about it.** When the property under test belongs to a system this
-   project does not own, the fake's contract is established by a probe
-   against the real system and then reused as a fixture — see
-   [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
-8. **Exercise the production wiring, not a hand-built copy of it.** How a
-   collaborator gets constructed, and what a client substitutes on the way
-   out of a call, are only testable where the product itself does them —
-   see [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
-9. **Derive the case set, the subject and the dimensions from the
-   specification.** Never from the artifact under test: a mutation battery
-   can score healthy while the specification stays uncovered — see
-   [references/hygiene.md](references/hygiene.md).
-10. **When the test is hard to write, fix the design first.** A long
-    arrange step, setup that resists being shared, a slow or fragile test,
-    or the urge to reach private state is a report on the product, not an
-    inconvenience in the test file — see
-    [references/tests-as-design-feedback.md](references/tests-as-design-feedback.md).
-11. **Keep the suite honest.** No committed focus/skip markers, no test
-    tuned to the gate, no non-determinism, no real credentials — see
+10. **Isolate the unit and replace peers, never internals.** No network,
+    disk, database or wall-clock dependence; time is injected, not slept
+    through; a stub is never asserted on — see
+    [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
+11. **Pin an external system's behaviour by observing it, not by reading
+    about it.** When the property under test belongs to a system this
+    project does not own, the fake's contract is established by a probe
+    against the real system and then reused as a fixture — see
+    [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
+12. **Exercise the production wiring, not a hand-built copy of it.** How a
+    collaborator gets constructed, and what a client substitutes on the way
+    out of a call, are only testable where the product itself does them —
+    see [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
+13. **Where the test is asynchronous, wait for success and time out for
+    failure** — never sleep, never assert a state the system was already
+    in, and separate what an object computes from how it schedules — see
+    [references/async-and-concurrency.md](references/async-and-concurrency.md).
+14. **Derive the case set, the subject and the dimensions from the
+    specification.** Never from the artifact under test: a mutation battery
+    can score healthy while the specification stays uncovered — see
     [references/hygiene.md](references/hygiene.md).
-12. **Let the static checks and the tests divide the work.** Where the
+15. **When the test is hard to write, fix the design first.** A long
+    arrange step, setup that resists being shared, a slow or fragile test,
+    a hidden dependency, or the urge to reach private state is a report on
+    the product, not an inconvenience in the test file — see
+    [references/tests-as-design-feedback.md](references/tests-as-design-feedback.md).
+16. **Keep the suite honest.** No committed focus/skip markers, no test
+    tuned to the gate, no flickering tolerated, no real credentials — see
+    [references/hygiene.md](references/hygiene.md).
+17. **Let the static checks and the tests divide the work.** Where the
     project has a type checker, do not test what it already forbids, and do
     test the guards, bypasses and type-level utilities it cannot verify —
     see [references/types-and-tests.md](references/types-and-tests.md).
@@ -91,11 +119,17 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Situation | Read |
 |-----------|------|
 | Deciding what "isolation" means here, which collaborators get a double, what a unit is, what the project rules must declare | [references/schools.md](references/schools.md) |
+| Deciding which level a test belongs to, what an integration test is for, where a test that reaches outside the process goes | [references/test-levels.md](references/test-levels.md) |
 | Deciding when a test gets written, what makes it verified, which test to write next, how to reach green, how big a step to take, how to end a session | [references/tdd-cycle.md](references/tdd-cycle.md) |
-| The test is painful to write, slow, fragile, or wants access it should not have, and you are deciding whether the test or the code is wrong | [references/tests-as-design-feedback.md](references/tests-as-design-feedback.md) |
+| Starting a feature, deciding what its first test is, kick-starting testing on a new or existing system, discovering the collaborators a unit needs | [references/outside-in-cycle.md](references/outside-in-cycle.md) |
+| The test failed and the message does not say why; choosing values that explain their own role in a report | [references/test-diagnostics.md](references/test-diagnostics.md) |
+| The test is painful to write, slow, fragile, wants access it should not have, or its subject is reached only through a global — and you are deciding whether the test or the code is wrong | [references/tests-as-design-feedback.md](references/tests-as-design-feedback.md) |
 | Laying out a test, naming it, asserting an error, choosing its data, grouping similar cases, choosing between example-based and property-based cases | [references/structure-and-naming.md](references/structure-and-naming.md) |
-| Judging whether a test is worth keeping, choosing between output/state/interaction verification, deciding what deserves a unit test at all | [references/unit-test-value.md](references/unit-test-value.md) |
+| The arrange step is long, or repeated across many tests with small variations | [references/test-data-builders.md](references/test-data-builders.md) |
+| Judging whether a test is worth keeping, choosing between output/state/interaction verification, deciding how precisely an interaction should be pinned, deciding what deserves a unit test at all | [references/unit-test-value.md](references/unit-test-value.md) |
 | Deciding what a double may stand for, how a fake's contract is established, testing construction or an outgoing call | [references/isolation-and-fakes.md](references/isolation-and-fakes.md) |
+| The test involves threads, callbacks, polling, timeouts, or a system that schedules its own work | [references/async-and-concurrency.md](references/async-and-concurrency.md) |
+| Testing a persistence mapper, a serializer, or anything else that maps your objects onto infrastructure you do not own | [references/adapters-and-persistence.md](references/adapters-and-persistence.md) |
 | Choosing the case set, judging whether coverage or a mutation score means anything, deciding whether a test may be deleted, reviewing suite hygiene | [references/hygiene.md](references/hygiene.md) |
 | A test wants to reach a private member, private state, a partially replaced type, the clock, or a shared setup hook | [references/anti-patterns.md](references/anti-patterns.md) |
 | The project has a static type checker and you are deciding what still needs a test | [references/types-and-tests.md](references/types-and-tests.md) |
@@ -109,7 +143,9 @@ Do not preload the whole skill; open a file only when its trigger fires.
   regression test that fails before the fix and passes after it.
 - A test that has never been observed to fail for its own reason is not
   yet evidence. Write it first, or break the behaviour it names and watch
-  it go red; an unexpected green is investigated, never enjoyed.
+  it go red; an unexpected green is investigated, never enjoyed. Read the
+  failure message and make it legible **before** writing the code that
+  turns it green.
 - Where the project practises test-driven development: work a written test
   list one item at a time, never hold more than one red test, pick the next
   test for what it teaches against what you can make pass, take the
@@ -117,12 +153,24 @@ Do not preload the whole skill; open a file only when its trigger fires.
   in the cycle, not a tuned test), then remove the duplication — including
   between the test and the code. Step size is chosen deliberately, not by
   habit. Leave a shared branch green; a bookmark left red stays local.
+- Where the project works outside-in: a feature opens with a failing
+  acceptance test written in the domain's vocabulary and closes when it
+  passes; the first test of a feature is its simplest *success* case;
+  development runs from the inputs toward the outputs; collaborators are
+  named from the client's point of view before they exist. Tests that
+  measure progress live in a suite of their own — never as silenced tests
+  in a suite that must be green.
+- Keep the levels apart: a unit test that acquires a real connection, file
+  or clock has changed level and must be moved, renamed and given the
+  lifecycle its level carries.
 - One scenario per test, one act step, no branching, Arrange/Act/Assert (or
   Given/When/Then), a name that states the behaviour and the condition as a
   fact — never `test_2`, `works`, or the name of the method under test.
-- A test that is hard to write, slow, or breaks for reasons it does not
-  assert is reporting a defect in the design; change the design first and
-  the test second, and record the cost when you cannot.
+- A test that is hard to write, slow, breaks for reasons it does not
+  assert, or can only reach its subject through a global is reporting a
+  defect in the design; change the design first and the test second, and
+  record the cost when you cannot. Tooling that breaks a hidden dependency
+  without changing the code spends the feedback the test was giving you.
 - A test is worth its place only if it scores on all four attributes at
   once: protection against bugs, resistance to refactoring, feedback speed,
   maintenance cost. Resistance to refactoring is the one never traded away.
@@ -133,13 +181,27 @@ Do not preload the whole skill; open a file only when its trigger fires.
   interaction only when it crosses the application boundary and its effect
   is visible outside — and then assert it at the last seam before the call
   leaves the process, in both directions.
+- **Specify precisely what should happen and no more.** Be exact about the
+  outcome the scenario drives and silent about everything it does not.
+  Allow queries any number of times; expect commands exactly as often as
+  the contract says. Keep required interactions few, match arguments only
+  as tightly as the scenario constrains them, and pin call order only
+  where the order is part of the contract.
 - A unit test touches nothing external: no network, disk, database, or
   wall-clock dependence. Control time by injecting it, preferably as a
   value, never by sleeping and never through an ambient global.
-- Fake the seams the code exposes (a parameter, an interface, an injected
-  dependency) — never someone else's internals, and only types you own.
-  Patching whatever the language lets you patch is a last resort, used only
-  when no seam exists, with a justifying comment.
+- Replace **peers**, never internals. Fake the seams the code exposes (a
+  parameter, an interface, an injected dependency) — never someone else's
+  internals, and only types you own. Prefer a named role to a concrete
+  type: doubling a class leaves the relationship unnamed and binds the
+  subject to more of that class than it uses. Patching whatever the
+  language lets you patch is a last resort, used only when no seam exists,
+  with a justifying comment.
+- Distinguish the three kinds of peer: a **dependency** is required at
+  construction and has no safe default; a **notification** and an
+  **adjustment** are defaulted and overridden per test. A construction
+  argument list that has grown unwieldy is usually adjustments treated as
+  dependencies, or an unnamed concept waiting to be extracted.
 - Never assert an interaction with a stub: a call made to obtain input is a
   step toward the result, not the result.
 - A fake's contract for a system this project does not own is established
@@ -148,6 +210,15 @@ Do not preload the whole skill; open a file only when its trigger fires.
 - A property that lives in the product's own construction or on the way out
   of a call is tested through the production factory or entry point, never
   through an instance the test assembled itself.
+- An asynchronous test waits for success and treats the timeout as the
+  failure — never a fixed sleep, and never an assertion the system could
+  already have satisfied before it started. Keep the timeout in one place,
+  separate what an object computes from how it schedules, and pull
+  self-scheduled activity out to somewhere a test can drive it.
+- Generic mapping code is exercised with purpose-built types, not with
+  production domain types: the coupling blocks refactoring, and a domain
+  type that later loses the feature under test leaves the suite green over
+  a case that no longer exists.
 - The case set, the subject under test and the dimensions varied all come
   from the specification, never from the artifact under test; a surviving
   mutation is evidence of a missing dimension, and a healthy mutation score
@@ -156,7 +227,9 @@ Do not preload the whole skill; open a file only when its trigger fires.
 - Assert the expected value, not a property that many wrong answers share.
   Where the specification derives the expected value from the inputs, write
   that derivation into the test over literals the test owns; never let one
-  constant stand for two different things in the same case.
+  constant stand for two different things in the same case. Where a value
+  stands for a concept — "nothing found", "not supplied", "irrelevant
+  here" — name the concept rather than writing its representation.
 - Test the subject as a black box; use coverage to find untested areas, not
   as a target. Trivial code needs no test, and better no test than a bad
   one. Test the conditionals, loops, operations and dispatch **you** wrote
@@ -173,12 +246,15 @@ Do not preload the whole skill; open a file only when its trigger fires.
   passes", no check disabled, no snapshot refreshed without understanding
   the cause.
 - Tests are deterministic — no reliance on iteration-order accidents,
-  wall-clock time, unpinned random seeds, or test execution order.
+  wall-clock time, unpinned random seeds, or test execution order. A test
+  that fails intermittently is broken, not mostly working.
 - Secrets in tests are test-only values, generated or signed for the test;
   never a real credential, and never a verification mocked away to avoid
   one.
 - No production code exists only to serve tests: no test-environment
-  switches, no members widened for a test.
+  switches, no members widened for a test. Reporting that operators depend
+  on is a feature and is test-driven through a seam you own; tracing you
+  added for yourself is scaffolding and is not.
 - Keep this skill universal: language spellings, runner mechanics,
   framework and architecture choices belong to the host project or to the
   dedicated skills — never here. Project instructions always take

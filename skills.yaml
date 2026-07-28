@@ -85,9 +85,9 @@ skills:
   # __test__/evals/testing-discipline/cases.json) runs against a real harness.
   - name: testing-discipline
     path: skills/testing-discipline
-    version: 1.2.0
+    version: 1.3.0
     status: draft
-    summary: Universal rules for writing and reviewing tests - the two unit-testing schools (London/mockist and classical/Detroit) declared per project, the red/green/refactor cycle declared the same way, the evidence rule that a test counts only once seen red, tests read as design feedback, structure, naming and data, test value and verification styles, isolation, fake provenance, wiring-level evidence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
+    summary: Universal rules for writing and reviewing tests - the two unit-testing schools (London/mockist and classical/Detroit) declared per project, the red/green/refactor cycle and the outside-in outer loop declared the same way, the evidence rule that a test counts only once seen red and its failure message is legible, the three levels of testing, tests read as design feedback, structure, naming, data and builders, test value, verification styles and interaction precision, isolation, peers versus internals, fake provenance, wiring-level evidence, asynchrony and concurrency, adapters and persistence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
     license: MIT
     content_policy:

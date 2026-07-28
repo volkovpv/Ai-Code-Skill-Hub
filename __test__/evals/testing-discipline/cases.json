@@ -442,6 +442,158 @@
           "yes, delete one"
         ]
       }
+    },
+    {
+      "id": "async-test-must-not-run-ahead-of-the-system",
+      "kind": "behavior",
+      "requirement": "An asynchronous test that waits for a state the system was already in can pass before the system has started; it must first wait for an intermediate state it could not already have been in.",
+      "prompt": "Our holdings start at zero. This end-to-end test sends a BUY of 10 and a SELL of 10 for the same stock on the same day, then waits until the holding equals 0 and passes. It has been green since the day it was written. Is that test actually establishing anything?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(before|already|runaway|ahead|never started|initial state)",
+          "(?i)(intermediate|wait until.*10|first assert|equals 10)"
+        ],
+        "stdout_not_contains": [
+          "the test looks correct",
+          "nothing wrong with that test"
+        ]
+      }
+    },
+    {
+      "id": "query-call-count-is-not-pinned-but-command-count-is",
+      "kind": "behavior",
+      "requirement": "Allow queries any number of times; expect commands exactly as often as the contract says. Pinning a query's call count breaks on caching or reordering that changed no observable behaviour.",
+      "prompt": "This test requires that the price catalogue is asked for a price exactly once and that the audit trail records the failure exactly once. We then added a cache in front of the catalogue and the test went red, though nothing a caller can see changed. Which of the two counts should the test have been pinning?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(quer|read|lookup).*(any number|not pin|allow|do not constrain)",
+          "(?i)(command|side effect|audit|record).*(exactly|once|expect)"
+        ],
+        "stdout_not_contains": [
+          "pin both call counts",
+          "the cache is the problem"
+        ]
+      }
+    },
+    {
+      "id": "generic-mapping-code-is-tested-with-purpose-built-types",
+      "kind": "behavior",
+      "requirement": "Generic reflective mapping code is exercised with purpose-built test types, not production domain types: the coupling blocks refactoring and, worse, the test rots silently when the domain type loses the feature it was covering.",
+      "prompt": "Our serializer test round-trips a real domain event because that type happened to have both a transient and a non-transient field, so it covered every path. Someone has just removed the transient field from that domain type for unrelated reasons and the test still passes. What should the test have been built on?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(purpose-built|dedicated|test-only|fixture type|its own type)",
+          "(?i)(no test fail|silent|still passes|covers nothing|stopped covering)"
+        ],
+        "stdout_not_contains": [
+          "keep using the domain type",
+          "the test is still fine"
+        ]
+      }
+    },
+    {
+      "id": "persistence-test-cleans-at-the-start-and-commits",
+      "kind": "behavior",
+      "requirement": "Persistent state is cleaned at the start of a test, not the end; and a test is not isolated by rolling its transaction back, because a rollback never exercises the commit where constraints and flushes fire.",
+      "prompt": "Our persistence tests each open a transaction, do their work, and roll back at the end so the database is left untouched. A defect just reached production where a foreign-key constraint rejects the write on commit. Is our isolation strategy the reason the suite missed it, and where should the cleanup live?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(commit|constraint|flush|never exercis)",
+          "(?i)(start|beginning|before the test|on the way in)"
+        ],
+        "stdout_not_contains": [
+          "rollback isolation is fine",
+          "clean up at the end"
+        ]
+      }
+    },
+    {
+      "id": "failure-message-is-fixed-before-the-production-code",
+      "kind": "behavior",
+      "requirement": "The cycle has four steps - fail, report, pass, refactor. The failure message is read and made legible while the failure is in front of you, before the code that turns it green is written.",
+      "prompt": "My new test is red exactly as intended, but the runner just prints 'expected 16301 but was 16103' and there are three assertions in the test, so I cannot tell which one fired. Should I get on with the production code and tidy the message later?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(before|now|first|while)",
+          "(?i)(message|diagnos|report|which value|name the)"
+        ],
+        "stdout_not_contains": [
+          "tidy it later",
+          "get on with the production code"
+        ]
+      }
+    },
+    {
+      "id": "hidden-dependency-is-injected-rather-than-intercepted",
+      "kind": "behavior",
+      "requirement": "A collaborator reachable only through a global or static accessor is a hidden dependency; the answer is to pass it in, not to reach for tooling that intercepts it without changing the code.",
+      "prompt": "The class I need to test builds its own timestamps from a static clock accessor, so I cannot control time. I found a library that can intercept that static call from the test without touching the production class. Should I use it?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(inject|pass (it )?in|dependenc|constructor|explicit)",
+          "(?i)(feedback|design|hidden|signal)"
+        ],
+        "stdout_not_contains": [
+          "yes, use the interception library",
+          "that is the right tool here"
+        ]
+      }
+    },
+    {
+      "id": "in-progress-acceptance-test-is-a-separate-suite-not-a-skip",
+      "kind": "behavior",
+      "requirement": "A new acceptance test is expected to fail until its feature lands, so it lives in a separate in-progress suite - never as a silenced test inside a suite that must be green.",
+      "prompt": "We work outside-in, so each feature opens with an acceptance test that fails for days. To keep the build green a colleague marked the in-progress one as skipped and committed it. Our rules also say no skipped tests may be committed. How do we hold both?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(separate|its own suite|in.progress suite|different suite)",
+          "(?i)(regression|always green|build)"
+        ],
+        "stdout_not_contains": [
+          "committing the skip is fine",
+          "make an exception to the rule"
+        ]
+      }
+    },
+    {
+      "id": "outside-in-loop-is-not-imposed-on-a-project-that-has-not-declared-it",
+      "kind": "negative",
+      "requirement": "The outer acceptance loop applies where the host project declares outside-in development or the London school; the skill does not mandate acceptance-test-first on a project that declared neither.",
+      "prompt": "Our project rules declare the classical school and say nothing about acceptance tests. I am adding one unit test to an existing domain service. Do I have to write a failing end-to-end acceptance test first?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(declar|project|rules|not required)"
+        ],
+        "stdout_not_contains": [
+          "you must start with an acceptance test",
+          "every feature requires an acceptance test"
+        ]
+      }
+    },
+    {
+      "id": "precise-assertion-is-not-mistaken-for-asserting-everything",
+      "kind": "negative",
+      "requirement": "Being exact about the outcome under test does not license re-asserting values the test's inputs never drove, or comparing a whole structure when one field is the point.",
+      "prompt": "My test drives one field of the result - the strike price - and asserts it equals 92. A reviewer says I should assert the whole returned object field by field, including the transaction id and the timestamp, to be thorough. Is that an improvement?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not|avoid|only|silent)",
+          "(?i)(drive|driven|scenario|relevant|brittle|unrelated)"
+        ],
+        "stdout_not_contains": [
+          "yes, assert the whole object",
+          "the reviewer is right"
+        ]
+      }
     }
   ]
 }

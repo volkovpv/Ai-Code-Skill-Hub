@@ -23,6 +23,53 @@ claim is justified once the decision is made. See
   share — a mutable global, a database, a staging environment — always is.
   Whether such a collaborator is nonetheless replaced is the school's call.
 
+## Peers, not internals
+
+Before asking *what may this double do*, ask *is this thing even eligible
+to be replaced*. Draw one line around the subject:
+
+- **Peers** are the things the subject talks to directly — passed in,
+  declared as a parameter, injected. They are part of how the subject is
+  used, so replacing one changes nothing about what the subject is.
+- **Internals** are what the subject uses to do its job: the data
+  structures it holds, the helpers it constructs for itself, the private
+  steps of its algorithm. Replacing one binds the test to a decision the
+  subject is entitled to change.
+
+**Only peers are ever replaced.** A test that has to reach past the
+subject's surface to substitute something has not found a seam — it has
+found the absence of one, and the answer is a design change rather than a
+more powerful substitution facility. This holds under both schools; they
+disagree about *which* peers are replaced, never about peers versus
+internals.
+
+### The three kinds of peer
+
+The distinction is worth making because it decides how the peer is
+supplied, and therefore what a test has to arrange:
+
+| Kind | What it is | Supplied how | Safe default? |
+|---|---|---|---|
+| **Dependency** | a service the subject cannot function without | required at construction | **none exists** |
+| **Notification** | someone kept informed of what the subject did; fire-and-forget, the subject neither knows nor cares who listens | construction or later | yes — no listeners |
+| **Adjustment** | something that tunes the subject's behaviour to its context: a policy, a strategy, a component part | construction or later | yes — the common choice |
+
+- **A dependency has no safe default, so it is required at
+  construction.** Constructing an object and then completing it by
+  setting properties is brittle: the caller has to remember, and adding a
+  new dependency leaves every existing call site compiling while
+  producing an invalid object.
+- **Notifications and adjustments may be defaulted and overridden**, which
+  is what stops a constructor growing without bound. A constructor whose
+  argument list has become unwieldy is often a list of *adjustments* being
+  treated as dependencies — see
+  [tests-as-design-feedback.md](tests-as-design-feedback.md).
+- The classification is contextual, not intrinsic. The same audit trail
+  is a dependency in a system where nothing may exist unaudited, and a
+  notification in a system where auditing is optional. A useful test: a
+  notification is one-way — it may not return a value or fail the caller,
+  because other listeners are behind it.
+
 ## The two kinds of double, and what each may be used for
 
 Whatever a runtime calls them — dummy, stub, fake, spy, mock — every double
@@ -51,7 +98,16 @@ allowed to assert.
 - **Double only types you own.** Wrap a third-party surface in an adapter of
   your own and double the adapter: you cannot vouch for a double of code
   whose behaviour you have not observed, and the adapter also confines the
-  blast radius of an upstream API change to one file.
+  blast radius of an upstream API change to one file. The adapter itself
+  is then covered by integration tests against the real thing, and the
+  only double in *those* is the callback interface you defined — see
+  [test-levels.md](test-levels.md).
+- **Two narrow exceptions.** A double of a third-party surface is worth
+  it to reach a path the real thing almost never takes (see *sabotage*
+  below), and to pin a sequence of calls whose order is part of a
+  contract you must honour — a rollback after a failure, say. Both are
+  rare enough that a suite carrying many such tests is telling you the
+  adapter boundary is in the wrong place.
 
 ## Control time, never wait for it
 
@@ -64,6 +120,11 @@ allowed to assert.
 - Asynchronous tests run the real scheduler of the platform and give every
   awaited assertion a deadline, so a hung await fails the test instead of
   hanging the suite.
+- **A system that schedules its own work internally cannot be tested
+  deterministically at all**, however carefully the clock is injected —
+  the scheduling itself has to come from outside. That, and the rest of
+  what asynchrony demands of a test, is in
+  [async-and-concurrency.md](async-and-concurrency.md).
 
 ## What to fake
 
@@ -78,6 +139,27 @@ allowed to assert.
 - The more a fake knows about the internals of what it replaces, the more
   it tests itself. Prefer the narrowest seam that still expresses the
   dependency.
+- **Double a named role, not a concrete type.** Where the language offers
+  it, standing a double directly in for a class — by subclassing it, or
+  by whatever facility replaces its methods — costs two things. First,
+  the relationship between the two objects stays unnamed: nothing in the
+  code says *what* the subject needs from that class, so the question has
+  to be answered again by every future reader, and any other use of the
+  same relationship goes unnoticed. Second, it overspecifies: the subject
+  is now declared to depend on the whole class when it uses two of its
+  operations, and a change to any of the others is a change to something
+  the subject supposedly depends on. Extracting and naming the role the
+  subject actually needs fixes both, and the act of finding the name is
+  usually where the domain concept turns up.
+- **Do not override a type's internal features, ever** — that pins the
+  test to the current implementation — and do not widen something's
+  visibility so it can be overridden. When there is no visible surface to
+  stand in for, the code is asking to be split into smaller composable
+  pieces; see [anti-patterns.md](anti-patterns.md) for the partial-double
+  case.
+- Where legacy or third-party code leaves no alternative, doubling a
+  concrete type is a compromise to be recorded and worked out of, on the
+  same terms as patching below.
 
 ## Two shapes worth knowing
 

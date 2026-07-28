@@ -5,6 +5,110 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.3.0] — 2026-07-28
+
+### `testing-discipline` 1.2.0 → 1.3.0: the London school gets its process, from *Growing Object-Oriented Software, Guided by Tests*
+
+The skill declared itself neutral between the two unit-testing schools and
+was not. Every operational file it carried — the cycle, the value model,
+the anti-patterns — was calibrated against the classical school's primary
+sources. London appeared only as a catalog entry that named the school's
+cost ("replacing every collaboration binds the tests to *how* the unit
+reaches its result") and then offered nothing to pay it down with: no
+outer loop, no account of where the doubled collaborators come from, and
+no rule for how tightly an interaction may be pinned. This release adds
+the missing half, calibrated against Freeman and Pryce's *Growing
+Object-Oriented Software, Guided by Tests* — the London school's own
+primary source — and writes down the boundaries where its rules meet the
+classical ones already in place.
+
+Six new reference files:
+
+- **`references/outside-in-cycle.md`** — the outer loop, applied where the
+  project declares London or outside-in development. A **walking
+  skeleton** built and deployed end-to-end before the first feature; each
+  feature opened by a failing acceptance test written in the domain's
+  vocabulary; the suite that **measures progress kept separate from the
+  suite that catches regressions**; the first test of a feature being its
+  simplest *success* case; development running **from the inputs toward
+  the outputs**; and **interface discovery** — the mechanism the school's
+  heavy use of doubles actually serves, in which a collaborator is named
+  from its client's point of view (*"if this worked, who would know?"*)
+  before any implementation of it exists.
+- **`references/test-levels.md`** — acceptance, integration and unit as
+  three different questions, with the asymmetry that decides why none
+  substitutes for another (*running* end-to-end tests reports external
+  quality; *writing* unit tests reports internal quality). A unit test
+  that acquires a real connection, file or clock has changed level and is
+  moved rather than tolerated.
+- **`references/test-diagnostics.md`** — **the cycle has four steps, not
+  three**: fail, *report*, pass, refactor. The report step runs before any
+  production code exists, because a failure nobody can read is a test that
+  gets deleted the first time it fires under deadline. Plus self-describing
+  values, obviously canned values, tracer objects, and checking
+  interactions before value assertions so the report names the cause
+  rather than the consequence.
+- **`references/test-data-builders.md`** — when a factory method is
+  enough and when it is not, safe (not realistic) defaults, and two traps
+  the one-line "prefer builders" advice could not carry: a reused
+  chainable builder **silently leaks one object's override into the next**
+  once two uses diverge, and a shared helper that takes *values* grows one
+  overload per variation — pass the builder through instead.
+- **`references/async-and-concurrency.md`** — separating what an object
+  computes from how it schedules; wait for success and time out for
+  failure; sampling versus listening and the **lost update** a poll can
+  miss; the stress-test procedure that requires watching the test fail
+  dependably first; flickering treated as breakage. Its load-bearing rule
+  ships a reproduction: a **runaway test** that waits for a state the
+  system was already in passes before the system has started, and stays
+  green when the work never happens at all.
+- **`references/adapters-and-persistence.md`** — clean persistent state at
+  the *start* of a test (so a failure leaves evidence and the next test
+  still isolates); write transaction boundaries into the test rather than
+  isolating by rollback, which never exercises the commit where
+  constraints fire; round-trip every reflective mapping; and do not
+  exercise generic mapping code with production domain types — the second
+  cost is **silent rot**, where the domain type loses the field the test
+  thought it was covering and nothing fails.
+
+Existing files gained the rules that make the above coherent:
+
+- `unit-test-value.md` — **specify precisely what should happen and no
+  more**: allow queries, expect commands; keep required interactions few;
+  match arguments only as tightly as the scenario constrains them; pin
+  call order only where the order is the contract; ignoring an irrelevant
+  peer is a power tool, and a *chain* of ignored peers is a design smell.
+- `isolation-and-fakes.md` — **peers, not internals** as the substitution
+  boundary, the three kinds of peer (a **dependency** required at
+  construction with no safe default, against **notifications** and
+  **adjustments** that carry defaults), and the case against doubling a
+  concrete type at all: the relationship stays unnamed and the subject is
+  bound to more of that type than it uses.
+- `tests-as-design-feedback.md` — five more symptoms (a hidden dependency,
+  a long construction argument list, an argument list that will not group,
+  a test class that falls into unrelated slices, a test in which every
+  interaction is required), plus **support reporting is a feature and is
+  test-driven; diagnostic tracing is scaffolding and is not**.
+- `structure-and-naming.md` — write the *information*, not its
+  representation; and the other half of "name the expected value": **exact
+  about the claim, silent about the rest**.
+- `hygiene.md` — a flickering test is broken, not mostly working; an
+  in-progress acceptance test is a separate suite, never a silenced test
+  in one that must be green.
+- `tdd-cycle.md`, `schools.md`, `anti-patterns.md` — the report step, the
+  routes into the new files, and the round-trip-mapping exception to
+  "never reach into private state", argued and bounded.
+
+Four collisions with the pre-existing rules are written down rather than
+left for a reader to trip over: *degenerate first case* (first test of an
+**operation**) against *simplest success case* (first test of a
+**feature**); the in-progress acceptance suite against no-committed-skips;
+naming the expected value against not over-asserting; and reflective
+round-tripping against the private-state prohibition. `SKILL.md`, the
+`README.md` and the OpenAI adapter were updated to match, and
+`__test__/skills/test_testing_discipline.py` grew eight test classes
+pinning the new rules, their reproductions and their boundaries.
+
 ## [3.2.0] — 2026-07-28
 
 ### `testing-discipline` 1.1.0 → 1.2.0: the process axis, from the classical school's primary source

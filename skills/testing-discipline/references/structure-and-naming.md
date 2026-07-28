@@ -28,7 +28,9 @@ whether the product or the test is wrong.
   reader which scenarios are alternatives of one another.
 - Keep the arrange step readable: **prefer factories or builders over
   copy-pasted fixture blobs**, so a test states only the fields that
-  matter to its scenario and inherits the rest.
+  matter to its scenario and inherits the rest. Which of the two, and the
+  traps in each, are in
+  [test-data-builders.md](test-data-builders.md).
 - **Mark the subject.** Give the object under test a name that says it is
   the subject rather than one of its dependencies, so a reader of a busy
   arrange step never has to work out which is which.
@@ -93,6 +95,18 @@ whether the product or the test is wrong.
   50, say 50. Where a whole class of values really is acceptable, that
   class is what the specification says and what the assertion should
   express — not the first predicate that happens to hold.
+- **…and say nothing about what the scenario does not drive.** The rule
+  above governs the outcome under test; its other half governs
+  everything else in the same result. Do not assert values the test's
+  inputs did not determine, do not re-assert behaviour another test
+  already pins, and do not compare a whole structure when one field is
+  the point — each of those is a way for an unrelated change to turn this
+  test red. The pair reads as one rule: **exact about the claim, silent
+  about the rest.** An assertion over text is the common case — pin the
+  information that must be present rather than the exact rendering,
+  unless the rendering is itself what is specified. When pinning text
+  precisely turns out to be hard, that is often a missing structured type
+  whose conversion to text could be tested on its own.
 
 ## The data a test carries
 
@@ -129,6 +143,19 @@ The values in a test are read by people. Choose them for what they reveal.
   one in parallel, or refactoring a computation that must produce
   bit-identical answers. Elsewhere it obscures why an expected value is
   what it is.
+- **Write the information, not its representation.** Where a value stands
+  for a *concept* — "no customer was found", "the field was not supplied",
+  "this argument is irrelevant here" — give the concept a name the test
+  owns and use the name. A test that writes the bare representation
+  instead says nothing about why that value is there, and binds itself to
+  a decision made elsewhere: when the concept is later represented
+  differently, every such test has to be found and edited, and any that
+  the type system does not catch keep compiling while meaning something
+  else. Named once, the change is one line.
+- **Give a value content that states its role wherever the type allows
+  it**, and choose values that could not have come from the real system
+  where it does not. Both are diagnostic decisions as much as readability
+  ones — see [test-diagnostics.md](test-diagnostics.md).
 
 ## Grouping similar cases
 
