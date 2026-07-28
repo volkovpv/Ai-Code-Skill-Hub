@@ -45,9 +45,7 @@ The core discipline it enforces:
   with an explicit ban list for legacy forms (`Optional`, `typing.List`,
   `pytz`, `get_event_loop`, …);
 - centralized `os.environ` access, no `print()` in shipped code, no
-  `assert` as runtime validation;
-- tests land in the same change as the code; every bug fix ships a
-  regression test.
+  `assert` as runtime validation.
 
 ## Key features
 
@@ -62,9 +60,9 @@ The core discipline it enforces:
   (`# skill-check-ignore: PY-ENV -- <reason>`).
 - **Layered knowledge.** Beyond `references/` (typing & style, type design,
   generics & protocols, security, concurrency, runtime correctness,
-  modern-python version gates, lint-clean, errors/config/logging, testing)
-  the skill ships verified `knowledge/` patterns and pitfalls, and
-  calibrated `data/` samples for the checker.
+  modern-python version gates, lint-clean, errors/config/logging, and a
+  Python test-mechanics spelling map) the skill ships verified `knowledge/`
+  patterns and pitfalls, and calibrated `data/` samples for the checker.
 
 ## How to install
 
@@ -92,8 +90,8 @@ The skill covers the *language*; your project rules (for Claude Code:
   naming/layout conventions, and any deliberate deviations (e.g. PEP 8
   truthiness for collections instead of explicit emptiness checks).
   Project instructions always take precedence over the skill.
-- **Leave to the skill:** the typing discipline, error handling, lint-clean
-  and testing rules — no need to restate them in your rules; reference the
+- **Leave to the skill:** the typing discipline, error handling and
+  lint-clean rules — no need to restate them in your rules; reference the
   skill instead ("Python style: see the python-coding skill").
 - The skill's checker is a backstop, not the authority: the agent still
   runs your project's real `lint`/`typecheck`/`test`, so make sure your

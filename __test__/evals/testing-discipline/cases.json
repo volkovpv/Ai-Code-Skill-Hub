@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "skill": "testing-discipline",
+  "platforms": ["claude", "codex", "opencode", "universal"],
+  "cases": [
+    {
+      "id": "trigger-on-writing-tests-for-a-change",
+      "kind": "trigger",
+      "requirement": "Activate whenever tests are being written or reviewed, whatever the code under test is written in.",
+      "prompt": "I just finished a change and I'm about to write its tests. What does each test have to establish, and how should I structure it?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(one scenario|arrange|act|assert|given)", "(?i)(name|behaviour|behavior|condition)"]
+      }
+    },
+    {
+      "id": "trigger-applies-to-an-unfamiliar-language-and-runner",
+      "kind": "trigger",
+      "requirement": "The skill is language- and runner-neutral: it applies to a stack it names nowhere in its own text.",
+      "prompt": "Our services are written in Go and we use the standard library testing package. Do these test rules apply to us, and what changes for a table-driven test?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(appl|yes|hold)", "(?i)(dimension|case|specification|spec)"],
+        "stdout_not_contains": ["only applies to"]
+      }
+    },
+    {
+      "id": "test-case-set-derived-from-spec-not-implementation",
+      "kind": "behavior",
+      "requirement": "A test's case set is derived from the specification's class, never copied from or parametrized over the implementation's own enumeration (case-set provenance).",
+      "prompt": "The payments module has ALLOWED_STATUSES = {\"pending\", \"paid\", \"cancelled\"} and a function is_allowed_status(s) that checks membership. I'm about to parametrize my test over that same ALLOWED_STATUSES, imported directly from the module. Is this test suite sufficient, and why or why not?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(specification|spec|mutat|copie|import)"],
+        "stdout_not_contains": ["this test suite is sufficient"]
+      }
+    },
+    {
+      "id": "test-subject-exercises-each-protection-layer-alone",
+      "kind": "behavior",
+      "requirement": "When a property is protected by more than one layer, each layer needs its own test on a path where it is the only protection (layered subject).",
+      "prompt": "My logger scrubs secret fields two ways: an upstream filter removes any key matching a secret-name pattern before the log record is built, and a second, independent serializer step also strips any key in a hardcoded deny-list right before emitting JSON. I have one test that injects a key named \"password\" through the whole pipeline and asserts it is absent from the final output. Is one such test enough to claim both layers work?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(each layer|separately|delet|remov|only protection|inner|alone)"],
+        "stdout_not_contains": ["one test is enough"]
+      }
+    },
+    {
+      "id": "test-case-set-covers-every-discriminated-dimension",
+      "kind": "behavior",
+      "requirement": "A parametrized case set must vary every dimension a guard discriminates on, not just the one already covered (dimensional totality).",
+      "prompt": "resolve(key) lowercases a key before checking membership in a lookup table. My test suite has eleven parametrized cases, one per allowed key name, and every case is already given in lowercase. Is this test suite complete, or is a dimension of the input untested?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(dimension|uppercase|mixed.case|normali|case.sensitiv|form)"],
+        "stdout_not_contains": ["this test suite is complete"]
+      }
+    },
+    {
+      "id": "external-system-fake-contract-needs-a-live-observation",
+      "kind": "behavior",
+      "requirement": "A unit-test fake for a third-party system's seam must have its own return values established by a live observation of the real system, never by re-reading project norms or vendor docs.",
+      "prompt": "I'm writing a fake for our AMQP client's publisher port so I can unit-test the code that reads a dead-lettered message's event name. I typed the fake's routing-key return value by re-reading our own AC-CONV-004 routing-key convention doc a second time, since my first reading turned out wrong. Is a second careful reading of the convention doc enough to trust the fake's return value this time, or is something else needed first?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(observ|live|real broker|probe|real system)"],
+        "stdout_not_contains": ["a second reading is enough", "re-reading the doc again is sufficient"]
+      }
+    },
+    {
+      "id": "outbound-header-fake-needs-live-observation-not-only-return-values",
+      "kind": "behavior",
+      "requirement": "A fake for a third-party client seam must also be verified for a value the real layer substitutes on the way OUT of a call (a header, id, or default the caller does not fully control), not only for the fake's own return values, because there is no return value to inspect for that shape.",
+      "prompt": "I am unit-testing an adapter that calls a third-party SDK client. My test replaces the SDK method the adapter calls with a fake that records the arguments it was given, and I assert the fake received the trace id my adapter passed in. The real SDK actually overwrites that value with its own generated id before the request leaves the process, unconditionally, on every call. Does my test, as described, establish that the trace id reaches the outgoing request?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|does not|cannot|will not)"],
+        "stdout_not_contains": ["yes, that establishes it", "your test confirms the trace id is sent"]
+      }
+    },
+    {
+      "id": "test-must-exercise-production-factory-not-hand-built-collaborator",
+      "kind": "behavior",
+      "requirement": "A test asserting how a third-party client is constructed (e.g. which interceptors are wired) must exercise the actual production factory, not a client object the test assembles itself, or it proves nothing about what the product wires.",
+      "prompt": "I want to unit-test that our production client factory wires a logging interceptor onto the SDK client it builds. In my test I construct a new instance of the SDK client directly, pass the interceptor to its constructor myself, and assert the interceptor is present on that instance. Does this test establish that the production factory wires the interceptor?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|does not|factory|production)"],
+        "stdout_not_contains": ["yes, this test is sufficient"]
+      }
+    },
+    {
+      "id": "bug-fix-ships-a-regression-test-that-fails-first",
+      "kind": "behavior",
+      "requirement": "Every bug fix ships a regression test that reproduces the defect and fails before the fix.",
+      "prompt": "I found and fixed a one-line off-by-one in our pagination code. The existing suite is green with the fix in place. Am I done, or does something else have to land in this change?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)regression", "(?i)(fail|red) (before|without)"],
+        "stdout_not_contains": ["you are done", "the green suite is enough"]
+      }
+    },
+    {
+      "id": "red-test-is-not-fixed-by-refreshing-the-expected-value",
+      "kind": "behavior",
+      "requirement": "Never tune a test to the gate: a red assertion or a stale snapshot is investigated, not overwritten.",
+      "prompt": "After my refactor one assertion is red and a snapshot no longer matches. Can I update the expected value to what the code now produces and refresh the snapshot so the build goes green?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(cause|understand|investigat|why)"],
+        "stdout_not_contains": ["yes, just update the expected value", "refresh the snapshot and move on"]
+      }
+    },
+    {
+      "id": "single-dimension-input-not-flagged-for-a-nonexistent-second-dimension",
+      "kind": "negative",
+      "requirement": "Do not demand an invented extra dimension when a guard genuinely discriminates on only one (dimensional totality must not overreach into requiring gratuitous cases).",
+      "prompt": "is_even(n) takes a plain integer and returns whether it is even. My tests cover 2, 3, 4, 5, -2, 0, and a large number. Is there a missing dimension of integer-ness itself I need a separate case for, beyond parity and sign?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["missing dimension of integer-ness", "you must add a case for every possible integer"]
+      }
+    },
+    {
+      "id": "external-system-fake-not-required-for-project-owned-seam",
+      "kind": "negative",
+      "requirement": "Do not demand a live external-system observation for a fake of a seam the project itself owns and defines.",
+      "prompt": "My repository class depends on a small Clock interface with a single now() method, defined and owned entirely by this project. I'm writing a plain stub that implements it and returns a fixed, hardcoded timestamp for a unit test. Do I need to run a live probe against some external system before I can trust this fake's return value?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["you must probe a live external system", "requires a live observation of a third-party system"]
+      }
+    },
+    {
+      "id": "return-value-only-fake-not-flagged-when-no-outbound-mutation-exists",
+      "kind": "negative",
+      "requirement": "Do not demand outbound-mutation verification for a fake whose only job is to return a value from a project-owned seam with no outgoing substitution involved.",
+      "prompt": "My service depends on a small in-project Repository interface with a single find_by_id() method. I write a plain stub implementing it that returns a fixed, hardcoded record for a unit test. There is no third-party client and no outgoing call involved. Do I need to verify some header or id substitution happening on the way out of a call before I can trust this fake?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["you must verify an outbound header substitution", "check what the real layer substitutes on the way out"]
+      }
+    },
+    {
+      "id": "test-exercising-the-real-factory-directly-not-flagged-as-wiring-gap",
+      "kind": "negative",
+      "requirement": "A test that calls the actual production factory itself (not a hand-built parallel instance) and asserts on its result is the correct seam and must not be flagged as the wiring-level gap.",
+      "prompt": "I am testing our create_client(...) production factory directly: I call it with my interceptor — the real factory, not a hand-rolled substitute — and assert the returned client carries the interceptor. Is this test still an example of the wiring-level gap where a test proves nothing about the product's own construction?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["yes, this is still the wiring gap", "this still proves nothing about production wiring"]
+      }
+    },
+    {
+      "id": "unrelated-request-does-not-activate-the-skill",
+      "kind": "negative",
+      "requirement": "The skill does not force test discipline onto a request that is not about tests.",
+      "prompt": "How do I change my bundler's output directory and hashed filenames for a production build?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["Arrange/Act/Assert", "regression test", "one scenario per test"]
+      }
+    }
+  ]
+}

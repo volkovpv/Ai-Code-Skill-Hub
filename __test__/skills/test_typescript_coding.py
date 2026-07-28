@@ -211,273 +211,79 @@ class TestRuntimeInstallLinkResolution(TempDirMixin):
         self.assertIn("not shipped in a runtime install", text, text)
 
 
-class TestCaseProvenanceSubjectAndDimensionGuidance(unittest.TestCase):
-    """Regression for OBS-20260726-001 (SFL, mirrored from
-    ``skills/python-coding`` OBS-20260726-001 / PR #11, itself transferred
-    from consumer ``news-intel-docs``
-    ``harness/observations/OBS-20260726-001.md``, Reviewer-confirmed C3,
-    ``harness/review/skill-triage-2026-07-25.md``, occurrences: 9).
+class TestTestingReferenceIsASpellingMapOnly(unittest.TestCase):
+    """The skill keeps TypeScript test *mechanics*, never the test rules.
 
-    ``references/testing.md`` §Hygiene had a rule against hardcoding an
-    expected value "so it passes", but no rule against the distinct pattern of
-    choosing a test's *case set*, its *subject*, or its *dimensional coverage*
-    from the artifact under test rather than from the specification. The gap
-    is language-independent — it already recurred nine times in a Python
-    consumer build and is reproduced here in TypeScript idiom (`as const`
-    registries, layered filter/serializer defence, normalized `Map` keys).
-    Each of the three anchor phrases below is a load-bearing clause of one of
-    the three rules, not an incidental word choice; their absence is exactly
-    the silence the observation reports, and their presence is the minimal,
-    checkable contract the delta must ship (a prose rule, per this skill's own
-    checker-rule/prose-rule split, gets a text-content pin here plus the
-    ``behavior``/``negative`` eval cases in
-    ``__test__/evals/typescript-coding``).
+    Until the split, ``references/testing.md`` carried the full set of
+    universal test rules — structure, isolation, fake provenance, case-set
+    provenance, hygiene — in TypeScript idiom, and a second language standard
+    carried a near-identical copy. Every one of those rules is a property of
+    tests, not of TypeScript (each shipped its own universality check), so they
+    now live in a single language-neutral skill, pinned by
+    ``__test__/skills/test_testing_discipline.py``. What stays here is the
+    part that genuinely is TypeScript: which construct expresses a rule.
+
+    The anchors below are load-bearing clauses of the relocated rules. Their
+    reappearance in this skill is the drift the split exists to prevent — one
+    rule, two homes, and the two homes start disagreeing.
     """
 
     TESTING_MD = SKILL / "references" / "testing.md"
 
-    # One literal, specific clause per rule — chosen so a superficial mention
-    # of "specification" or "dimension" elsewhere in the file cannot satisfy
-    # the check by accident.
-    RULE_PROVENANCE = (
-        "never copied from — or parametrized over — the artifact under test"
-    )
-    RULE_SUBJECT = (
+    RELOCATED_RULE_ANCHORS = (
+        "never copied from — or parametrized over — the artifact under test",
         "a test that reaches it through the outer layer proves nothing about "
-        "the inner one"
-    )
-    RULE_DIMENSION = "treat a surviving mutation as evidence of a missing dimension"
-
-    def _text(self) -> str:
-        # Markdown hard-wraps prose at ~80 columns, so a multi-word anchor
-        # phrase can straddle a line break; collapse all whitespace runs
-        # (including the wrap-induced newline + indentation) to a single
-        # space before searching, exactly as a human skimming the rendered
-        # text would read it.
-        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
-
-    def test_provenance_rule_is_present(self):
-        self.assertIn(self.RULE_PROVENANCE, self._text())
-
-    def test_layered_subject_rule_is_present(self):
-        self.assertIn(self.RULE_SUBJECT, self._text())
-
-    def test_dimensional_totality_rule_is_present(self):
-        self.assertIn(self.RULE_DIMENSION, self._text())
-
-    def test_each_rule_ships_an_illustrative_ts_reproduction(self):
-        # The rule must be checkable, not merely aspirational: each of the
-        # three carries its own minimal, deterministic TypeScript
-        # reproduction snippet.
-        text = self._text()
-        self.assertIn("as const", text, "rule 1 (provenance) needs its as-const/mutation snippet")
-        self.assertIn("downstream", text)
-        self.assertIn("overwrite", text)
-        self.assertIn("normalized", text)
-        self.assertIn("raw key", text)
-
-    def test_negative_do_not_tune_the_gate_rule_survives_untouched(self):
-        # False-positive guard: the new block must not have replaced or
-        # duplicated the pre-existing, distinct "do not tune a test to the
-        # gate" rule this observation explicitly does NOT cover.
-        text = self._text()
-        needle = 'never hardcode an expected value "so it passes"'
-        self.assertEqual(text.count(needle), 1, text)
-
-    def test_new_rules_are_not_accidentally_duplicated(self):
-        text = self._text()
-        for needle in (self.RULE_PROVENANCE, self.RULE_SUBJECT, self.RULE_DIMENSION):
-            self.assertEqual(text.count(needle), 1, needle)
-
-
-class TestExternalReferenceBehaviourGuidance(unittest.TestCase):
-    """Regression for OBS-20260726-002 (SFL, mirrored from
-    ``skills/python-coding`` OBS-20260727-001 / PR #13, itself transferred
-    from consumer ``news-intel-docs``
-    ``harness/observations/OBS-20260726-002.md``, Reviewer-confirmed C3,
-    ``harness/review/skill-triage-2026-07-26.md``, occurrences: 3, both
-    claimed minimal reproductions independently re-executed by that
-    Reviewer).
-
-    ``references/testing.md`` already says *what* to fake (an interface or
-    seam the code exposes, never someone else's internals) but was silent on
-    *how the fake's own return values are known to be true of the real
-    system* before the fake is written. The gap is language-independent: a
-    unit-test double for a third-party seam stays green while encoding a
-    wrong belief about that system's runtime behaviour, and only a live
-    probe against the real system — never a re-reading of project norms or
-    vendor prose — catches it. The anchor phrases below are load-bearing
-    clauses of the new rule, not incidental word choice; their absence is
-    exactly the silence the observation reports.
-    """
-
-    TESTING_MD = SKILL / "references" / "testing.md"
-
-    RULE_NO_READING_ESTABLISHES_IT = (
+        "the inner one",
+        "treat a surviving mutation as evidence of a missing dimension",
         "no fake, and no re-reading of a project norm, an RFC, or vendor "
-        "documentation, can establish what that system actually does"
-    )
-    RULE_SWITCH_TRIGGER = (
+        "documentation, can establish what that system actually does",
         "a second rejection of the same reading on the same external-system "
-        "property"
-    )
-
-    def _text(self) -> str:
-        # Same whitespace-collapse rationale as the provenance/subject/
-        # dimension guidance above: Markdown hard-wraps prose, so a
-        # multi-word anchor phrase can straddle a line break.
-        return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
-
-    def test_external_system_observation_rule_is_present(self):
-        self.assertIn(self.RULE_NO_READING_ESTABLISHES_IT, self._text())
-
-    def test_second_rejection_switch_trigger_is_present(self):
-        self.assertIn(self.RULE_SWITCH_TRIGGER, self._text())
-
-    def test_rule_ships_two_illustrative_ts_reproductions(self):
-        # The rule must be checkable, not merely aspirational: two
-        # deterministic, project-independent minimal reproductions in
-        # TypeScript idiom, one per occurrence family (an empty-vs-absent
-        # URL identity; a driver's object-row column collapse).
-        text = self._text()
-        self.assertIn('new URL("amqp://:p@h:1")', text)
-        self.assertIn("?column?", text)
-
-    def test_negative_fake_the_seam_rule_survives_untouched(self):
-        # False-positive guard: the new block must not have replaced or
-        # duplicated the pre-existing, distinct "mock interfaces and seams
-        # the code exposes, never someone else's internals" rule — this
-        # observation is silent-not-wrong about that rule, not a
-        # replacement for it.
-        text = self._text()
-        needle = "never someone else's internals"
-        self.assertEqual(text.count(needle), 1, text)
-
-    def test_new_rule_is_not_accidentally_duplicated(self):
-        text = self._text()
-        for needle in (
-            self.RULE_NO_READING_ESTABLISHES_IT,
-            self.RULE_SWITCH_TRIGGER,
-        ):
-            self.assertEqual(text.count(needle), 1, needle)
-
-
-class TestOutboundMutationAndWiringLevelFakeGuidance(unittest.TestCase):
-    """Regression for OBS-20260728-001 (SFL, mirrored from
-    ``skills/python-coding`` OBS-20260728-001, itself transferred from a
-    consuming project's ``OBS-20260727-001``, Reviewer-confirmed C3,
-    occurrences: 6 across two consecutive tasks, at least three of them after
-    the sibling fix for the adjacent external-system-fake class was already
-    pinned).
-
-    Two sub-shapes of the same root as ``OBS-20260727-001``
-    (``TestExternalReferenceBehaviourGuidance`` above) — "evidence collected
-    somewhere other than where the property lives" — that its own scope
-    sentence did not make legible:
-
-    1. **Outbound-mutation / input-side.** The existing rule scopes itself to
-       "a fake's own return values", i.e. a fake computing a WRONG OUTPUT for
-       a given input. A fake bound at the exact layer that substitutes a
-       value the caller does not fully control on the way OUT of a call
-       (a header, an id, a default) has no return value to inspect at all,
-       so a reader keying on "return values" would not recognise this shape
-       as covered, even though the same "the fake stands in for the very
-       layer performing the substitution" principle applies.
-    2. **Wiring-level.** A test that constructs its own copy of a third-party
-       collaborator (to assert a property of *how* it is built — which
-       constructor arguments, which interceptors/hooks) establishes nothing
-       about the construction the product's own factory performs; the two
-       are different code paths and only the second one ships.
-
-    Both sub-shapes are language-neutral: the reporting occurrences are not
-    Python-specific, and this skill's ``references/testing.md`` carried the
-    parent rule but neither sub-shape before this change. The anchor phrases
-    below are load-bearing clauses of the new guidance, not incidental word
-    choice; their absence is exactly the silence the observation reports.
-    """
-
-    TESTING_MD = SKILL / "references" / "testing.md"
-
-    RULE_OUTBOUND_NO_RETURN_VALUE = (
+        "property",
         "there is no return value to inspect and the fake stands in for the "
-        "very code that would decide the outcome"
-    )
-    RULE_OUTBOUND_BELIEF = "the caller's argument reaches the wire unmodified"
-    RULE_WIRING_LEAD = (
+        "very code that would decide the outcome",
         "A test that constructs the collaborator itself establishes nothing "
-        "about the construction the product performs"
+        "about the construction the product performs",
+        'never hardcode an expected value "so it passes"',
+        "Arrange / Act / Assert",
     )
-    RULE_WIRING_PROVES_ACHIEVABLE = (
-        "proves only that the property is achievable, never that the "
-        "product's own wiring achieves it"
+
+    # One TypeScript construct per rule family the file must still spell out.
+    REQUIRED_SPELLINGS = (
+        "object literal",  # a stub for a seam the project owns
+        "vi.mock",  # last-resort module patching
+        "no promise float",  # an asynchronous test leaves nothing dangling
+        "it.skip",  # a skip that must ship
+        "asserts x is T",  # narrowing predicates that need unit tests
+        "Expect<Equal<Actual, Expected>>",  # positive type-level assertion
+        "@ts-expect-error",  # negative type-level assertion
+        "fast-check",  # generated cases
     )
 
     def _text(self) -> str:
-        # Same whitespace-collapse rationale as the two guidance classes
-        # above: Markdown hard-wraps prose, so a multi-word anchor phrase can
-        # straddle a line break.
+        # Markdown hard-wraps prose, so a multi-word anchor can straddle a
+        # line break; collapse whitespace runs before searching.
         return " ".join(self.TESTING_MD.read_text(encoding="utf-8").split())
 
-    def test_outbound_mutation_no_return_value_rule_is_present(self):
-        self.assertIn(self.RULE_OUTBOUND_NO_RETURN_VALUE, self._text())
+    def test_file_declares_itself_a_spelling_map(self):
+        self.assertIn("A spelling map, not a rule list", self._text())
 
-    def test_outbound_mutation_belief_framing_is_present(self):
-        self.assertIn(self.RULE_OUTBOUND_BELIEF, self._text())
-
-    def test_wiring_level_lead_rule_is_present(self):
-        self.assertIn(self.RULE_WIRING_LEAD, self._text())
-
-    def test_wiring_level_achievable_vs_achieves_distinction_is_present(self):
-        self.assertIn(self.RULE_WIRING_PROVES_ACHIEVABLE, self._text())
-
-    def test_rule_ships_two_illustrative_ts_reproductions(self):
-        # Deterministic, project-independent minimal reproductions in
-        # TypeScript/Node idiom, one per sub-shape: an outbound header/id
-        # substitution the caller does not control, and a factory whose
-        # interceptor argument has zero test coverage.
+    def test_no_relocated_rule_text_came_back(self):
         text = self._text()
-        self.assertIn("request-id, retry token, or default identity header", text)
-        self.assertIn("createClient(", text)
-        self.assertIn(
-            "leave the suite fully green while the running product wires "
-            "no interceptors at all",
-            text,
-        )
+        for anchor in self.RELOCATED_RULE_ANCHORS:
+            self.assertNotIn(anchor, text, f"relocated rule re-stated here: {anchor!r}")
 
-    def test_negative_existing_reproductions_survive_untouched(self):
-        # False-positive guard: the pre-existing OBS-20260727-001 rule and
-        # its two reproductions must not have been replaced or duplicated by
-        # this widening.
+    def test_every_typescript_specific_spelling_is_still_covered(self):
+        # Negative guard for the deletion: trimming the file must not have
+        # taken the TypeScript-only mechanics with it.
         text = self._text()
-        for needle in (
-            'new URL("amqp://:p@h:1")',
-            # Not the bare `?column?` token — the pre-existing reproduction
-            # names it twice on purpose (the column name, then the row it
-            # collapses into), so the sentence lead is the stable anchor.
-            "PostgreSQL names an unaliased expression column",
-            "no fake, and no re-reading of a project norm, an RFC, or vendor "
-            "documentation, can establish what that system actually does",
-            "a second rejection of the same reading on the same "
-            "external-system property",
-        ):
-            self.assertEqual(text.count(needle), 1, needle)
+        for spelling in self.REQUIRED_SPELLINGS:
+            self.assertIn(spelling, text, spelling)
 
-    def test_negative_mock_the_seam_rule_survives_untouched(self):
-        # The pre-existing, distinct "mock interfaces and seams the code
-        # exposes, never someone else's internals" rule (unrelated to this
-        # observation) must survive untouched.
-        text = self._text()
-        self.assertEqual(text.count("never someone else's internals"), 1, text)
-
-    def test_new_rules_are_not_accidentally_duplicated(self):
-        text = self._text()
-        for needle in (
-            self.RULE_OUTBOUND_NO_RETURN_VALUE,
-            self.RULE_OUTBOUND_BELIEF,
-            self.RULE_WIRING_LEAD,
-            self.RULE_WIRING_PROVES_ACHIEVABLE,
-        ):
-            self.assertEqual(text.count(needle), 1, needle)
+    def test_skill_md_no_longer_carries_the_universal_test_rule(self):
+        skill_md = " ".join((SKILL / "SKILL.md").read_text(encoding="utf-8").split())
+        self.assertNotIn("A code change without its tests is incomplete", skill_md)
+        # ...and still routes to the spelling map it kept.
+        self.assertIn("references/testing.md", skill_md)
 
 
 class TestLiteralMasking(unittest.TestCase):

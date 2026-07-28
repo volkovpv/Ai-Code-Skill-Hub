@@ -26,9 +26,7 @@ The core discipline it enforces:
   strictTypeChecked, airbnb, SonarJS, functional, jsdoc): explicit boolean
   expressions, `??` over `||`, no floating promises, immutable data, no
   type/lint suppressions;
-- centralized `process.env` access, no `console.*` in shipped code;
-- tests land in the same change as the code; every bug fix ships a
-  regression test.
+- centralized `process.env` access, no `console.*` in shipped code.
 
 ## Key features
 
@@ -40,9 +38,10 @@ The core discipline it enforces:
   suppressions require a rule code and a written reason
   (`// skill-check-ignore: TS-ENV -- <reason>`).
 - **Layered knowledge.** Beyond `references/` (typing & style, type design,
-  generics & type-level programming, lint-clean, errors/config/logging,
-  testing) the skill ships verified `knowledge/` patterns and pitfalls,
-  calibrated `data/` samples for the checker, and reviewed `observations/`.
+  generics & type-level programming, lint-clean, errors/config/logging, and
+  a TypeScript test-mechanics spelling map) the skill ships verified
+  `knowledge/` patterns and pitfalls, calibrated `data/` samples for the
+  checker, and reviewed `observations/`.
 
 ## How to install
 
@@ -69,8 +68,8 @@ The skill covers the *language*; your project rules (for Claude Code:
   where env/config access is centralized, naming/layout conventions, and any
   deliberate deviations (e.g. a relaxed rule in test files). Project
   instructions always take precedence over the skill.
-- **Leave to the skill:** the typing discipline, error handling, lint-clean
-  and testing rules — no need to restate them in your rules; reference the
+- **Leave to the skill:** the typing discipline, error handling and
+  lint-clean rules — no need to restate them in your rules; reference the
   skill instead ("TypeScript style: see the typescript-coding skill").
 - The skill's checker is a backstop, not the authority: the agent still runs
   your project's real `lint`/`typecheck`/`test`, so make sure your rules say

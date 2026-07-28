@@ -1,14 +1,14 @@
 ---
 name: python-coding
-description: Universal coding standard and workflow for production Python with no framework or architecture assumptions. Strict typing (mypy/pyright strict, no Any), closed sets as enums or Literal unions closed by assert_never, NewType ids, frozen dataclasses, read-only parameters; secure by default (parameterized SQL, no shell=True, no eval/exec or pickle on untrusted data, yaml.safe_load, path containment, secrets + constant-time compare, TLS verification always on); structured concurrency (TaskGroup, timeouts, no fire-and-forget); aware-UTC datetimes, Decimal money, context-managed resources; narrow except with `raise ... from` once at the source; explicit boolean expressions over or-defaults; centralized os.environ; no print, no suppressions; version-gated modern features (PEP 695, TypeIs, t-strings, lazy annotations); tests in the same change. Use whenever writing, reviewing, or refactoring Python (.py) — app code, libraries, scripts, or tests. Combine with hexagonal-service for ports-and-adapters layering.
+description: Universal coding standard and workflow for production Python with no framework or architecture assumptions. Strict typing (mypy/pyright strict, no Any), closed sets as enums or Literal unions closed by assert_never, NewType ids, frozen dataclasses, read-only parameters; secure by default (parameterized SQL, no shell=True, no eval/exec or pickle on untrusted data, yaml.safe_load, path containment, secrets + constant-time compare, TLS verification always on); structured concurrency (TaskGroup, timeouts, no fire-and-forget); aware-UTC datetimes, Decimal money, context-managed resources; narrow except with `raise ... from` once at the source; explicit boolean expressions over or-defaults; centralized os.environ; no print, no suppressions; version-gated modern features (PEP 695, TypeIs, t-strings, lazy annotations). Use whenever writing, reviewing, or refactoring Python (.py) — app code, libraries, scripts, or tests. Combine with hexagonal-service for ports-and-adapters layering.
 ---
 
 # Python coding (universal)
 
-Write strictly-typed, secure, test-covered Python. This skill is
-**universal by contract**: every rule here holds in any Python codebase —
-it assumes no framework, no architectural style, no DI container, no
-specific libraries. Architecture-bound rules live in the
+Write strictly-typed, secure Python. This skill is **universal by
+contract**: every rule here holds in any Python codebase — it assumes no
+framework, no architectural style, no DI container, no specific
+libraries. Architecture-bound rules live in the
 `hexagonal-service` skill; when the host project uses it, apply that skill
 on top of this one.
 
@@ -59,28 +59,25 @@ on top of this one.
    surface. Follow [references/lint-clean.md](references/lint-clean.md) so
    the project's `lint` / `typecheck` come back with zero errors and zero
    warnings.
-9. **Test in the same change.** A code change without its tests is
-   incomplete; every bug fix ships a regression test that fails before the
-   fix. See [references/testing.md](references/testing.md).
-10. **Self-check before handing off.** Run the convention checker over the
-    files you touched:
+9. **Self-check before handing off.** Run the convention checker over the
+   files you touched:
 
-    ```bash
-    python scripts/check_py_conventions.py path/to/changed.py
-    ```
+   ```bash
+   python scripts/check_py_conventions.py path/to/changed.py
+   ```
 
-    It is a heuristic backstop — read every finding in context, then run
-    the project's real `lint` / `typecheck` / `test`, which are
-    authoritative. A checked false positive may be suppressed only per
-    rule code and only with a written reason:
+   It is a heuristic backstop — read every finding in context, then run
+   the project's real `lint` / `typecheck` / `test`, which are
+   authoritative. A checked false positive may be suppressed only per
+   rule code and only with a written reason:
 
-    ```python
-    raw = os.environ.get("CI")  # skill-check-ignore: PY-ENV -- CI detection in a build script
-    ```
+   ```python
+   raw = os.environ.get("CI")  # skill-check-ignore: PY-ENV -- CI detection in a build script
+   ```
 
-    A bare `skill-check-ignore`, an unknown code, or an empty
-    justification aborts the check (exit 2); `PY-SUPPRESS` can never be
-    suppressed.
+   A bare `skill-check-ignore`, an unknown code, or an empty
+   justification aborts the check (exit 2); `PY-SUPPRESS` can never be
+   suppressed.
 
 ## Routing: what to read when
 
@@ -97,7 +94,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | Which language/stdlib feature to use at which Python version; legacy forms to purge | [references/modern-python.md](references/modern-python.md) |
 | Making code pass a strict linter with zero warnings (booleans, immutability, complexity, docstrings) | [references/lint-clean.md](references/lint-clean.md) |
 | Exceptions, `except` blocks, exception groups, retries, env access, logging hygiene | [references/errors-config-logging.md](references/errors-config-logging.md) |
-| Writing or reviewing tests | [references/testing.md](references/testing.md) |
+| Spelling a test rule in Python (stubs, patching, skips, type-level assertions, async, checker behaviour in test paths) | [references/testing.md](references/testing.md) |
 | Applying a verified pattern | [knowledge/patterns.md](knowledge/patterns.md) |
 | A checker finding looks wrong, or a typing/runtime edge case bites | [knowledge/pitfalls.md](knowledge/pitfalls.md) |
 | A calibrated input/output pair for the checker | [data/README.md](data/README.md) |
@@ -183,10 +180,9 @@ has been promoted into `knowledge/` or this workflow.
   legacy spellings (`Optional`, `typing.List`, `utcnow`, `pytz`,
   `get_event_loop`, `os.path` plumbing) — the version-gated list is in
   [references/modern-python.md](references/modern-python.md).
-- A code change without its tests is incomplete; do not suppress the type
-  checker or linter (`# type: ignore`, blanket `# noqa`,
-  `# pylint: disable`) to go green. Sole exception: a documented upstream
-  limitation of a single lint rule, held by a justified line-scoped
+- Do not suppress the type checker or linter (`# type: ignore`, blanket
+  `# noqa`, `# pylint: disable`) to go green. Sole exception: a documented
+  upstream limitation of a single lint rule, held by a justified line-scoped
   `# noqa: <RULE> -- <reason>` naming exactly one rule — see
   [references/typing-and-style.md](references/typing-and-style.md).
 - Keep this skill universal: framework, architecture, and project-specific

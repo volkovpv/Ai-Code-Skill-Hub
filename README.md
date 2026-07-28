@@ -67,6 +67,7 @@ Skill здесь — не одна инструкция, а **версионир
 │   ├── example-skill/         # эталонный skill — полная модель, см. «Анатомия skill»
 │   ├── typescript-coding/     # универсальный TypeScript-стандарт (без фреймворков/архитектуры)
 │   ├── python-coding/         # универсальный Python-стандарт (без фреймворков/архитектуры)
+│   ├── testing-discipline/    # правила написания тестов (без привязки к языку и раннеру)
 │   ├── hexagonal-service/     # архитектура ports-and-adapters (язык- и фреймворк-нейтральная)
 │   └── typescript-nestjs/     # NestJS-специфика поверх hexagonal-service и typescript-coding
 │
@@ -125,7 +126,12 @@ Skill здесь — не одна инструкция, а **версионир
 - [python-coding](skills/python-coding/README.md) — универсальный строго
   типизированный стандарт Python: строгий type checker, закрытые множества
   как enum/Literal, исчерпывающий match, иммутабельность по умолчанию,
-  дисциплина ошибок и тестов;
+  дисциплина ошибок;
+- [testing-discipline](skills/testing-discipline/README.md) — правила
+  написания и ревью тестов без привязки к языку, раннеру, фреймворку и
+  платформе: структура и именование, изоляция и фейки, происхождение
+  контракта фейка внешней системы, проверка реальной production-обвязки,
+  происхождение набора кейсов и гигиена набора тестов;
 - [hexagonal-service](skills/hexagonal-service/README.md) — канон
   ports-and-adapters, нейтральный к языку, фреймворку и проекту;
 - [typescript-nestjs](skills/typescript-nestjs/README.md) — NestJS-механика

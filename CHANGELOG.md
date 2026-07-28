@@ -5,6 +5,89 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.0.0] — 2026-07-28
+
+### New skill: `testing-discipline` 1.0.0 (major: a skill was created)
+
+- The rules for writing and reviewing tests now live in one place, free of
+  any language, runner, framework or platform assumption. Until this
+  release the same rule set was carried twice — once per language standard
+  — and each of the last three test-rule fixes had to be applied to one
+  standard and then mirrored into the other in a separate release
+  (`2.5.0`/`2.6.0`, `2.7.0`/`2.8.0`, `2.9.0`/`2.10.0`), even though every
+  one of them shipped its own universality check. Two copies of one rule
+  can drift, and a third language would have needed a third copy.
+- `SKILL.md` carries the workflow and the rule list and routes to four
+  references: `structure-and-naming.md` (Arrange/Act/Assert, one scenario
+  per test, names that state behaviour and condition, asserting the error
+  *and* its condition, factories over fixture blobs, example-based versus
+  property-based cases); `isolation-and-fakes.md` (nothing external in a
+  unit test, injected clocks and deadlines instead of waiting, faking the
+  seams the code exposes and never someone else's internals, the
+  external-system fake-provenance rule with its two reproductions, the
+  outbound-substitution shape, and the production-wiring rule);
+  `hygiene.md` (no committed focus/skip, no test tuned to the gate,
+  regression test per bug fix, determinism, the case-set/subject/dimension
+  family with its three reproductions, test-only secrets); and
+  `types-and-tests.md` (what a static checker already covers and what it
+  cannot verify).
+- Status is `draft` until the eval-gate
+  (`scripts/run_skill_evals.py` over `__test__/evals/testing-discipline/cases.json`,
+  15 cases: 2 trigger, 6 behavior, 5 negative, plus a trigger case in a
+  language the skill names nowhere) runs against a real harness. Ships an
+  OpenAI adapter and a user-facing `README.md`; no scripts and no optional
+  layers — a language-neutral checker for prose test rules would be
+  guesswork.
+
+### `python-coding` 1.4.0 → 1.5.0 (minor: an existing skill's rules changed)
+
+- `references/testing.md` is now a **spelling map**: which Python
+  construct expresses a test rule (a `Protocol`-satisfying stub,
+  `monkeypatch`/`unittest.mock.patch` as the justified last resort,
+  injected clocks, a real event loop with `asyncio.timeout` deadlines,
+  `pytest.mark.skip` with a reason, the `Any`/`cast`/`print` relaxations
+  scoped to test files, `TypeGuard`/`TypeIs` unit tests,
+  `typing.assert_type` and the `warn_unused_ignores`-policed negative
+  type-level assertion, Hypothesis), plus the checker's behaviour in test
+  paths. The rules themselves — and the observation-backed guidance
+  transferred in `2.5.0`, `2.7.0` and `2.9.0` — moved to
+  `testing-discipline` unchanged in substance.
+- `SKILL.md` drops the "test in the same change" workflow step and the
+  test clause of the suppression rule; the routing row now points at the
+  spelling map. The `description` and the OpenAI adapter prompt no longer
+  claim test rules.
+
+### `typescript-coding` 1.6.0 → 1.7.0 (minor: an existing skill's rules changed)
+
+- Same split, TypeScript side: `references/testing.md` becomes a spelling
+  map (object-literal stubs, module patching as the justified last resort,
+  injected clocks, awaited assertions with deadlines and no floating
+  promises, `it.skip` with a reason and never `.only`, the
+  `any`/non-null/`console` relaxations scoped to spec files, type-guard
+  and assertion-function tests, equality-style type-level assertions and
+  the `@ts-expect-error` negative case, fast-check), plus the checker's
+  behaviour in test paths. The rules transferred in `2.6.0`, `2.8.0` and
+  `2.10.0` moved to `testing-discipline`.
+- `SKILL.md` drops the "test in the same change" workflow step and the
+  test clause of the suppression rule; `description` and the OpenAI
+  adapter prompt updated accordingly.
+
+### Tests and documentation
+
+- The three observation-backed regression classes that pinned the moved
+  rules (case-set provenance/subject/dimension, external-system fake
+  provenance, outbound mutation + wiring level) are relocated into
+  `__test__/skills/test_testing_discipline.py` against the new skill's
+  files, alongside structural, neutrality and adapter pins. Both language
+  test modules gain a guard that their `references/testing.md` stays a
+  spelling map and re-states none of the relocated rule text; the new
+  module carries the same guard for both skills.
+- The ten test-rule eval cases duplicated across the two language
+  manifests collapse into `__test__/evals/testing-discipline/cases.json`;
+  the language manifests keep their language-specific cases.
+- Root `README.md` lists the new skill; `docs/history.{eng,rus}.md` gain
+  the bilingual entry for the split.
+
 ## [2.10.0] — 2026-07-28
 
 ### `typescript-coding` 1.5.0 → 1.6.0 (minor: an existing skill's rules changed)

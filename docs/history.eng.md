@@ -36,6 +36,92 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## One rule, two homes — the test rules become a skill of their own
+
+**Releases:** project `3.0.0` (new skill `testing-discipline` `1.0.0` ·
+`python-coding` `1.4.0 → 1.5.0` · `typescript-coding` `1.6.0 → 1.7.0`)
+**Type:** duplication removed — the same rule was being maintained twice
+
+### In one sentence
+
+How to write a test is a property of tests, not of a programming language —
+but each language standard carried its own full copy of those rules, so every
+fix had to be made twice, by hand, in two separate releases.
+
+### The problem, precisely
+
+The three most recent test-rule fixes each landed in one standard first and
+then had to be mirrored into the other one:
+
+| The rule that was fixed | Landed first | Mirrored later |
+|---|---|---|
+| Where a test's cases, subject and dimensions come from | project `2.5.0` | project `2.6.0` |
+| How a stub's contract for an external system is established | project `2.7.0` | project `2.8.0` |
+| Values substituted on the way out, and who builds the collaborator | project `2.9.0` | project `2.10.0` |
+
+Six releases for three rules. Nothing about any of them was
+language-specific: each one shipped its own universality check, and the
+mirrored copy differed only in which library the example named. The cost was
+not just the duplicated work — it was that the two copies could disagree, and
+that a third language would have needed a third copy of everything.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["A test rule is fixed in\none language standard"] --> B["Someone must remember\nthe other standard"]
+    B --> C["A second release re-states\nthe same rule in other idiom"]
+    C --> D{"Two copies of one rule"}
+    D -->|"one gets edited"| E["Wordings drift apart"]
+    D -->|"a third language arrives"| F["A third copy is needed"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["A test rule is fixed once,\nin the testing standard"] --> B{"One copy"}
+    B --> C["Language standards keep only\na spelling map for their idiom"]
+    C --> D["A new language costs\na spelling map, not a rule set"]
+```
+
+### Example — what moved and what stayed
+
+The rule and its reproduction are language-neutral, so they moved:
+
+> A fake's own return values, when the property under test belongs to an
+> external system, are established by observing that system once, never by
+> reading.
+
+What stayed behind in each language standard is only the vocabulary that
+expresses it — a row in a table, not a rule:
+
+| What the test needs | Stays in the language standard |
+|---|---|
+| A stand-in for a seam the project owns | which construct satisfies the declared interface |
+| Last-resort patching | which patching facility, and that it needs a justification |
+| A skip that must ship | which marker carries the reason |
+| A negative type-level assertion | which suppression the checker itself polices |
+
+### What the skills now say
+
+- `testing-discipline` owns the rules: tests ship with the change, one
+  scenario per test, isolation and injected time, what may be faked and how a
+  fake's contract is justified, evidence collected where the property lives,
+  where cases come from, and suite hygiene.
+- `python-coding` and `typescript-coding` keep a spelling map each and no
+  longer state test rules of their own.
+
+### Where the rule stops
+
+The testing standard says nothing about which runner to use, where test files
+live, or what coverage number the build demands — those belong to the project.
+Which collaborator is faked at which seam in a ports-and-adapters codebase
+still belongs to `hexagonal-service`, and how a rule is written in a given
+language still belongs to that language's standard.
+
+---
+
 ## What a stub still can't see — two more shapes of the same blind spot
 
 **Releases:** project `2.10.0` (`typescript-coding` `1.5.0 → 1.6.0`) · project

@@ -24,7 +24,7 @@ skills:
   # executed against a real harness) and are promoted to stable.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.6.0
+    version: 1.7.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -67,7 +67,7 @@ skills:
       observation_review_required: true
   - name: python-coding
     path: skills/python-coding
-    version: 1.4.0
+    version: 1.5.0
     status: stable
     summary: Universal strictly-typed, secure-by-default Python coding standard (typing, security, structured concurrency, runtime correctness, version-gated 3.12-3.14 features) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -76,6 +76,20 @@ skills:
       knowledge: true
       data: true
       observations: true
+    content_policy:
+      max_tracked_file_bytes: 262144
+      pii_allowed: false
+      secrets_allowed: false
+      observation_review_required: true
+  # Draft until the eval-gate (scripts/run_skill_evals.py over
+  # __test__/evals/testing-discipline/cases.json) runs against a real harness.
+  - name: testing-discipline
+    path: skills/testing-discipline
+    version: 1.0.0
+    status: draft
+    summary: Universal rules for writing and reviewing tests - structure, isolation, fake provenance, wiring-level evidence, case-set provenance and suite hygiene; no language, runner, framework or platform assumptions.
+    platforms: [universal, codex, opencode, claude, hermes]
+    license: MIT
     content_policy:
       max_tracked_file_bytes: 262144
       pii_allowed: false
