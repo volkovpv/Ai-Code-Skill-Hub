@@ -3,8 +3,9 @@
 
 Language policy (AGENTS.md): only the root ``README.md``,
 ``__test__/README.md`` and ``docs/history.rus.md`` are written in Russian;
-audit reports under ``_audit/`` are exempt; everything else — skill content,
-source code, scripts, templates, workflows, tests, docs — is English-only.
+audit reports under ``_audit/`` and scratch notes under ``_temp/`` are exempt;
+everything else — skill content, source code, scripts, templates, workflows,
+tests, docs — is English-only.
 
 Usage::
 
@@ -43,8 +44,10 @@ ALLOWED_FILES = frozenset(
     }
 )
 
-# Directories (relative prefixes) whose whole content is exempt.
-ALLOWED_DIR_PREFIXES = ("_audit/",)
+# Directories (relative prefixes) whose whole content is exempt. Both are
+# untracked working areas, not repository content: `_audit/` holds review
+# reports and `_temp/` holds scratch notes written for whoever runs the tool.
+ALLOWED_DIR_PREFIXES = ("_audit/", "_temp/")
 
 # Never scanned: VCS internals, environments, caches, generated trees.
 SKIP_DIR_NAMES = frozenset(
@@ -122,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"{rel_posix}:{line_no}: non-English (Cyrillic) text outside the "
             "allowlist (README.md, __test__/README.md, docs/history.rus.md, "
-            "_audit/); translate it or add an inline "
+            "_audit/, _temp/); translate it or add an inline "
             "'non-english-ok: <reason>' waiver"
         )
     summary = "OK(language)" if not findings else "FAIL(language)"

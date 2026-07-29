@@ -33,7 +33,7 @@
           "(?i)(dimension|case|specification|spec)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?only applies to"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])only applies to"
         ]
       }
     },
@@ -138,13 +138,13 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)regression",
-          "(?i)\\b(fails?|failed|failing|red)\\b[^.\\n]{0,30}?\\b(before|without|first|prior to)\\b"
+          "(?i)(?:\\b(?:fails?|failed|failing|red)\\b[^.\\n]{0,30}?\\b(?:before|without|first|prior to)\\b|\\b(?:revert\\w*|undo\\w*|remov\\w*|back out|backing out|stash\\w*|disabl\\w*)\\b[^.\\n]{0,40}?\\bfix\\b|\\bfix\\b[^.\\n]{0,25}?\\b(?:reverted|removed|undone|backed out)\\b)"
         ],
         "stdout_not_contains": [
           "the green suite is enough"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?you(?:'re| are) done\\b(?![^.\\n]*\\b(?:once|when|after|until)\\b)"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])you(?:'re| are) done\\b(?![^.\\n]*\\b(?:once|when|after|until)\\b)"
         ]
       }
     },
@@ -162,7 +162,7 @@
           "yes, just update the expected value"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?refresh the snapshot and move on"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])refresh the snapshot and move on"
         ]
       }
     },
@@ -247,7 +247,7 @@
           "(?i)(london|declar|project rule)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?use the real `?PriceCalculator`?"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])use the real `?PriceCalculator`?(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
         ]
       }
     },
@@ -262,7 +262,7 @@
           "(?i)(stub|input|implementation detail|over.specif|fragile|brittle)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?keep both assertions"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])keep both assertions"
         ]
       }
     },
@@ -292,7 +292,7 @@
           "(?i)(observable behaviour|observable behavior|discount|implementation detail|do not (expose|widen))"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?make it public"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])make it public"
         ]
       }
     },
@@ -351,7 +351,7 @@
           "(?i)(why|investigat|find out|reach|subject|already)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?move on to the next"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])move on to the next"
         ]
       }
     },
@@ -366,7 +366,7 @@
           "(?i)(design|split|too (big|many)|collaborat|responsibilit)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?just move it into a shared helper"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])just move it into a shared helper"
         ]
       }
     },
@@ -379,10 +379,10 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)(literal|in the test|specification|spec)",
-          "(?i)(?:\\b(do not|don't|never|avoid|why not|rather than|instead of|not to)\\b[^.\\n]{0,60}?\\b(import|importing|production|module)\\b|\\bimporting\\b[^.\\n]{0,80}?\\b(recomputes?|algorithm under test|equals itself|circular)\\b)"
+          "(?i)(?:\\b(?:do not|don't|never|avoid|why not|rather than|instead of|not to|not in)\\b[^.\\n]{0,60}?\\b(?:import\\w*|production|module)\\b|\\bimport\\w*\\b[^.\\n]{0,120}?\\b(?:recomput\\w*|restate\\w*|algorithm under test|equals itself|circular)\\b)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?import `?COMMISSION_RATE`?"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])import `?COMMISSION_RATE`?"
         ]
       }
     },
@@ -456,7 +456,7 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)(before|already|runaway|ahead|never started|initial state)",
-          "(?i)(intermediate|wait until.*10|first assert|equals 10)"
+          "(?i)(?:intermediate|first assert\\w*|wait (?:until|for)[^.\\n]{0,40}\\b10\\b|equals? 10|unreachable from the (?:start|initial)|could not (?:already )?(?:have been|be) (?:in|true)|trivially[- ]true|non-?zero (?:opening|starting|initial)|distinct quantit\\w*)"
         ],
         "stdout_not_contains": [
           "the test looks correct",
@@ -472,14 +472,14 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(quer|read|lookup).*(any number|not pin|allow|do not constrain)",
+          "(?is)(?:\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b.{0,400}?\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain)\\b|\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain)\\b.{0,400}?\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b)",
           "(?i)(command|side effect|audit|record).*(exactly|once|expect)"
         ],
         "stdout_not_contains": [
           "the cache is the problem"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?pin both call counts"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])pin both call counts"
         ]
       }
     },
@@ -498,7 +498,7 @@
           "the test is still fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?keep using the domain type"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])keep using the domain type"
         ]
       }
     },
@@ -517,7 +517,7 @@
           "rollback isolation is fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?clean(?:ing)? up at the end"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])clean(?:ing)? up at the end"
         ]
       }
     },
@@ -533,8 +533,8 @@
           "(?i)(message|diagnos|report|which value|name the)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?tidy it later",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?get on with the production code"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])tidy it later",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])get on with the production code"
         ]
       }
     },
@@ -570,7 +570,7 @@
           "committing the skip is fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?make an exception to the rule"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])make an exception to the rule"
         ]
       }
     },
@@ -586,8 +586,8 @@
           "(?i)(unit|integration)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?isolate it from its collaborators",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?replace every collaborator with a double"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])isolate it from its collaborators",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])replace every collaborator with a double"
         ]
       }
     },
@@ -607,7 +607,7 @@
           "any test with two classes is an integration test"
         ],
         "stdout_not_matches": [
-          "(?i)^\\W*(the |your )?reviewer is right"
+          "(?im)^\\W*(?<![\"'“«])(?:the |your )?reviewer is right\\b(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
         ]
       }
     },
@@ -623,8 +623,8 @@
           "(?i)(narrow|double|test|first)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?extract the interface from the implementation",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?write the class first"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])extract the interface from the implementation",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])write the class first"
         ]
       }
     },
@@ -643,7 +643,7 @@
           "yes, assert the whole object"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?the reviewer is right"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])the reviewer is right(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
         ]
       }
     }

@@ -82,7 +82,7 @@ Skill здесь — не одна инструкция, а **версионир
 │   ├── check_release_gate.py  # гейт: изменение кода ⇔ поднятие версии
 │   ├── check_mutation_score.py# гейт: mutation score не ниже порога
 │   ├── mutation.py            # локальный запуск мутаций по одному файлу (CPU−2, без полного прогона)
-│   ├── check_language.py      # гейт: без русского текста вне README/_audit (языковая политика)
+│   ├── check_language.py      # гейт: без русского текста вне README/_audit/_temp (языковая политика)
 │   └── run_skill_evals.py     # валидация и запуск eval-manifests (offline/opt-in)
 │
 ├── src/skill_library/         # реализация CLI (Python ≥ 3.12, только stdlib)
@@ -558,7 +558,8 @@ Skills — **доверенный исполняемый контент**: ин�
   Оба инструмента — dev-группа uv и на runtime-самодостаточность библиотеки
   не влияют.
 - Языковая политика: русский текст допустим только в корневом `README.md`,
-  `__test__/README.md` и отчётах `_audit/`; всё остальное — по-английски.
+  `__test__/README.md` и в неверсионируемых рабочих каталогах `_audit/`
+  (отчёты ревью) и `_temp/` (черновые заметки); всё остальное — по-английски.
   Гейт — `python scripts/check_language.py` (шаг CI + самопроверка в
   `__test__/test_language_policy.py`); для Unicode-данных в тестах есть
   строчный waiver `non-english-ok: <причина>`.

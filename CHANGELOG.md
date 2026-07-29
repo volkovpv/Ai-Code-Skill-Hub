@@ -5,6 +5,58 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.4.2] — 2026-07-29
+
+### `_temp/` joins `_audit/` as a language-policy exemption
+
+- `scripts/check_language.py` exempts `_temp/` from the English-only rule.
+  Both exempt prefixes are untracked working areas (`.gitignore` lists
+  `_audit/*` and `_temp/*`): they hold review reports and scratch notes
+  written for whoever runs the tool, not repository content that a reader of
+  the library will ever see. Until now a note written in the reader's own
+  language there failed `skillctl test` — the scanner walks the working tree,
+  not the index, so being untracked did not exempt it.
+- The exemption is a directory prefix, not a name match: `_temp/notes.md` is
+  allowed while `_template.md` and `_temporary/notes.md` stay English-only.
+  `__test__/test_language_policy.py` pins both directions.
+- The rule text is updated everywhere it is stated: `AGENTS.md` (authoritative),
+  `CLAUDE.md`, `README.md` and the scanner's own docstring and failure message.
+
+### `testing-discipline` eval manifest: second audit pass
+
+- A full `--repeat 3` gate (120 live invocations) came back **114/120**. The
+  shape of the failures is the finding: six failures in six *different* cases,
+  every one of them 2/3. A skill that did not know a rule would not state it in
+  the other two attempts — so all six were again defects of the instrument, and
+  the skill is untouched by this entry.
+- Four required regexes were pinned to one lexical realisation of their rule
+  and now accept it however it is phrased:
+  - `bug-fix-…-fails-first` demanded the bigram `(fail|red) (before|first)`;
+    the answer expressed the same ordering as "revert your one-line fix and run
+    it". The pattern now also accepts reverting/undoing/removing the fix.
+  - `expected-value-derivation-…` missed on the plural (`\bimport\b` against
+    "not in **imports**"), on the gerund (`recomputes?` against
+    "**recomputing**") and on a 96-character gap under an 80-character limit.
+  - `async-test-must-not-run-ahead-…` demanded the words "intermediate" or
+    "equals 10"; the answer proposed the equivalent remedy — make the expected
+    end state unreachable from the start state. The pattern now states the
+    principle, not one recipe for it.
+  - `query-call-count-…` required the query word and the permission phrase on
+    one line in one order; they were 256 characters apart in the other order.
+- The endorsement template gained two guards, applied across all 21 bans:
+  - *use–mention*: a phrase in quotes is being named, not advised — the failing
+    answer wrote `"Tidy it later" is how that happens` while condemning it;
+  - *qualified verdict*: where the skill itself makes a verdict contingent on
+    the declared school or on scope, a verdict that carries its condition in
+    the same sentence is the required answer ("the reviewer is right **if**
+    your project declares London"). Applied only to the three verdict-shaped
+    bans; on bans that are unconditionally true it would only weaken them.
+- Verified offline in both directions before any re-run: all **120** saved
+  harness answers are accepted (including the six the gate rejected), and 27
+  sentence pairs assert that each changed expectation still catches the wrong
+  answer and spares the right one. `__test__/README.md` documents both guards
+  and the "no single recipe" rule.
+
 ## [3.4.1] — 2026-07-28
 
 ### Eval manifests can forbid a pattern, not just a substring

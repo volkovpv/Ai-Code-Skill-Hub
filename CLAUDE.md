@@ -9,7 +9,7 @@ A self-contained, vendor-neutral library of **Agent Skills** ("git repo as a ski
 - **Skill content**: `skills/` (canonical sources), `skills.yaml` (catalog), `templates/skill/` (scaffold for `skillctl new` — never validated or installed directly).
 - **CLI implementation**: `src/skill_library/` (Python ≥ 3.12, **stdlib only — never add dependencies**), thin wrappers in `scripts/`.
 
-`AGENTS.md` is the authoritative rules file for agents/developers; only the root `README.md` and `__test__/README.md` are in **Russian** — all other docs (including `CHANGELOG.md` and `__test__/scenarios/README.md`) are in English; audit reports under `_audit/` are exempt from the language rule. `README.md` must be kept in sync with actual CLI behaviour — never document features that don't exist.
+`AGENTS.md` is the authoritative rules file for agents/developers; only the root `README.md` and `__test__/README.md` are in **Russian** — all other docs (including `CHANGELOG.md` and `__test__/scenarios/README.md`) are in English; the untracked working areas `_audit/` (audit reports) and `_temp/` (scratch notes) are exempt from the language rule. `README.md` must be kept in sync with actual CLI behaviour — never document features that don't exist.
 
 ## Commands
 

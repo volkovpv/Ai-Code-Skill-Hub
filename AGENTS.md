@@ -142,7 +142,8 @@ installed into a consumer.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
   features that do not exist. Only the root `README.md`, `__test__/README.md`
   and `docs/history.rus.md` are written in Russian; every other document is in
-  English (audit reports under `_audit/` are exempt).
+  English. The untracked working areas `_audit/` (review reports) and `_temp/`
+  (scratch notes) are exempt — they are not repository content.
 - Bump the skill's `version` in `skills.yaml` whenever its content changes.
 
 ## Release discipline
