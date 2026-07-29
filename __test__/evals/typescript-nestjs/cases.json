@@ -52,7 +52,7 @@
       "id": "conflict-project-logger-wrapper-wins",
       "kind": "behavior",
       "requirement": "A documented project decision overrides the skill's own-logger-port preference.",
-      "prompt": "Our project has an ADR mandating the nestjs-pino integration package for all services (a settled team decision). Set up request logging for a new module following the project rules.",
+      "prompt": "Our project has an ADR mandating the nestjs-pino integration package for all services — a settled team decision. Take it as given; do not look for the file that records it and do not create any files. Show, as code in your answer, how request logging is set up for a new module following the project rules.",
       "expect": {
         "exit_code": 0,
         "stdout_matches": ["nestjs-pino", "(?i)(project|adr)"]
@@ -66,6 +66,87 @@
       "expect": {
         "exit_code": 0,
         "stdout_not_contains": ["@Module", "ValidationPipe", "unique symbol"]
+      }
+    },
+    {
+      "id": "http-status-comes-from-the-status-registry",
+      "kind": "behavior",
+      "requirement": "HttpStatus from @nestjs/common is the canonical status registry — a raw numeric literal never stands in for it, including as a status-map key or a test assertion.",
+      "prompt": "Two lines in our NestJS service spell HTTP statuses as raw numeric literals: the module filter's map `new Map([[404, ProblemCode.notFound], [409, ProblemCode.conflict]])`, and an integration-test assertion `expect(res.status).toBe(404)`. The mapping itself is correct — only the way the statuses are spelled is wrong. Rewrite both lines with the spelling you recommend, keeping everything else identical. Work from the snippets as given: do not ask for the files, and show no alternatives.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["HttpStatus.NOT_FOUND", "HttpStatus.CONFLICT"],
+        "stdout_not_contains": ["toBe(404)"]
+      }
+    },
+    {
+      "id": "cross-module-import-goes-through-the-public-barrel",
+      "kind": "behavior",
+      "requirement": "Cross-module imports go through the target module's public barrel; importing another module's *.module.ts, use case or repository is forbidden.",
+      "prompt": "In modules/billing I need the customer lookup that lives in modules/customers. Right now I wrote `import { CustomersModule } from '../customers/customers.module';` and injected CustomerRepository out of it. What is the correct import surface here, and what may that surface expose? Keep it short.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(barrel|index\\.ts|public surface)", "(?i)(token|input port)"]
+      }
+    },
+    {
+      "id": "application-layer-framework-import-is-type-only",
+      "kind": "behavior",
+      "requirement": "domain/ imports nothing from the framework; application/ may import from the framework base package only as a type-only import.",
+      "prompt": "Our application-layer service needs the OnApplicationBootstrap lifecycle interface from @nestjs/common, and a colleague wants to put @Injectable() on that same class. Which of the two is allowed in application code, and how exactly is the allowed one written? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["import type", "(?i)(not|never|forbidden|no)"]
+      }
+    },
+    {
+      "id": "trace-id-is-established-before-the-guards",
+      "kind": "behavior",
+      "requirement": "Guards run before interceptors, so a trace id that must survive auth failures is established in middleware, not in an interceptor.",
+      "prompt": "Our logging interceptor generates the trace id for each request. Requests rejected by the auth guard show up in the logs with no trace id at all. Why does that happen, and where should the trace id be established instead? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)middleware", "(?i)(before|precede|prior|earlier)"]
+      }
+    },
+    {
+      "id": "env-is-read-only-in-the-config-layer",
+      "kind": "behavior",
+      "requirement": "Configuration enters through namespaced registerAs factories with a fail-closed startup validation schema; a raw process.env read outside the config layer is forbidden.",
+      "prompt": "A driven adapter in our NestJS service reads process.env.PAYMENTS_API_URL directly, with a fallback string. Show the shape you recommend instead — where the value is declared, where it is validated, and how the adapter reads it. Keep it to a short answer with at most two code blocks.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["registerAs", "(?i)validat", "(?i)configservice"]
+      }
+    },
+    {
+      "id": "use-case-receives-limits-not-the-config-service",
+      "kind": "behavior",
+      "requirement": "Config values are consumed by driven adapters and providers/ factories; a use case receives limits as parameters, never the ConfigService itself.",
+      "prompt": "Our CreateInvoiceUseCase needs a page size that lives in configuration. Should its constructor take ConfigService? If not, what does it take, and who supplies the value? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(usefactory|factory|provider)", "(?i)(parameter|constructor|value|number)"]
+      }
+    },
+    {
+      "id": "integration-test-overrides-at-the-token",
+      "kind": "behavior",
+      "requirement": "Integration tests build the module graph with Test.createTestingModule and substitute at the DI token, driving the scenario through the boundary.",
+      "prompt": "I need an integration test for our billing module in which the payment gateway is replaced by a fake, and the scenario is driven the way a real client would drive it. Show only the setup you recommend — the testing module, the substitution, and how the scenario is triggered — with no alternatives.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["overrideProvider", "Test.createTestingModule"]
+      }
+    },
+    {
+      "id": "public-endpoint-opts-out-of-the-default-guard",
+      "kind": "behavior",
+      "requirement": "Authentication is on by default via APP_GUARD; a public endpoint opts out explicitly with a @Public() decorator whose metadata key is a unique symbol.",
+      "prompt": "Our new health-check controller must be reachable without a token, while every other route in the service stays authenticated. How should that be wired in NestJS? Show the wiring you recommend, briefly.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["APP_GUARD", "(?i)@public|public\\(\\)"]
       }
     }
   ]
