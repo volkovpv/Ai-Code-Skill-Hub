@@ -37,7 +37,7 @@
           "(?i)(dimension|case|specification|spec)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])only applies to"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])only applies to(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -142,13 +142,13 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)regression",
-          "(?i)(?:\\b(?:fails?|failed|failing|red)\\b[^.\\n]{0,30}?\\b(?:before|without|first|prior to)\\b|\\b(?:revert\\w*|undo\\w*|remov\\w*|back out|backing out|stash\\w*|disabl\\w*)\\b[^.\\n]{0,40}?\\bfix\\b|\\bfix\\b[^.\\n]{0,25}?\\b(?:reverted|removed|undone|backed out)\\b)"
+          "(?i)(?:\\b(?:fails?|failed|failing|red)\\b[^.\\n]{0,30}?\\b(?:before|without|first|prior to|pre-?fix|old code|unfixed)\\b|\\b(?:revert\\w*|undo\\w*|remov\\w*|back out|backing out|stash\\w*|disabl\\w*)\\b[^.\\n]{0,40}?\\bfix\\b|\\bfix\\b[^.\\n]{0,25}?\\b(?:reverted|removed|undone|backed out)\\b)"
         ],
         "stdout_not_contains": [
           "the green suite is enough"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])you(?:'re| are) done\\b(?![^.\\n]*\\b(?:once|when|after|until)\\b)"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])you(?:'re| are) done\\b(?![^.\\n]*\\b(?:once|when|after|until)\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -166,7 +166,7 @@
           "yes, just update the expected value"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])refresh the snapshot and move on"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])refresh the snapshot and move on(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -251,7 +251,7 @@
           "(?i)(london|declar|project rule)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])use the real `?PriceCalculator`?(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])use the real `?PriceCalculator`?(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -266,7 +266,7 @@
           "(?i)(stub|input|implementation detail|over.specif|fragile|brittle)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])keep both assertions"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])keep both assertions(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -278,7 +278,7 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(hardcode|hard-code|duplicat|same (algorithm|implementation)|itself|specification)"
+          "(?i)(hardcode|hard-code|duplicat|same (algorithm|implementation|helpers?|functions?|formula|code)|itself|specification|circular|tautolog|hand-comput|independent of the implementation)"
         ],
         "stdout_not_contains": [
           "this is a good test"
@@ -293,10 +293,10 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(observable behaviour|observable behavior|discount|implementation detail|do not (expose|widen))"
+          "(?i)(observable behaviour|observable behavior|observable effect|discount|implementation detail|public (API|surface)|widening (its |the )?visibility|do not (expose|widen))"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])make it public"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])make it public(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -337,7 +337,7 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)(see|watch|observe).{0,40}(fail|red)",
-          "(?i)(break|revert|invert|remove).{0,60}(behaviour|behavior|guard|condition|code)"
+          "(?i)(break|revert|invert|remove|comment out|disable).{0,60}(behaviour|behavior|guard|condition|code|logic|calculation|implementation)"
         ],
         "stdout_not_contains": [
           "nothing left to do"
@@ -355,7 +355,7 @@
           "(?i)(why|investigat|find out|reach|subject|already)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])move on to the next"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])move on to the next(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -370,7 +370,7 @@
           "(?i)(design|split|too (big|many)|collaborat|responsibilit)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])just move it into a shared helper"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])just move it into a shared helper(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -382,11 +382,11 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(literal|in the test|specification|spec)",
-          "(?i)(?:\\b(?:do not|don't|never|avoid|why not|rather than|instead of|not to|not in)\\b[^.\\n]{0,60}?\\b(?:import\\w*|production|module)\\b|\\bimport\\w*\\b[^.\\n]{0,120}?\\b(?:recomput\\w*|restate\\w*|algorithm under test|equals itself|circular)\\b)"
+          "(?i)(literal|hardcod\\w*|hard-cod\\w*|in the test|specification|spec)",
+          "(?i)(?:\\b(?:do not|don't|never|avoid|why not|rather than|instead of|not to|not in|not)\\b[^.\\n]{0,60}?\\b(?:import\\w*|production|module)\\b|\\bimport\\w*\\b[^.\\n]{0,120}?\\b(?:recomput\\w*|restate\\w*|re-?execut\\w*|re-?implement\\w*|lockstep|algorithm under test|equals itself|circular)\\b)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])import `?COMMISSION_RATE`?"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])import `?COMMISSION_RATE`?(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -409,11 +409,11 @@
       "id": "cycle-is-not-imposed-on-a-project-that-has-not-declared-it",
       "kind": "negative",
       "requirement": "The red/green/refactor cycle applies where the host project declares it; the skill does not mandate a development process.",
-      "prompt": "Our team writes tests right after each function, deliberately, and our project rules say nothing about TDD. I just need a review of this one test's structure and naming. Is our process wrong?",
+      "prompt": "Our team writes tests right after each function, deliberately, and our project rules say nothing about TDD. Here is the whole test, pasted below — nothing to open, I just need a review of its structure and naming.\n\n  test_1:\n    cart = new Cart()\n    cart.add(item(price = 100))\n    cart.add(item(price = 50))\n    assert cart.total() == 150\n\nIs our process wrong?",
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(project|declare|rules|your process)"
+          "(?i)(project|declare|rules|your process|not wrong|nothing wrong|sequencing|on its own merits|does not (?:mandate|require|dictate))"
         ],
         "stdout_not_contains": [
           "you must write the test first",
@@ -476,14 +476,14 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?is)(?:\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b.{0,400}?\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain)\\b|\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain)\\b.{0,400}?\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b)",
+          "(?is)(?:\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b.{0,400}?\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain|drop\\w*|loosen\\w*|stop pinning|over-specif\\w*|implementation detail)\\b|\\b(?:any number|any count|as many times|unpinned|not pinned|do not pin|don't pin|never pin\\w*|unconstrained|do not constrain|drop\\w*|loosen\\w*|stop pinning|over-specif\\w*|implementation detail)\\b.{0,400}?\\b(?:quer\\w*|read\\w*|lookup\\w*|catalogue|stub)\\b)",
           "(?i)(command|side effect|audit|record).*(exactly|once|expect)"
         ],
         "stdout_not_contains": [
           "the cache is the problem"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])pin both call counts"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])pin both call counts(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -502,7 +502,7 @@
           "the test is still fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])keep using the domain type"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])keep using the domain type(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -521,7 +521,7 @@
           "rollback isolation is fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])clean(?:ing)? up at the end"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])clean(?:ing)? up at the end(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -537,8 +537,8 @@
           "(?i)(message|diagnos|report|which value|name the)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])tidy it later",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])get on with the production code"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])tidy it later(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])get on with the production code(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -574,7 +574,7 @@
           "committing the skip is fine"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])make an exception to the rule"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])make an exception to the rule(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -590,8 +590,8 @@
           "(?i)(unit|integration)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])isolate it from its collaborators",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])replace every collaborator with a double"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])isolate it from its collaborators(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])replace every collaborator with a double(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -611,7 +611,7 @@
           "any test with two classes is an integration test"
         ],
         "stdout_not_matches": [
-          "(?im)^\\W*(?<![\"'“«])(?:the |your )?reviewer is right\\b(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
+          "(?im)^\\W*(?<![\"'“«])(?:the |your )?reviewer is right\\b(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -627,8 +627,8 @@
           "(?i)(narrow|double|test|first)"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])extract the interface from the implementation",
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])write the class first"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])extract the interface from the implementation(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])write the class first(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -647,7 +647,7 @@
           "yes, assert the whole object"
         ],
         "stdout_not_matches": [
-          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b)[^.\\n]){0,60}?(?<![\"'“«])the reviewer is right(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)"
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\"'“«])the reviewer is right(?![^.\\n]*\\b(?:if|when|unless|under|where|depends|only|but|insofar|provided)\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     }

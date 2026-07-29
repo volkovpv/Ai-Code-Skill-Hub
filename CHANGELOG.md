@@ -5,6 +5,103 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.5.0] — 2026-07-29
+
+### `testing-discipline` is stable
+
+The skill was draft "until the eval-gate runs against a real harness". It has
+now run four times against a live one, and the bar it is promoted on is
+recorded in `skills.yaml` next to the entry rather than left to memory: **every
+one of the 40 cases passes at least 2 of 3 attempts on the gate tier
+(`claude-sonnet-5`, effort `medium`)** — measured 118/120, with two cases at
+2/3.
+
+The bar is per-case majority, not a clean sweep. A single `--repeat 1` run is
+what it replaces: across this release's runs the one-shot result moved between
+35/40 and 36/40 with a *different* set of failures each time, so it measured
+the model's variance rather than the skill. The two cases that sit at 2/3
+(`async-test-must-not-run-ahead-of-the-system`,
+`persistence-test-cleans-at-the-start-and-commits`) fail on wording their
+passing attempts quote from the skill verbatim — variance, not a missing rule.
+
+### Four rules made reachable from `SKILL.md`
+
+A live gate run of `testing-discipline` (`claude-sonnet-5`, effort `medium`)
+failed two cases whose rules were already written down — in
+`references/hygiene.md`, which a short question never opens. Both are now
+stated in `SKILL.md` itself, which is always loaded:
+
+- **An unfinished test stays in the working copy.** A test red only because
+  its behaviour is not written yet is not carried by a skip; the documented-
+  skip exception is for a test held red by something outside the current
+  change, and renaming the silence to an expected-failure or pending marker —
+  with or without a tracking reference — is the same commit.
+- **A red test after a refactor is a finding.** A refactor that changes no
+  behaviour cannot turn a test red, so when one does the question is whether
+  the change was more than a refactor or introduced a defect; that is settled
+  before any expected value or snapshot moves. Where the behaviour did change
+  on purpose, the new expectation comes from the specification that sanctioned
+  it, never read back from what the code now produces.
+
+- **Persistent state is cleaned at the start of a test, not at the end** — and
+  a test is not isolated by rolling its transaction back, since commit is
+  where pending changes flush, constraints are checked, generated values are
+  assigned and triggers fire. Found the same way at `--repeat 3`: the attempt
+  that opened `references/adapters-and-persistence.md` answered correctly, the
+  two that did not put the cleanup in teardown.
+
+- **A wait whose condition already held at the starting state never waited for
+  anything** — a quantity back to the value it began at, a collection back to
+  empty. `references/async-and-concurrency.md` already carried this scenario as
+  its minimal reproduction; without the tell in `SKILL.md` an agent diagnosed
+  the same test as merely tautological and missed the asynchronous point.
+
+The frontmatter `description` now names persistence (`persistence cleans on the
+way in and commits`), since it is the only text read before the skill is loaded
+and a question phrased in database terms was not reaching the skill at all.
+Room was made by dropping `the two levels kept apart`, which the preceding
+sentence about the school already states, and `determinism`.
+
+The refusal now leads the tuning rule (`A red test is answered with a
+diagnosis, never with a refreshed expectation`), because an agent that met the
+"behaviour changed on purpose" branch first answered "yes, that's the normal
+move" and never reached the rest. `agents/openai.yaml` carries the clauses too.
+Skill version 1.4.0 → 1.5.0.
+
+### Eval oracles widened to the vocabulary answers actually use
+
+Seven `testing-discipline` oracles rejected correct answers over wording:
+break-and-restore phrased as breaking the *logic* or *commenting out* the
+calculation; un-pinning a query count phrased as *drop or loosen* or
+*implementation detail*; declining to impose the cycle phrased as *not wrong*
+or *a sequencing choice*; a circular test called *tautological* or answered
+with *hand-computed* fixtures; a regression test verified against the
+*pre-fix* code; visibility answered with the *public API's observable effect*;
+an expected value the answer said to *hardcode* — both where it explained that
+importing the constants makes the test *re-execute* the formula, and where the
+oracle asked for a *literal* while the skill's own rule is spelled "hardcode
+the expected results".
+
+The forbidden patterns carried a real defect, in both directions. They scan
+only the sentence *prefix* for what would make the phrase conditional or
+negated, so `Once that's in place, you're done` read as a flat claim, and
+`Write the class first and you'll end up naming the interface after the
+implementation, not after what your object needs` read as advice to write the
+class first. The shared prefix exclusion now covers conditional openers
+(`once|if|when|after|until|provided`) alongside the negations it already knew,
+and every pattern gained a trailing guard for a negation that arrives after the
+phrase — closing both blind spots in all twenty-one patterns rather than the
+two that happened to fire.
+
+`cycle-is-not-imposed-on-a-project-that-has-not-declared-it` asked for a review
+of "this one test" that the harness never put in the temporary project, so the
+answer was "paste the test" and the process question went unanswered; the test
+is now inline in the prompt.
+
+Every widening was replayed over the 240 harness answers saved by four runs:
+the correct answers pass, and every substantively wrong answer in that archive
+is still rejected.
+
 ## [3.4.4] — 2026-07-29
 
 ### Reasoning effort is part of the eval environment, not the operator's shell
@@ -13,10 +110,12 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
   decide an answer:
 
   ```json
+{
   "tiers": {
     "gate":  { "model": "claude-sonnet-5",           "effort": "medium" },
     "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
   }
+}
   ```
 
   `scripts/run_skill_evals.py` gains `--effort` and an `{effort}` placeholder

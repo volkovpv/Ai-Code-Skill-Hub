@@ -1299,6 +1299,22 @@ class TestAsyncAndConcurrencyGuidance(unittest.TestCase):
             text,
         )
 
+    def test_the_runaway_tell_is_reachable_from_skill_md(self):
+        # Measured against the live gate: an agent that never opened this file
+        # diagnosed the reproduction as merely tautological and missed the
+        # asynchronous point — that the wait was satisfied before it began.
+        # The tell has to survive in the file that is always loaded.
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "**A wait whose condition already held at the starting state "
+            "never waited for anything**",
+            body,
+        )
+        self.assertIn("a quantity that returns to the value it began at", body)
+        self.assertIn(
+            "wait for a state the initial one could not have been in", body
+        )
+
     def test_asserting_an_absence_of_effect_has_its_own_technique(self):
         text = self._text()
         self.assertIn("## Testing that an action has *no* effect", text)
@@ -1422,6 +1438,19 @@ class TestAdaptersAndPersistenceGuidance(unittest.TestCase):
         )
         self.assertIn(self.RULE_SILENT_ROT, text)
         self.assertIn("**and no test fails.**", text)
+
+    def test_the_cleanup_position_is_reachable_from_skill_md(self):
+        # The rule lived only here, and a question that never opens this file
+        # gets the habitual answer instead: clean up in teardown. It has to
+        # survive in the file that is always loaded.
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "Persistent state is cleaned at the **start** of a test, not at "
+            "the end",
+            body,
+        )
+        self.assertIn("Nor is a test isolated by rolling its transaction back", body)
+        self.assertIn("never commits never exercises any of it", body)
 
     def test_rules_are_not_accidentally_duplicated(self):
         text = self._text()
@@ -1610,6 +1639,44 @@ class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
             hygiene,
         )
 
+    def test_a_red_test_after_a_refactor_is_investigated_before_the_expectation_moves(
+        self,
+    ):
+        # "Do not tune a test to the gate" reads as being about laziness, so a
+        # refactor that intentionally changed behaviour looks like a licensed
+        # exception and refreshing the snapshot looks like the normal
+        # workflow. What closes it is that a refactor changes no behaviour by
+        # definition: a red one is a finding, and the replacement expectation
+        # comes from the specification rather than from the new output.
+        hygiene = flat(REFERENCES / "hygiene.md")
+        body = flat(SKILL / "SKILL.md")
+        for text in (hygiene, body):
+            self.assertIn(
+                "refactor that changes no behaviour cannot turn a test red", text
+            )
+            self.assertIn("more than a refactor or it introduced a defect", text)
+        self.assertIn(
+            "never read back from what the code now produces", hygiene
+        )
+        # The refusal has to lead: measured against the live gate, an agent
+        # that meets the "behaviour changed on purpose" branch first answers
+        # "yes, that's the normal move" and never reaches the rest.
+        self.assertIn(
+            "**A red test is answered with a diagnosis, never with a "
+            "refreshed expectation**",
+            body,
+        )
+        self.assertLess(
+            body.index("answered with a diagnosis"),
+            body.index("did change on purpose"),
+            "the refusal must precede the intentional-change branch",
+        )
+        self.assertIn(
+            "rather than reading it back from what the code now produces", body
+        )
+        # And the rule this clause extends survives, exactly once.
+        self.assertEqual(hygiene.count("**Do not tune a test to the gate:**"), 1)
+
     def test_visible_derivation_is_distinguished_from_leaking_the_algorithm(self):
         structure = flat(REFERENCES / "structure-and-naming.md")
         anti = flat(REFERENCES / "anti-patterns.md")
@@ -1642,6 +1709,32 @@ class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
         self.assertIn("**Never share a red suite.**", hygiene)
         # And the rule it is being distinguished from survives, exactly once.
         self.assertEqual(hygiene.count("**No focused or skipped tests committed.**"), 1)
+
+    def test_the_silence_stays_forbidden_under_a_different_marker(self):
+        # The documented-skip exception one clause above is the loophole an
+        # agent takes: it re-emerges as "commit it as an expected failure
+        # with a tracking ticket", which is the same silenced test in a
+        # suite that is supposed to be green.
+        hygiene = flat(REFERENCES / "hygiene.md")
+        self.assertIn("**Renaming the silence does not lift the rule:**", hygiene)
+        self.assertIn("expected-failure or pending marker", hygiene)
+        self.assertIn(
+            "it never covers a test whose behaviour is simply not written yet",
+            hygiene,
+        )
+
+    def test_the_unfinished_test_resolution_is_reachable_from_skill_md(self):
+        # Both rules already lived in hygiene.md, and an agent answering a
+        # one-line question never opened it: the resolution has to survive in
+        # the file that is always loaded, not only in the reference.
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "A test that is red only because its behaviour is not written yet "
+            "stays in the working copy until it passes",
+            body,
+        )
+        self.assertIn("renaming the silence to an expected-failure or pending marker", body)
+        self.assertIn("references/hygiene.md", body)
 
     def test_naming_the_expected_value_is_scoped_apart_from_over_asserting(self):
         # "Say exactly 50" and "do not assert what the inputs did not drive"
