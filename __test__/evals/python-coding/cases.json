@@ -53,10 +53,10 @@
       "id": "conflict-project-instructions-win",
       "kind": "behavior",
       "requirement": "Explicit project instructions take precedence over the skill's explicit-boolean rule.",
-      "prompt": "Our project's CLAUDE.md explicitly mandates idiomatic PEP 8 truthiness for collection emptiness checks (a documented team decision). Write a small function that returns the first element of a list of ints or None when the list is empty, following the project rules.",
+      "prompt": "Our project rules explicitly mandate idiomatic PEP 8 truthiness for collection emptiness checks — a documented, settled team decision. Take that decision as given; do not look for the file that records it. Write a small function that returns the first element of a list of ints or None when the list is empty, following the project rules.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(if\\s+\\w+:|not\\s+\\w+|project)"]
+        "stdout_matches": ["(?i)(if\\s+\\w+|not\\s+\\w+|project)"]
       }
     },
     {
@@ -110,6 +110,147 @@
       "expect": {
         "exit_code": 0,
         "stdout_not_contains": ["mypy", "dataclass", "def count_vowels"]
+      }
+    },
+    {
+      "id": "sql-values-go-through-placeholders",
+      "kind": "behavior",
+      "requirement": "SQL values travel through placeholders, never through the query string; identifiers come from a closed allowlist in code.",
+      "prompt": "In Python, look up a user row by an email address that arrived in an HTTP request, using a DB-API cursor. Show only the single final code block you recommend, with no alternatives and no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)execute\\(", "(\\?|%s|:email|%\\(email\\)s)"],
+        "stdout_not_contains": ["f\"SELECT", "f'SELECT"]
+      }
+    },
+    {
+      "id": "path-from-input-is-resolved-and-containment-checked",
+      "kind": "behavior",
+      "requirement": "A path built from input is resolved and containment-checked against its base directory; a string prefix check is not a containment check.",
+      "prompt": "A download endpoint builds a file path from a user-supplied name under a fixed base directory. Show only the containment check you recommend before the file is opened, with no alternatives.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(resolve\\(\\)|realpath)", "(?i)(is_relative_to|commonpath|\\.parents)"]
+      }
+    },
+    {
+      "id": "untrusted-payload-is-never-unpickled",
+      "kind": "behavior",
+      "requirement": "pickle executes arbitrary code by design — never unpickle data you did not produce and store yourself.",
+      "prompt": "We cache objects in Redis and read them back with pickle.loads(raw). The same cache is also written by an ingestion job that stores documents received from partners. Is pickle acceptable here? Answer with a verdict first, then what you would use instead.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(arbitrary code|code execution|remote code|never)", "(?i)(json|msgpack|data-only|validat)"]
+      }
+    },
+    {
+      "id": "token-comes-from-secrets-and-compares-in-constant-time",
+      "kind": "behavior",
+      "requirement": "Security-relevant randomness comes from secrets, and secrets are compared in constant time.",
+      "prompt": "Show only the two Python lines you recommend: generating a password-reset token, and comparing a token submitted by a client with the stored one. No alternatives, no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["secrets\\.token_", "(hmac|secrets)\\.compare_digest"]
+      }
+    },
+    {
+      "id": "tls-verification-stays-on",
+      "kind": "behavior",
+      "requirement": "TLS verification is never disabled in shipped code; a broken certificate is fixed in the trust store.",
+      "prompt": "Our staging environment has a certificate our Python HTTP client rejects, and the quickest fix is passing verify=False on the call. Should we ship that? Answer with a verdict first, then what to do instead.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(no|never|not)", "(?i)(trust store|certificate|ca bundle|ca_bundle|cert)"]
+      }
+    },
+    {
+      "id": "password-hash-is-memory-hard",
+      "kind": "behavior",
+      "requirement": "Passwords are hashed with a memory-hard algorithm; a general-purpose digest over a password is a defect, salted or not.",
+      "prompt": "We store user passwords as sha256(password + salt) in Python. Say what is wrong with that, and show only the replacement you recommend. Keep it short.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(argon2|scrypt)", "(?i)(memory|cost|fast|brute)"]
+      }
+    },
+    {
+      "id": "every-external-await-has-a-timeout",
+      "kind": "behavior",
+      "requirement": "Every external await carries a deadline; an unbounded wait is a defect, not a default.",
+      "prompt": "This coroutine awaits an HTTP call with no deadline at all: `resp = await client.get(url)`. Show only the corrected block you recommend, with no alternatives.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(asyncio\\.timeout|timeout\\s*=)"]
+      }
+    },
+    {
+      "id": "cancellederror-propagates",
+      "kind": "behavior",
+      "requirement": "CancelledError must propagate: catching it without re-raising breaks every timeout and task group above the handler.",
+      "prompt": "Our worker's main loop contains `except asyncio.CancelledError:` followed by a log line and a plain `return`. What breaks because of that, and what must the handler do instead? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)re-?raise", "(?i)(timeout|task ?group|shutdown|cancel)"]
+      }
+    },
+    {
+      "id": "shared-counter-across-threads-is-locked",
+      "kind": "behavior",
+      "requirement": "The GIL never made compound operations atomic and free-threaded builds have none: cross-thread mutation goes through an explicit lock, a queue, or an immutable hand-off.",
+      "prompt": "Two threads increment a shared dict counter with `counts[key] += 1`. A colleague says the GIL makes that atomic, so no lock is needed. Is the colleague right? Answer with a verdict first, then what the code should do.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(lock|queue)", "(?i)(free.?threaded|not atomic|race|read-modify-write|check-then-act)"]
+      }
+    },
+    {
+      "id": "timestamps-are-aware-utc",
+      "kind": "behavior",
+      "requirement": "Datetimes are timezone-aware; utcnow() is naive by construction and deprecated.",
+      "prompt": "Our records are stamped with `datetime.utcnow()`. Show only the replacement line you recommend and one sentence of rationale.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)datetime\\.now\\(", "(?i)(timezone\\.utc|UTC)", "(?i)(naive|aware)"]
+      }
+    },
+    {
+      "id": "money-is-decimal-not-binary-float",
+      "kind": "behavior",
+      "requirement": "Money is Decimal or integer minor units, constructed from str or int — never a binary float.",
+      "prompt": "Our invoice totals are Python floats and the sums drift by cents. Show the representation you recommend, and how one amount is constructed from a JSON payload. Keep it short.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)decimal", "(?i)(str|string|minor unit|cents|int)"]
+      }
+    },
+    {
+      "id": "resource-is-released-by-a-context-manager",
+      "kind": "behavior",
+      "requirement": "Every acquired resource is released by a context manager; __del__ is never the release path.",
+      "prompt": "A class in our code opens a socket in __init__ and closes it in __del__. Say what is wrong with that, and show the lifecycle you recommend instead. Keep it short.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(__enter__|with |context manager)", "(?i)(__del__|garbage|nondeterministic|never run|interpreter shutdown)"]
+      }
+    },
+    {
+      "id": "wrapped-once-with-raise-from",
+      "kind": "behavior",
+      "requirement": "Inside an except block a wrapping raise is chained with `from err`; an unchained raise there silently replaces the real cause.",
+      "prompt": "Inside `except OSError as err:` in our storage adapter we write `raise StorageUnavailableError(\"connect failed\")`. The linter is silent but a reviewer objects. Show only the corrected raise statement and one sentence of rationale.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["from err", "(?i)(cause|chain|traceback|context)"]
+      }
+    },
+    {
+      "id": "legacy-typing-spellings-are-purged",
+      "kind": "behavior",
+      "requirement": "On a modern floor the legacy typing spellings are banned in favour of builtin generics and the | union.",
+      "prompt": "This helper is annotated `def load(items: typing.List[str], flag: typing.Optional[bool]) -> typing.Dict[str, int]:` in a project whose Python floor is 3.12. Show only the corrected signature you recommend.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["list\\[str\\]", "bool \\| None", "dict\\[str, int\\]"]
       }
     }
   ]

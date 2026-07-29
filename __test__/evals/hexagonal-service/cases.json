@@ -78,6 +78,156 @@
         "exit_code": 0,
         "stdout_not_contains": ["driven adapter", "input port", "composition root"]
       }
+    },
+    {
+      "id": "approach-choice-is-recommended-and-recorded-by-the-project",
+      "kind": "trigger",
+      "requirement": "The skill describes the approaches and recommends one, but the choice belongs to the host project's rules and must be recorded there.",
+      "prompt": "We are starting a new service: medium sized, five people touching the core, a rich set of business invariants. Which way should the inside of the hexagon be structured — one undivided core, or a split into a domain core and an application ring — and what has to happen to that decision afterwards?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)layered", "(?i)(record|document|declare|project rules)"]
+      }
+    },
+    {
+      "id": "undeclared-strategy-follows-the-existing-layout",
+      "kind": "behavior",
+      "requirement": "With no strategy declared in the project rules, follow the code's de-facto layout and propose recording it — never invent a private one.",
+      "prompt": "Our repository documents no architecture rules at all, but every existing module is laid out the same way: domain/, application/, infrastructure/, plus a composition root per module. I am adding a new module and I personally prefer feature slices. Which layout do I use, and is there anything else I should do?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(existing|de.facto|current|same)", "(?i)(record|document|propose|declar)"]
+      }
+    },
+    {
+      "id": "hexagons-do-not-nest",
+      "kind": "behavior",
+      "requirement": "One hexagon per app: a protected subsystem inside a service is its own component or its own service, never a hexagon nested inside another hexagon.",
+      "prompt": "Inside our order service we want to protect the pricing subsystem with its own ports and adapters, living inside the service's existing hexagon — a hexagon within a hexagon. Is that the right model? Answer with a verdict first, then say how the pricing subsystem should be modelled.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(do ?n.?t nest|not nest|no nesting|one hexagon per)", "(?i)(component|own service|separate service|module)"]
+      }
+    },
+    {
+      "id": "driven-port-is-declared-per-external-system",
+      "kind": "behavior",
+      "requirement": "A driven port represents the conversation with one external system, not a domain concept; translating the external model into the domain is the adapter's job.",
+      "prompt": "Our service reads exchange rates from a single external provider's HTTP API. I want two driven ports — CurrencyPort and MoneyConversionPort — both implemented by the same provider client, because those are the two domain concepts involved. Is that the right way to cut the ports? Answer with a verdict first, then the ports you recommend.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(one port|single port|external system|per external)", "(?i)(adapter|translat|map)"]
+      }
+    },
+    {
+      "id": "output-port-does-not-extend-a-framework-repository-base",
+      "kind": "behavior",
+      "requirement": "An output port is the app's own interface; extending a framework's repository base type as a port drags inherited technology methods into the contract.",
+      "prompt": "In our app the OrderRepositoryPort interface extends our ORM's generic Repository<Order> base type, so we inherit findOne, save and the query builder for free. Is that a sound output port? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(leak|inherit|technolog)", "(?i)(no|avoid|instead|defect|own)"]
+      }
+    },
+    {
+      "id": "inbound-broker-consumer-sits-behind-a-driven-port",
+      "kind": "behavior",
+      "requirement": "A message broker is a driven actor even when messages flow inbound — the app initiates the conversation by subscribing.",
+      "prompt": "Messages arrive from our message broker and a consumer hands each one to a use case. Since the messages flow INTO the app, our team assumed the broker is a driving actor. Is the broker a driving or a driven actor here, and why? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)driven", "(?i)(subscrib|initiat)"]
+      }
+    },
+    {
+      "id": "anemic-entity-gets-its-behavior-back",
+      "kind": "behavior",
+      "requirement": "A data-only entity whose rules live in a service is the anemic domain model — a defect to refactor, not a style choice.",
+      "prompt": "Our Order class holds only fields with getters and setters, and every rule about when an order may be cancelled lives in OrderService. A reviewer says this is fine because it keeps the entity simple and testable. Is the reviewer right, and what would you change?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)anemic", "(?i)(entity|behaviou?r|method)"]
+      }
+    },
+    {
+      "id": "value-object-validates-in-its-constructor",
+      "kind": "behavior",
+      "requirement": "A value object is immutable and validated at construction, so a value object that exists is valid and no client re-checks it.",
+      "prompt": "I am adding an EmailAddress value object to our domain. Where does its format validation belong, and what may code holding one assume? Answer in prose, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(constructor|factory|construct|creation)", "(?i)(immutab|valid)"]
+      }
+    },
+    {
+      "id": "identity-is-generated-inside-the-domain",
+      "kind": "behavior",
+      "requirement": "Entity identity is generated inside the domain, with separate create-new and reconstitute factory paths — never delegated to a database sequence.",
+      "prompt": "Our Customer entity currently receives its id from the database's auto-increment column after the repository saves it, so a new Customer has no id until then. Where should the id come from instead, and how does a driven adapter then load an existing customer? Answer in prose, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(domain|constructor|construction|factory)", "(?i)(reconstitut|reconstruct|existing id|rehydrat|second factory)"]
+      }
+    },
+    {
+      "id": "one-persistence-port-per-aggregate-root",
+      "kind": "behavior",
+      "requirement": "Persistence follows the aggregate boundary: one repository-style output port per aggregate root, and every write goes through the root.",
+      "prompt": "Order is our aggregate root and OrderLine is a child entity inside that aggregate. I want to add an OrderLineRepositoryPort so a single line can be updated without loading its order. Is that the right move? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(aggregate root|root)", "(?i)(through the root|one (repository|port)|no|instead)"]
+      }
+    },
+    {
+      "id": "use-case-never-reads-configuration-itself",
+      "kind": "behavior",
+      "requirement": "A use case never reads configuration or the environment; infrastructure limits arrive as parameters supplied by the composition root.",
+      "prompt": "Our SyncInventoryUseCase needs a page size and a request timeout. The quickest fix is to read them from the config object inside the use case. Is that acceptable, and where should those two values come from? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(parameter|constructor|inject|composition root|passed in)", "(?i)(config|configuration)"]
+      }
+    },
+    {
+      "id": "boundary-validation-splits-schema-and-domain-failures",
+      "kind": "behavior",
+      "requirement": "Boundary validation rejects unknown fields and distinguishes a schema violation from a schema-valid but domain-invalid request.",
+      "prompt": "Our endpoint returns the same status for two different rejections: a payload carrying a misspelled extra field, and a well-formed payload whose quantity exceeds the customer's credit limit. Should both get the same status, and where is each failure detected? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["400", "422"]
+      }
+    },
+    {
+      "id": "outbound-call-lives-in-a-driven-adapter-behind-a-resilience-policy",
+      "kind": "behavior",
+      "requirement": "Any outbound call is made only from a driven adapter, wrapped in a resilience policy whose parameters come from configuration.",
+      "prompt": "A use case in our service calls an external pricing API directly with the HTTP client, with no timeout. Two separate things are wrong here — name them, and say what the call should look like instead. Answer in prose, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)driven adapter", "(?i)(timeout|retry|circuit)"]
+      }
+    },
+    {
+      "id": "driving-adapter-calls-exactly-one-input-port",
+      "kind": "behavior",
+      "requirement": "A driving adapter calls exactly one input port; chaining several ports or enforcing a rule before the call is use-case work that has leaked out.",
+      "prompt": "Our controller method calls the ReserveStock port, inspects the result, and then calls the ChargePayment port, skipping the charge when the reservation came back partial. Is that acceptable controller code? Answer with a verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(one input port|single input port|exactly one port|one port)", "(?i)(use case|orchestrat)"]
+      }
+    },
+    {
+      "id": "one-off-script-does-not-get-a-hexagon",
+      "kind": "negative",
+      "requirement": "Do not apply the pattern where it does not pay: a one-off script has no business core to protect.",
+      "prompt": "Write me a 20-line one-off script that renames the files in a folder according to a CSV mapping. It runs once, on my laptop, and then I delete it.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["driven adapter", "output port", "composition root"]
+      }
     }
   ]
 }

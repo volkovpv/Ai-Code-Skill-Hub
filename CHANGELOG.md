@@ -5,6 +5,52 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.5.1] — 2026-07-29
+
+No skill rule changed in this release. What changed is how much of those rules
+the gate actually covers, and what the word "stable" next to them is backed by.
+
+### Gate coverage for the four skills that had stopped growing
+
+Their case sets had not moved since the skills were first published, while the
+skills themselves had: `hexagonal-service` went 1.0 → 2.2.0 (gaining
+`approaches.md`, `domain-modeling.md` and `strategies.md`) on the same 7 cases,
+`typescript-coding` collected five accepted observations on the same 7,
+`typescript-nestjs` kept its original 6, and `python-coding` handed its test
+cases to `testing-discipline` in 3.4.0 without replacing them. Whole reference
+files — adoption strategies, domain modeling, generics, security, concurrency,
+runtime correctness, config and observability — had no case at all.
+
+47 cases were added, one per rule left uncovered: `hexagonal-service` 7 → 22,
+`python-coding` 10 → 24, `typescript-coding` 7 → 17, `typescript-nestjs`
+6 → 14.
+
+### The bar they are stable on is measured, not asserted
+
+`skills.yaml` said only that they "passed the eval-gate" — no date, no tier, no
+repeat count, no score; the tier mechanism (3.5.0) landed after those
+promotions, so the green they stood on named no model/effort pair at all. All
+four are now measured with `--tier gate --repeat 3` (`claude-sonnet-5`, effort
+`medium`) on the same bar as `testing-discipline`: **every case passes at least
+2 of 3 attempts** — 226 of 231 attempts, five cases at 2/3. The per-skill
+scores and the cases sitting at 2/3 are recorded in `skills.yaml` next to each
+entry rather than left to memory.
+
+### Three `conflict-*` cases were flaky by construction
+
+Each pointed at a `CLAUDE.md` or ADR file that the harness's temporary project
+never creates, so a run could go looking for it, fail to find it and refuse the
+premise, or stop to ask for permission to write files — measuring the harness,
+not the skill. They now state the team decision as given, forbid the file
+lookup, and ask for code in the answer; all three moved to 3/3.
+
+Five oracles were corrected the same way, after reading what the harness
+actually answered: `secrets.compare_digest` is the same function as
+`hmac.compare_digest`, a containment check may be spelled with `commonpath` or
+`.parents`, a `catch (cause)` binding is already `unknown` under strict mode
+without saying so, and two patterns demanded vocabulary a correct answer need
+not use.
+
 ## [3.5.0] — 2026-07-29
 
 ### `testing-discipline` is stable
