@@ -5,6 +5,310 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.5.0] — 2026-07-29
+
+### `testing-discipline` is stable
+
+The skill was draft "until the eval-gate runs against a real harness". It has
+now run four times against a live one, and the bar it is promoted on is
+recorded in `skills.yaml` next to the entry rather than left to memory: **every
+one of the 40 cases passes at least 2 of 3 attempts on the gate tier
+(`claude-sonnet-5`, effort `medium`)** — measured 118/120, with two cases at
+2/3.
+
+The bar is per-case majority, not a clean sweep. A single `--repeat 1` run is
+what it replaces: across this release's runs the one-shot result moved between
+35/40 and 36/40 with a *different* set of failures each time, so it measured
+the model's variance rather than the skill. The two cases that sit at 2/3
+(`async-test-must-not-run-ahead-of-the-system`,
+`persistence-test-cleans-at-the-start-and-commits`) fail on wording their
+passing attempts quote from the skill verbatim — variance, not a missing rule.
+
+### Four rules made reachable from `SKILL.md`
+
+A live gate run of `testing-discipline` (`claude-sonnet-5`, effort `medium`)
+failed two cases whose rules were already written down — in
+`references/hygiene.md`, which a short question never opens. Both are now
+stated in `SKILL.md` itself, which is always loaded:
+
+- **An unfinished test stays in the working copy.** A test red only because
+  its behaviour is not written yet is not carried by a skip; the documented-
+  skip exception is for a test held red by something outside the current
+  change, and renaming the silence to an expected-failure or pending marker —
+  with or without a tracking reference — is the same commit.
+- **A red test after a refactor is a finding.** A refactor that changes no
+  behaviour cannot turn a test red, so when one does the question is whether
+  the change was more than a refactor or introduced a defect; that is settled
+  before any expected value or snapshot moves. Where the behaviour did change
+  on purpose, the new expectation comes from the specification that sanctioned
+  it, never read back from what the code now produces.
+
+- **Persistent state is cleaned at the start of a test, not at the end** — and
+  a test is not isolated by rolling its transaction back, since commit is
+  where pending changes flush, constraints are checked, generated values are
+  assigned and triggers fire. Found the same way at `--repeat 3`: the attempt
+  that opened `references/adapters-and-persistence.md` answered correctly, the
+  two that did not put the cleanup in teardown.
+
+- **A wait whose condition already held at the starting state never waited for
+  anything** — a quantity back to the value it began at, a collection back to
+  empty. `references/async-and-concurrency.md` already carried this scenario as
+  its minimal reproduction; without the tell in `SKILL.md` an agent diagnosed
+  the same test as merely tautological and missed the asynchronous point.
+
+The frontmatter `description` now names persistence (`persistence cleans on the
+way in and commits`), since it is the only text read before the skill is loaded
+and a question phrased in database terms was not reaching the skill at all.
+Room was made by dropping `the two levels kept apart`, which the preceding
+sentence about the school already states, and `determinism`.
+
+The refusal now leads the tuning rule (`A red test is answered with a
+diagnosis, never with a refreshed expectation`), because an agent that met the
+"behaviour changed on purpose" branch first answered "yes, that's the normal
+move" and never reached the rest. `agents/openai.yaml` carries the clauses too.
+Skill version 1.4.0 → 1.5.0.
+
+### Eval oracles widened to the vocabulary answers actually use
+
+Seven `testing-discipline` oracles rejected correct answers over wording:
+break-and-restore phrased as breaking the *logic* or *commenting out* the
+calculation; un-pinning a query count phrased as *drop or loosen* or
+*implementation detail*; declining to impose the cycle phrased as *not wrong*
+or *a sequencing choice*; a circular test called *tautological* or answered
+with *hand-computed* fixtures; a regression test verified against the
+*pre-fix* code; visibility answered with the *public API's observable effect*;
+an expected value the answer said to *hardcode* — both where it explained that
+importing the constants makes the test *re-execute* the formula, and where the
+oracle asked for a *literal* while the skill's own rule is spelled "hardcode
+the expected results".
+
+The forbidden patterns carried a real defect, in both directions. They scan
+only the sentence *prefix* for what would make the phrase conditional or
+negated, so `Once that's in place, you're done` read as a flat claim, and
+`Write the class first and you'll end up naming the interface after the
+implementation, not after what your object needs` read as advice to write the
+class first. The shared prefix exclusion now covers conditional openers
+(`once|if|when|after|until|provided`) alongside the negations it already knew,
+and every pattern gained a trailing guard for a negation that arrives after the
+phrase — closing both blind spots in all twenty-one patterns rather than the
+two that happened to fire.
+
+`cycle-is-not-imposed-on-a-project-that-has-not-declared-it` asked for a review
+of "this one test" that the harness never put in the temporary project, so the
+answer was "paste the test" and the process question went unanswered; the test
+is now inline in the prompt.
+
+Every widening was replayed over the 240 harness answers saved by four runs:
+the correct answers pass, and every substantively wrong answer in that archive
+is still rejected.
+
+## [3.4.4] — 2026-07-29
+
+### Reasoning effort is part of the eval environment, not the operator's shell
+
+- The `models` block added in 3.4.3 becomes `tiers`, carrying both dials that
+  decide an answer:
+
+  ```json
+{
+  "tiers": {
+    "gate":  { "model": "claude-sonnet-5",           "effort": "medium" },
+    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+  }
+}
+  ```
+
+  `scripts/run_skill_evals.py` gains `--effort` and an `{effort}` placeholder
+  next to `--model`/`{model}`, and the run header names both.
+- The gap this closes: effort changes the answer as much as the model does, and
+  it was arriving from the operator's own environment — `CLAUDE_EFFORT` in the
+  launching shell, inherited by every harness subprocess, plus `effortLevel` in
+  their personal `settings.json`. Every gate run so far was therefore a claim
+  about "that model **at high effort**", recorded nowhere. The runner now strips
+  `CLAUDE_EFFORT` from the harness environment: the manifest decides, or nothing
+  does.
+- Effort is validated against `low|medium|high|xhigh|max` at manifest load,
+  because `claude --effort` does not reject an unknown level — it warns and
+  silently falls back to its own default, which would produce a run whose header
+  lies about its environment.
+- Which effort to declare is an audience decision. Where it is unknown, the
+  lower bound is the safer claim: a skill that passes at low effort will almost
+  certainly pass at high, and not the other way round. Every manifest here
+  declares `medium` for the gate and `low` for debug.
+- Validation covers unknown tiers, unknown dials, non-string values and bad
+  effort levels; `__test__/test_evals.py` reaches 21 tests, including one that
+  sets `CLAUDE_EFFORT` in the parent and asserts the harness sees it unset, and
+  one that reads the saved answer to confirm the declared pair reached the
+  harness rather than only the log. `README.md`, `CLAUDE.md` and
+  `__test__/README.md` document both dials.
+
+## [3.4.3] — 2026-07-29
+
+### Eval runs name their model instead of inheriting whatever the CLI defaults to
+
+- Every `__test__/evals/<skill>/cases.json` now declares `models: {gate, debug}`
+  and `scripts/run_skill_evals.py` takes `--tier {gate,debug}` (default `gate`)
+  plus a `{model}` placeholder for `--command`.
+  - `gate` — the model the skill's users actually run (`claude-sonnet-5` for
+    every manifest here). A green gate is green *for that model* and claims
+    nothing about any other, so this is the only tier that may move a skill
+    `draft → stable`.
+  - `debug` — a cheap, fast model (`claude-haiku-4-5-20251001`) for shaking
+    manifest defects out between live runs. Its failures may be the model's
+    limits rather than the skill's, so it promotes nothing; it exists because
+    three rounds of manifest defects cost an hour of live run each. A weaker
+    model also makes the skill's effect more visible, so cases the model
+    already passes unaided stand out.
+- `--model` overrides the declared tier for a one-off experiment.
+- Fail-closed in both directions: a resolved model with no `{model}` in the
+  command is refused (the harness would silently use its own default while the
+  log named a different model), and a `{model}` placeholder with no resolved
+  model is refused too. A manifest without a `models` block stays valid and
+  runs on the harness default — recorded as such.
+- Every run now opens with a header naming its environment —
+  `RUN <skill> platform=… tier=… model=… repeat=… cases=… command=…` — so a
+  green result records where it is green. `--validate-only` lists the declared
+  tiers alongside the case count.
+- `__test__/test_evals.py` grows to 19 tests covering tier selection, the
+  override, both fail-closed directions, the no-models fallback, tier and
+  model-name validation, and that every catalog manifest declares both tiers.
+  `README.md`, `CLAUDE.md` and `__test__/README.md` document the two tiers and
+  the rule that only a `gate` run can promote.
+
+## [3.4.2] — 2026-07-29
+
+### `_temp/` joins `_audit/` as a language-policy exemption
+
+- `scripts/check_language.py` exempts `_temp/` from the English-only rule.
+  Both exempt prefixes are untracked working areas (`.gitignore` lists
+  `_audit/*` and `_temp/*`): they hold review reports and scratch notes
+  written for whoever runs the tool, not repository content that a reader of
+  the library will ever see. Until now a note written in the reader's own
+  language there failed `skillctl test` — the scanner walks the working tree,
+  not the index, so being untracked did not exempt it.
+- The exemption is a directory prefix, not a name match: `_temp/notes.md` is
+  allowed while `_template.md` and `_temporary/notes.md` stay English-only.
+  `__test__/test_language_policy.py` pins both directions.
+- The rule text is updated everywhere it is stated: `AGENTS.md` (authoritative),
+  `CLAUDE.md`, `README.md` and the scanner's own docstring and failure message.
+
+### `testing-discipline` eval manifest: second audit pass
+
+- A full `--repeat 3` gate (120 live invocations) came back **114/120**. The
+  shape of the failures is the finding: six failures in six *different* cases,
+  every one of them 2/3. A skill that did not know a rule would not state it in
+  the other two attempts — so all six were again defects of the instrument, and
+  the skill is untouched by this entry.
+- Four required regexes were pinned to one lexical realisation of their rule
+  and now accept it however it is phrased:
+  - `bug-fix-…-fails-first` demanded the bigram `(fail|red) (before|first)`;
+    the answer expressed the same ordering as "revert your one-line fix and run
+    it". The pattern now also accepts reverting/undoing/removing the fix.
+  - `expected-value-derivation-…` missed on the plural (`\bimport\b` against
+    "not in **imports**"), on the gerund (`recomputes?` against
+    "**recomputing**") and on a 96-character gap under an 80-character limit.
+  - `async-test-must-not-run-ahead-…` demanded the words "intermediate" or
+    "equals 10"; the answer proposed the equivalent remedy — make the expected
+    end state unreachable from the start state. The pattern now states the
+    principle, not one recipe for it.
+  - `query-call-count-…` required the query word and the permission phrase on
+    one line in one order; they were 256 characters apart in the other order.
+- The endorsement template gained two guards, applied across all 21 bans:
+  - *use–mention*: a phrase in quotes is being named, not advised — the failing
+    answer wrote `"Tidy it later" is how that happens` while condemning it;
+  - *qualified verdict*: where the skill itself makes a verdict contingent on
+    the declared school or on scope, a verdict that carries its condition in
+    the same sentence is the required answer ("the reviewer is right **if**
+    your project declares London"). Applied only to the three verdict-shaped
+    bans; on bans that are unconditionally true it would only weaken them.
+- Verified offline in both directions before any re-run: all **120** saved
+  harness answers are accepted (including the six the gate rejected), and 27
+  sentence pairs assert that each changed expectation still catches the wrong
+  answer and spares the right one. `__test__/README.md` documents both guards
+  and the "no single recipe" rule.
+
+## [3.4.1] — 2026-07-28
+
+### Eval manifests can forbid a pattern, not just a substring
+
+- `scripts/run_skill_evals.py` accepts an optional `stdout_not_matches` list
+  in a case's `expect`: regexes the harness output must **not** match,
+  searched with `re.MULTILINE`, validated and compiled at manifest-load time
+  alongside `stdout_matches`. The four existing oracles are unchanged, so
+  every manifest stays valid as written.
+- The gap this closes: `stdout_not_contains` bans a phrase wherever it
+  occurs, which is wrong for any case whose correct answer is conditional.
+  Ran against the live Claude Code CLI, the `testing-discipline` case
+  `unit-integration-line-is-taken-from-the-declared-school` failed 5 of 6
+  attempts on the banned phrase `the reviewer is right` — every failure
+  inside a clause like "under London the reviewer is right about the label",
+  which is precisely the school-conditional answer the case requires. The
+  one passing attempt differed only in wording, not in behaviour, so the
+  case was scoring synonyms rather than the skill.
+- That case now states its requirement positively (the verdict must be tied
+  to a declared school) and uses an anchored `stdout_not_matches` to reject
+  an unconditional verdict — including the hybrid answer that names the
+  schools and *then* hands down a flat one, which neither the old ban nor a
+  positive pattern alone could catch. Verified against nine real harness
+  outputs (zero false rejections) and re-run live: 3/3 pass, against 1/5
+  before the fix.
+- `__test__/test_evals.py` pins the new field (a flat claim fails while the
+  same words inside a conditional clause pass, invalid regexes and
+  non-list values are rejected at validation); `__test__/README.md`
+  documents the oracle and when to reach for it.
+
+### A failing case keeps its answer (`--save-output`)
+
+- `scripts/run_skill_evals.py --save-output DIR` writes every harness stdout
+  to `DIR/<skill>--<case>--<attempt>.txt`. A verdict names the oracle that
+  missed but not what the harness actually said, and the temporary project
+  is deleted with the attempt — so until now the only way to read a failure
+  was to run the case again. Diagnosing three failures in one gate run cost
+  two extra live runs; this removes that.
+- The output path is built with `skill_library.security.safe_join`, and a
+  case `id` must now match `[A-Za-z0-9][A-Za-z0-9._-]*` because it names a
+  file. No manifest in the repository violates the rule; the runner rejects
+  an id that would escape the directory at validation time, before anything
+  runs.
+
+### The whole class of form-pinned expectations, not just the one that fired
+
+- A full `--repeat 3` gate over `testing-discipline` (120 live invocations)
+  came back **117/120**. All three failures were manifest defects, not skill
+  defects: re-run with the answers captured, the skill stated the required
+  rule every time.
+  - `bug-fix-ships-a-regression-test-that-fails-first` required the bigram
+    `(fail|red) (before|without)`. The failing answer wrote "a regression
+    test that **fails** before the fix" — the requirement verbatim, rejected
+    over one inflected letter. The two passing attempts matched only because
+    they happened to also write the uninflected "red before".
+  - `expected-value-derivation-is-visible-but-not-borrowed-from-production`
+    required a negative verb near "import". The failing answer put the
+    prohibition in a heading ("Why not import the constants") and a gerund
+    ("Importing … recomputes the expected value with the algorithm under
+    test") — right answer, wrong part of speech. The same case also banned
+    the substring `import COMMISSION_RATE`, which the correct advice "do not
+    import COMMISSION_RATE" contains; it had not fired yet only because the
+    model wrote the identifier in backticks.
+  - `declared-school-is-followed-not-overridden` banned `use the real
+    PriceCalculator` — the exact words the correct answer must write after
+    "don't". It passed three re-runs only because the identifier came back
+    backticked.
+- So the audit covered all 40 cases rather than the three that fired.
+  Seventeen cases had bans phrased as advice, which a correct answer has to
+  contradict verbatim; each is now an endorsement pattern that matches only
+  where the phrase is put forward as a recommendation — sentence-initial,
+  with no negation between the sentence start and the phrase — and tolerates
+  backticked identifiers. Bans that a correct answer cannot utter (`yes,
+  this test is sufficient`, `this is a good test`) were left as substrings.
+- Every conversion is checked in both directions: 23 sentence pairs assert
+  that the negated form survives and the endorsement is still caught, and
+  all 18 real harness answers saved so far pass, including the two that the
+  gate rejected.
+- `testing-discipline` stays `draft` and its version is unchanged — no skill
+  content changed here, only the instrument measuring it. The gate must be
+  re-run green before the status can move.
+
 ## [3.4.0] — 2026-07-28
 
 ### Every skill now stands alone (`typescript-nestjs` 1.1.1 → 1.2.0, `typescript-coding` 1.7.0 → 1.8.0, `python-coding` 1.5.0 → 1.6.0, `hexagonal-service` 2.1.1 → 2.2.0, `testing-discipline` 1.3.0 → 1.4.0)

@@ -1,6 +1,6 @@
 ---
 name: testing-discipline
-description: Discipline for unit and integration tests, with no language, runner, framework, or platform assumptions; testing a whole deployed system from outside is out of scope. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here, and it also draws the line between a unit test and an integration test. No change without its tests; a bug fix ships a regression test that fails first; a test is not evidence until seen red, its failure message made legible before the code; the two levels kept apart; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and replace peers, never internals; under London each role is discovered from its client; an external fake is pinned by live observation; exact about the claim, silent about the rest; async tests wait for success; hygiene — no focus/skip, no tuning to the gate, determinism. Use when writing or reviewing unit or integration tests, in any language.
+description: Discipline for unit and integration tests, with no language, runner, framework, or platform assumptions; testing a whole deployed system from outside is out of scope. The school — London (mockist) or classical (Detroit) — is declared by the host project's rules, never here, and it also draws the line between a unit test and an integration test. No change without its tests; a bug fix ships a regression test that fails first; a test is not evidence until seen red, its failure message made legible before the code; Arrange/Act/Assert, one scenario per test, names stating behaviour and condition; unit tests touch nothing external and replace peers, never internals; under London each role is discovered from its client; an external fake is pinned by live observation; exact about the claim, silent about the rest; async tests wait for success; persistence cleans on the way in and commits; hygiene — no focus/skip, no tuning to the gate. Use when writing or reviewing unit or integration tests, in any language.
 ---
 
 # Testing discipline (universal)
@@ -132,6 +132,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 | The test involves threads, callbacks, polling, timeouts, or a system that schedules its own work | [references/async-and-concurrency.md](references/async-and-concurrency.md) |
 | Testing a persistence mapper, a serializer, or anything else that maps your objects onto infrastructure you do not own | [references/adapters-and-persistence.md](references/adapters-and-persistence.md) |
 | Choosing the case set, judging whether coverage or a mutation score means anything, deciding whether a test may be deleted, reviewing suite hygiene | [references/hygiene.md](references/hygiene.md) |
+| A test is red and you are deciding whether to update its expected value or refresh its snapshot, or an unfinished test is red and you are deciding how to carry it | [references/hygiene.md](references/hygiene.md) |
 | A test wants to reach a private member, private state, a partially replaced type, the clock, or a shared setup hook | [references/anti-patterns.md](references/anti-patterns.md) |
 
 ## Rules
@@ -210,9 +211,21 @@ Do not preload the whole skill; open a file only when its trigger fires.
   through an instance the test assembled itself.
 - An asynchronous test waits for success and treats the timeout as the
   failure — never a fixed sleep, and never an assertion the system could
-  already have satisfied before it started. Keep the timeout in one place,
+  already have satisfied before it started. **A wait whose condition
+  already held at the starting state never waited for anything**: a
+  quantity that returns to the value it began at, a collection back to
+  empty, a flag back to its default. Such a test passes against a system
+  that did nothing at all, so wait for a state the initial one could not
+  have been in. Keep the timeout in one place,
   separate what an object computes from how it schedules, and pull
   self-scheduled activity out to somewhere a test can drive it.
+- Persistent state is cleaned at the **start** of a test, not at the end:
+  tidying up on the way out breaks isolation the moment a test fails
+  before its cleanup, and deletes the evidence that would have explained
+  the failure. Nor is a test isolated by rolling its transaction back —
+  commit is where pending changes flush, integrity constraints are
+  checked, generated values are assigned and triggers fire, so a test that
+  never commits never exercises any of it.
 - Generic mapping code is exercised with purpose-built types, not with
   production domain types: the coupling blocks refactoring, and a domain
   type that later loses the feature under test leaves the suite green over
@@ -240,10 +253,21 @@ Do not preload the whole skill; open a file only when its trigger fires.
   made it redundant.
 - No focused or skipped tests committed, no commented-out tests, no
   conditional assertions, no empty tests, no duplicate test names, and no
-  red suite shared.
+  red suite shared. A test that is red only because its behaviour is not
+  written yet stays in the working copy until it passes — silencing it and
+  committing it is the one resolution both the cycle and this rule reject,
+  and renaming the silence to an expected-failure or pending marker, with
+  or without a tracking reference, is the same commit.
 - Never tune a test to the gate: no expected value hardcoded "so it
   passes", no check disabled, no snapshot refreshed without understanding
-  the cause.
+  the cause. **A red test is answered with a diagnosis, never with a
+  refreshed expectation** — and that holds however deliberate the change
+  that turned it red. A refactor that changes no behaviour cannot turn a
+  test red, so when one does, establish which happened — the change was
+  more than a refactor or it introduced a defect — before any expected
+  value or snapshot moves. Even where the behaviour did change on purpose,
+  derive the new expectation from the specification that sanctioned it
+  rather than reading it back from what the code now produces.
 - Tests are deterministic — no reliance on iteration-order accidents,
   wall-clock time, unpinned random seeds, or test execution order. A test
   that fails intermittently is broken, not mostly working.

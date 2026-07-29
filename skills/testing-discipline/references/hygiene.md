@@ -12,7 +12,12 @@ claims to protect is unprotected.
   never a bare marker. A test for behaviour still being built is not an
   exception to this: **while it is red it stays in the working copy**, and
   it reaches a shared branch only once it passes — never as a silenced
-  test inside a suite that is supposed to be green.
+  test inside a suite that is supposed to be green. **Renaming the silence
+  does not lift the rule:** an expected-failure or pending marker, a
+  commented-out body, or a tracking ticket attached to any of them is the
+  same committed silence. The documented exception is for a test held red
+  by something outside the current change; it never covers a test whose
+  behaviour is simply not written yet.
 - **Never share a red suite.** A failing test is a bookmark for the person
   who wrote it; anything shared — a commit, a push, a review — starts from
   certainty about what works, or the next reader cannot tell your failure
@@ -32,7 +37,14 @@ claims to protect is unprotected.
 - **Do not tune a test to the gate:** never hardcode an expected value "so
   it passes", never disable a check, never refresh a snapshot or golden
   file without understanding the cause. A red test means dig into the
-  cause. This is about values chosen *in the test* to make a run green and
+  cause. **A refactor that changes no behaviour cannot turn a test red**,
+  so when one does, either the change was more than a refactor or it
+  introduced a defect — establish which before any expected value or
+  snapshot moves. Where the behaviour really did change on purpose, the
+  new expectation is derived from the specification that sanctioned the
+  change, never read back from what the code now produces: an expectation
+  copied from the current output asserts only that the code agrees with
+  itself. This is about values chosen *in the test* to make a run green and
   left there; a deliberately constant first implementation in the
   *production* code, removed in the same session by generalizing it, is a
   step in the cycle and not this — see [tdd-cycle.md](tdd-cycle.md).

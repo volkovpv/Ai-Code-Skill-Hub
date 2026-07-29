@@ -9,7 +9,7 @@ A self-contained, vendor-neutral library of **Agent Skills** ("git repo as a ski
 - **Skill content**: `skills/` (canonical sources), `skills.yaml` (catalog), `templates/skill/` (scaffold for `skillctl new` — never validated or installed directly).
 - **CLI implementation**: `src/skill_library/` (Python ≥ 3.12, **stdlib only — never add dependencies**), thin wrappers in `scripts/`.
 
-`AGENTS.md` is the authoritative rules file for agents/developers; only the root `README.md` and `__test__/README.md` are in **Russian** — all other docs (including `CHANGELOG.md` and `__test__/scenarios/README.md`) are in English; audit reports under `_audit/` are exempt from the language rule. `README.md` must be kept in sync with actual CLI behaviour — never document features that don't exist.
+`AGENTS.md` is the authoritative rules file for agents/developers; only the root `README.md` and `__test__/README.md` are in **Russian** — all other docs (including `CHANGELOG.md` and `__test__/scenarios/README.md`) are in English; the untracked working areas `_audit/` (audit reports) and `_temp/` (scratch notes) are exempt from the language rule. `README.md` must be kept in sync with actual CLI behaviour — never document features that don't exist.
 
 ## Commands
 
@@ -27,6 +27,9 @@ uv run python -m unittest __test__.test_installer.InstallTests.test_name -v   # 
 uv run skillctl list                             # catalog overview
 uv run skillctl new <name> --with knowledge,data,observations   # scaffold + register in skills.yaml
 uv run skillctl install <skill> --target <proj> --agent claude  # smoke-test installation
+uv run python scripts/run_skill_evals.py --validate-only __test__/evals/*/cases.json   # offline, no model
+uv run python scripts/run_skill_evals.py --repeat 3 --save-output DIR \
+  --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/<skill>/cases.json   # live gate run
 uv run python scripts/mutation.py <module>       # scoped mutation run for ONE changed file (throttled, CPU-2)
 uv run scripts/bump_version.py --patch           # THE ONLY way to bump the project version
 uv run scripts/check_version_drift.py            # pyproject = __init__.py = CHANGELOG gate
@@ -52,6 +55,10 @@ Zero-tooling fallback (no uv, no venv — the library has no dependencies): `pyt
 ### Skill anatomy (enforced by validator)
 
 `skills/<name>/` requires `SKILL.md` (frontmatter `name` must equal the directory name) and `ORIGIN.yaml` (provenance: `original`/`vendored`). Optional directories — only these are allowed: `agents/`, `references/`, `scripts/`, `assets/`, and the layers `knowledge/`, `data/`, `observations/`. A non-empty layer requires its `knowledge/INDEX.md` / `data/README.md` / `observations/INDEX.md`. No `CHANGELOG.md`/`history/` or other auxiliary docs inside a skill (sole exceptions: the skill-root `README.md` — user-facing docs, excluded from runtime installs — and `data/README.md`); executables only in `scripts/`. Layer flags in `skills.yaml` `capabilities:` must match the actual directories. Progressive disclosure: `SKILL.md` stays short and routes to deeper files; never duplicate `references/` content into it.
+
+### Eval environment tiers
+
+Each `__test__/evals/<skill>/cases.json` declares `tiers: {gate, debug}`, each carrying both dials that decide an answer — `model` and `effort`. `gate` (the default `--tier`) is the environment the skill's users actually run; a green gate is green for that pair only, and it is the only tier that may move a skill `draft → stable`. `debug` is a cheap pair for shaking manifest defects out between live runs; its failures may be the environment's limits rather than the skill's, so it promotes nothing. Fail-closed per dial, both ways: a resolved value requires its `{model}`/`{effort}` placeholder in `--command`, and a placeholder requires a resolved value — otherwise the run header would name an environment the harness never received. Effort is validated here (`low|medium|high|xhigh|max`) because `claude --effort` ignores an unknown level and silently uses its own default, and `CLAUDE_EFFORT` is stripped from the harness environment so the manifest, not the operator's shell, decides. Every run prints the header, so a green result records where it is green.
 
 ## Two independent version systems — do not mix them up
 

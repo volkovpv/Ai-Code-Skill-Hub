@@ -1,9 +1,9 @@
 """Tests for scripts/check_language.py — the English-only policy gate.
 
 Policy (AGENTS.md): Russian is allowed only in the root README.md,
-__test__/README.md, docs/history.rus.md and audit reports under _audit/;
-everywhere else the text must be English, with explicit per-line waivers for
-Unicode test data.
+__test__/README.md, docs/history.rus.md and the untracked working areas
+_audit/ and _temp/; everywhere else the text must be English, with explicit
+per-line waivers for Unicode test data.
 """
 
 from __future__ import annotations
@@ -51,8 +51,19 @@ class TestLanguagePolicy(TempDirTestCase):
         self.write("__test__/README.md", RU_LINE)
         self.write("docs/history.rus.md", RU_LINE)
         self.write("_audit/2026-01-01-report.md", RU_LINE)
+        self.write("_temp/notes.md", RU_LINE)
         result = self.run_scan(str(self.tmp))
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_exempt_prefix_matches_the_directory_not_a_similar_name(self):
+        # `_temp/` is exempt as a directory; `_template.md` or `_temporary/`
+        # are ordinary paths and stay English-only.
+        self.write("_template.md", RU_LINE)
+        self.write("_temporary/notes.md", RU_LINE)
+        result = self.run_scan(str(self.tmp))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("_template.md:1:", result.stdout)
+        self.assertIn("_temporary/notes.md:1:", result.stdout)
 
     def test_english_half_of_the_history_pair_is_not_allowlisted(self):
         # Only the .rus half is carved out; its English twin stays English-only.
