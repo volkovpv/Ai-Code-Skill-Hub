@@ -2,6 +2,10 @@
   "schema_version": 1,
   "skill": "hexagonal-service",
   "platforms": ["claude", "codex", "opencode", "universal"],
+  "tiers": {
+    "gate": { "model": "claude-sonnet-5", "effort": "medium" },
+    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+  },
   "cases": [
     {
       "id": "trigger-on-layer-placement-question",

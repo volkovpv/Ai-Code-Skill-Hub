@@ -5,6 +5,77 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.4.4] — 2026-07-29
+
+### Reasoning effort is part of the eval environment, not the operator's shell
+
+- The `models` block added in 3.4.3 becomes `tiers`, carrying both dials that
+  decide an answer:
+
+  ```json
+  "tiers": {
+    "gate":  { "model": "claude-sonnet-5",           "effort": "medium" },
+    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+  }
+  ```
+
+  `scripts/run_skill_evals.py` gains `--effort` and an `{effort}` placeholder
+  next to `--model`/`{model}`, and the run header names both.
+- The gap this closes: effort changes the answer as much as the model does, and
+  it was arriving from the operator's own environment — `CLAUDE_EFFORT` in the
+  launching shell, inherited by every harness subprocess, plus `effortLevel` in
+  their personal `settings.json`. Every gate run so far was therefore a claim
+  about "that model **at high effort**", recorded nowhere. The runner now strips
+  `CLAUDE_EFFORT` from the harness environment: the manifest decides, or nothing
+  does.
+- Effort is validated against `low|medium|high|xhigh|max` at manifest load,
+  because `claude --effort` does not reject an unknown level — it warns and
+  silently falls back to its own default, which would produce a run whose header
+  lies about its environment.
+- Which effort to declare is an audience decision. Where it is unknown, the
+  lower bound is the safer claim: a skill that passes at low effort will almost
+  certainly pass at high, and not the other way round. Every manifest here
+  declares `medium` for the gate and `low` for debug.
+- Validation covers unknown tiers, unknown dials, non-string values and bad
+  effort levels; `__test__/test_evals.py` reaches 21 tests, including one that
+  sets `CLAUDE_EFFORT` in the parent and asserts the harness sees it unset, and
+  one that reads the saved answer to confirm the declared pair reached the
+  harness rather than only the log. `README.md`, `CLAUDE.md` and
+  `__test__/README.md` document both dials.
+
+## [3.4.3] — 2026-07-29
+
+### Eval runs name their model instead of inheriting whatever the CLI defaults to
+
+- Every `__test__/evals/<skill>/cases.json` now declares `models: {gate, debug}`
+  and `scripts/run_skill_evals.py` takes `--tier {gate,debug}` (default `gate`)
+  plus a `{model}` placeholder for `--command`.
+  - `gate` — the model the skill's users actually run (`claude-sonnet-5` for
+    every manifest here). A green gate is green *for that model* and claims
+    nothing about any other, so this is the only tier that may move a skill
+    `draft → stable`.
+  - `debug` — a cheap, fast model (`claude-haiku-4-5-20251001`) for shaking
+    manifest defects out between live runs. Its failures may be the model's
+    limits rather than the skill's, so it promotes nothing; it exists because
+    three rounds of manifest defects cost an hour of live run each. A weaker
+    model also makes the skill's effect more visible, so cases the model
+    already passes unaided stand out.
+- `--model` overrides the declared tier for a one-off experiment.
+- Fail-closed in both directions: a resolved model with no `{model}` in the
+  command is refused (the harness would silently use its own default while the
+  log named a different model), and a `{model}` placeholder with no resolved
+  model is refused too. A manifest without a `models` block stays valid and
+  runs on the harness default — recorded as such.
+- Every run now opens with a header naming its environment —
+  `RUN <skill> platform=… tier=… model=… repeat=… cases=… command=…` — so a
+  green result records where it is green. `--validate-only` lists the declared
+  tiers alongside the case count.
+- `__test__/test_evals.py` grows to 19 tests covering tier selection, the
+  override, both fail-closed directions, the no-models fallback, tier and
+  model-name validation, and that every catalog manifest declares both tiers.
+  `README.md`, `CLAUDE.md` and `__test__/README.md` document the two tiers and
+  the rule that only a `gate` run can promote.
+
 ## [3.4.2] — 2026-07-29
 
 ### `_temp/` joins `_audit/` as a language-policy exemption

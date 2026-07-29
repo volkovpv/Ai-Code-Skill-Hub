@@ -240,6 +240,141 @@ class TestEvalRunner(TempDirTestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn(".id must match", result.stderr)
 
+    def _tiered_manifest(self, tiers: object) -> Path:
+        manifest = self.tmp / "tiered.json"
+        data = json.loads(self._echo_manifest().read_text(encoding="utf-8"))
+        data["tiers"] = tiers
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        return manifest
+
+    def _echo_argv_command(self, *placeholders: str) -> str:
+        # Prints every argument, so the test can see what reached the harness.
+        asked = " ".join("{%s}" % name for name in placeholders)
+        return f'{sys.executable} -c "import sys; print(\'|\'.join(sys.argv[1:]))" {asked} {{prompt}}'
+
+    def test_tier_selects_the_declared_environment_and_the_log_names_it(self):
+        # A green run is green for one model at one effort; the log has to say which.
+        manifest = self._tiered_manifest(
+            {
+                "gate": {"model": "gate-model", "effort": "medium"},
+                "debug": {"model": "debug-model", "effort": "low"},
+            }
+        )
+        for tier, model, effort in (("gate", "gate-model", "medium"), ("debug", "debug-model", "low")):
+            with self.subTest(tier=tier):
+                outdir = self.tmp / f"answers-{tier}"
+                result = self.run_eval(
+                    "--platform", "universal",
+                    "--tier", tier,
+                    "--save-output", str(outdir),
+                    "--command", self._echo_argv_command("model", "effort"),
+                    str(manifest),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(f"tier={tier} model={model} effort={effort}", result.stdout)
+                # ...and the same pair actually reached the harness, not just the log.
+                answer = (outdir / "example-skill--echoed--1.txt").read_text(encoding="utf-8")
+                self.assertTrue(answer.startswith(f"{model}|{effort}|"), answer)
+
+    def test_explicit_flags_override_the_declared_tier(self):
+        manifest = self._tiered_manifest({"gate": {"model": "gate-model", "effort": "medium"}})
+        result = self.run_eval(
+            "--platform", "universal",
+            "--model", "override-model",
+            "--effort", "max",
+            "--command", self._echo_argv_command("model", "effort"),
+            str(manifest),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("model=override-model effort=max", result.stdout)
+
+    def test_declared_dial_without_a_placeholder_is_refused(self):
+        # Otherwise the header names an environment the harness never received.
+        for dial in ("model", "effort"):
+            with self.subTest(dial=dial):
+                manifest = self._tiered_manifest({"gate": {dial: "medium" if dial == "effort" else "m"}})
+                result = self.run_eval(
+                    "--platform", "universal",
+                    "--command", self._echo_argv_command(),
+                    str(manifest),
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(f"no {{{dial}}} placeholder", result.stderr)
+
+    def test_placeholder_without_a_value_is_refused(self):
+        for dial in ("model", "effort"):
+            with self.subTest(dial=dial):
+                manifest = self._echo_manifest()  # no tiers block
+                result = self.run_eval(
+                    "--platform", "universal",
+                    "--command", self._echo_argv_command(dial),
+                    str(manifest),
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(f"no {dial} is set", result.stderr)
+
+    def test_manifest_without_tiers_still_runs_on_the_harness_default(self):
+        manifest = self._echo_manifest()
+        command = f'{sys.executable} -c "import sys; print(sys.argv[1])" {{prompt}}'
+        result = self.run_eval("--platform", "universal", "--command", command, str(manifest))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("model=(harness default) effort=(harness default)", result.stdout)
+
+    def test_the_shell_effort_does_not_leak_into_the_harness(self):
+        # The operator's own CLAUDE_EFFORT must not decide what a run measures.
+        manifest = self._echo_manifest()
+        command = (
+            f'{sys.executable} -c "import os; print(os.environ.get(\'CLAUDE_EFFORT\', \'unset\'))"'
+            " {prompt}"
+        )
+        outdir = self.tmp / "leak"
+        env = sandboxed_env()
+        env["CLAUDE_EFFORT"] = "max"
+        subprocess.run(
+            [
+                sys.executable, str(RUNNER), "--platform", "universal",
+                "--save-output", str(outdir), "--command", command, str(manifest),
+            ],
+            cwd=ROOT, capture_output=True, text=True, timeout=30, env=env, check=False,
+        )
+        answer = (outdir / "example-skill--echoed--1.txt").read_text(encoding="utf-8").strip()
+        self.assertEqual(answer, "unset")
+
+    def test_unknown_tier_and_unknown_dial_are_rejected(self):
+        cheap = self._tiered_manifest({"gate": {"model": "m"}, "cheap": {"model": "m"}})
+        result = self.run_eval("--validate-only", str(cheap))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unknown tiers: cheap", result.stderr)
+
+        dial = self._tiered_manifest({"gate": {"model": "m", "temperature": "0"}})
+        result = self.run_eval("--validate-only", str(dial))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unknown dials in tiers.gate: temperature", result.stderr)
+
+    def test_dial_values_must_be_non_empty_strings(self):
+        for tiers in ({"gate": {"model": ""}}, {"gate": {"model": 5}}, {"gate": {}}, {}, "sonnet"):
+            with self.subTest(tiers=tiers):
+                result = self.run_eval("--validate-only", str(self._tiered_manifest(tiers)))
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("tiers", result.stderr)
+
+    def test_effort_level_is_validated_here_because_the_harness_fails_open(self):
+        # `claude --effort` warns and silently uses its default on a bad value.
+        manifest = self._tiered_manifest({"gate": {"effort": "highest"}})
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("tiers.gate.effort must be one of", result.stderr)
+
+    def test_every_catalog_manifest_declares_both_dials_for_both_tiers(self):
+        # The point of the tiers is that no live run is implicitly on whatever
+        # the CLI and the operator's own settings happen to default to.
+        for path in sorted((ROOT / "__test__" / "evals").glob("*/cases.json")):
+            with self.subTest(manifest=path.name):
+                tiers = json.loads(path.read_text(encoding="utf-8")).get("tiers", {})
+                self.assertEqual(sorted(tiers), ["debug", "gate"], path)
+                for tier, dials in tiers.items():
+                    self.assertEqual(sorted(dials), ["effort", "model"], (path, tier))
+
 
 if __name__ == "__main__":
     import unittest

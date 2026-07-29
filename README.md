@@ -83,7 +83,7 @@ Skill здесь — не одна инструкция, а **версионир
 │   ├── check_mutation_score.py# гейт: mutation score не ниже порога
 │   ├── mutation.py            # локальный запуск мутаций по одному файлу (CPU−2, без полного прогона)
 │   ├── check_language.py      # гейт: без русского текста вне README/_audit/_temp (языковая политика)
-│   └── run_skill_evals.py     # валидация и запуск eval-manifests (offline/opt-in)
+│   └── run_skill_evals.py     # валидация и запуск eval-manifests (offline/opt-in, --tier gate|debug)
 │
 ├── src/skill_library/         # реализация CLI (Python ≥ 3.12, только stdlib)
 │   ├── cli.py                 # разбор аргументов и команды
@@ -100,7 +100,7 @@ Skill здесь — не одна инструкция, а **версионир
 │   ├── README.md              # руководство по тестированию skills (виды, гейты, критерии)
 │   ├── fixtures/valid-skill/  # позитивный fixture
 │   ├── fixtures/invalid-skill/# негативный fixture (нарочно сломан)
-│   ├── evals/<skill>/         # versioned eval-manifests (cases.json, schema v1)
+│   ├── evals/<skill>/         # versioned eval-manifests (cases.json, schema v1, tiers.gate/debug)
 │   ├── network_blocker/       # Python-level запрет сети для subprocess-тестов
 │   ├── scenarios/README.md    # ручные E2E-сценарии
 │   ├── skills/                # тесты отдельных skills (test_<имя_через_подчёркивание>.py)
@@ -607,6 +607,14 @@ uv run mutmut results                                    # разбор выжи
 
 # Offline-проверка eval-манифестов (без запуска модели)
 uv run python scripts/run_skill_evals.py --validate-only __test__/evals/*/cases.json
+
+# Живой прогон. Среда (модель + effort) объявлена в манифесте, блок `tiers`:
+# gate — среда, в которой skill будут использовать (ею двигают draft → stable),
+# debug — дешёвая, для отладки самих ожиданий между живыми прогонами.
+uv run python scripts/run_skill_evals.py --repeat 3 --save-output /tmp/eval-out \
+  --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/<skill>/cases.json
+uv run python scripts/run_skill_evals.py --tier debug \
+  --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/<skill>/cases.json
 
 # Языковая политика (без русского текста вне allowlist)
 uv run python scripts/check_language.py

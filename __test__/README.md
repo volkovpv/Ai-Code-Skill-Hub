@@ -215,19 +215,70 @@ schema v1 требует `skill`, `platforms` и непустые cases с по�
 
 Реальный harness запускается только явно, отдельно от offline unittest:
 
-    uv run python scripts/run_skill_evals.py --platform claude --repeat 3 --command 'claude -p {prompt}' __test__/evals/example-skill/cases.json
+    uv run python scripts/run_skill_evals.py --platform claude --repeat 3 --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/example-skill/cases.json
 
 Runner устанавливает skill во временный проект перед каждым повтором. Команда
-поддерживает placeholders `{prompt}`, `{project}`, `{skill}`. Не
+поддерживает placeholders `{prompt}`, `{project}`, `{skill}`, `{model}`, `{effort}`. Не
 сохраняйте в manifest credentials, PII или production data; логи реального
 harness проверяются перед публикацией.
+
+### Среда прогона: два уровня
+
+Ответ модели определяет не только сама модель, но и reasoning effort. Обе
+ручки объявляются в manifest вместе, как одна среда:
+
+```json
+{
+  "tiers": {
+    "gate":  { "model": "claude-sonnet-5",           "effort": "medium" },
+    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+  }
+}
+```
+
+`gate` — среда, в которой skill будут реально использовать. Зелёный гейт
+зелёный **для этой пары** и не говорит ничего про другие, поэтому уровень
+`gate` (по умолчанию) — единственный, которым можно двигать `draft → stable`.
+Если аудитория неизвестна, берите нижнюю границу поддержки: skill, прошедший
+на низком effort, почти наверняка пройдёт и на высоком, обратное неверно.
+
+`debug` — дешёвая и быстрая среда для отладки самого manifest между живыми
+прогонами. Её падения могут оказаться пределом среды, а не дефектом skill,
+так что уровень `debug` ничего не продвигает; он экономит час живого прогона
+на каждую итерацию правок ожиданий. Дополнительная польза: на слабой модели
+skill обязан «работать заметнее», и кейсы, которые модель проходит и без него,
+всплывают сами.
+
+    uv run python scripts/run_skill_evals.py --tier debug --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/example-skill/cases.json
+
+`--model` и `--effort` перекрывают объявленный уровень для разового
+эксперимента.
+
+Правило fail-closed работает для каждой ручки в обе стороны: значение задано,
+но в `--command` нет соответствующего placeholder — ошибка (harness молча взял
+бы свой default, а лог назвал бы чужую среду); placeholder есть, а значение не
+задано — тоже ошибка. Manifest без блока `tiers` по-прежнему валиден и гоняется
+на default harness — так это и пишется в лог.
+
+Effort проверяется здесь, а не harness: `claude --effort` на неизвестном
+значении **не падает**, а печатает warning и берёт свой default. Допустимые
+значения — `low`, `medium`, `high`, `xhigh`, `max`.
+
+Effort приходит и третьим путём — из переменной `CLAUDE_EFFORT` того шелла,
+который запустил прогон. Runner вычищает её из окружения дочернего процесса:
+среду прогона задаёт manifest, а не личные настройки того, кто нажал Enter.
+
+Каждый прогон начинается со строки, называющей свою среду, чтобы у зелёного
+результата было указано, где именно он зелёный:
+
+    RUN testing-discipline platform=claude tier=gate model=claude-sonnet-5 effort=medium repeat=3 cases=40 command='claude -p --model {model} --effort {effort} {prompt}'
 
 Вердикт называет промахнувшийся оракул, но не ответ harness, а временный
 проект к этому моменту уже удалён. Чтобы разбирать падения не переснимая
 прогон, добавьте `--save-output DIR` — каждый ответ ляжет в
 `DIR/<skill>--<case>--<attempt>.txt`:
 
-    uv run python scripts/run_skill_evals.py --platform claude --repeat 3 --save-output /tmp/eval-out --command 'claude -p {prompt}' __test__/evals/example-skill/cases.json
+    uv run python scripts/run_skill_evals.py --platform claude --repeat 3 --save-output /tmp/eval-out --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/example-skill/cases.json
 
 Каталог назначения задаёте вы, поэтому `id` кейса ограничен
 `[A-Za-z0-9][A-Za-z0-9._-]*`: он становится именем файла. Сохранённые ответы
