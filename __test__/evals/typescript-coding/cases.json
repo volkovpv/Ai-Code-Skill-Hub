@@ -180,6 +180,28 @@
         "exit_code": 0,
         "stdout_matches": ["void ", "(?i)(floating|unhandled|reject|deliberate|intentional|explicit)"]
       }
+    },
+    {
+      "id": "jsdoc-is-written-as-a-two-asterisk-block",
+      "kind": "behavior",
+      "requirement": "JSDoc is read only from a /** */ block; the same tags in // line comments are inert.",
+      "prompt": "In a .js module checked with // @ts-check, I wrote this above the constant and the editor still shows no type:\n// @typedef {{ id: string, name: string }} User\n// @type {User}\nconst user = { id: 1 };\nWhy does the annotation have no effect, and what exactly should the comment look like? Show only the corrected comment block and one sentence of rationale.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["/\\*\\*", "(?i)(ignor|inert|not jsdoc|no effect|only.{0,20}block|two asterisk)"],
+        "stdout_not_contains": ["// @typedef", "// @type {User}"]
+      }
+    },
+    {
+      "id": "line-comment-directives-are-not-turned-into-jsdoc",
+      "kind": "negative",
+      "requirement": "The block-comment rule is about JSDoc only; a directive whose own form is a line comment must stay one.",
+      "prompt": "In a TypeScript test, write the negative type-level assertion that pins that `greet(42)` does not compile, given `export const greet = (name: string): string => `hi ${name}`;`. Show only the two lines of test code, nothing else.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["// @ts-expect-error"],
+        "stdout_not_contains": ["/** @ts-expect-error", "/* @ts-expect-error"]
+      }
     }
   ]
 }

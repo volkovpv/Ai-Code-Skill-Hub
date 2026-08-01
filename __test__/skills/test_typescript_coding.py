@@ -286,6 +286,102 @@ class TestTestingReferenceIsASpellingMapOnly(unittest.TestCase):
         self.assertIn("references/testing.md", skill_md)
 
 
+class TestJsdocCommentFormGuidance(unittest.TestCase):
+    """Regression for OBS-20260801-001: JSDoc outside ``/** */`` is inert.
+
+    The skill told the agent *what* to document on the exported surface and
+    what not to put in the block, but never that the block itself has one
+    parsed form. A tag written in ``//`` line comments — or in a single-star
+    ``/* ... */`` — is not JSDoc at all: nothing in the stack reads it and
+    nothing reports it, so the intended check silently never runs. That makes
+    it a defect class, not a style deviation, and the file that carries the
+    rule must say so.
+
+    The anchors below are the load-bearing clauses. The reproduction detail
+    stays in the pitfall (one home), and the negative guards pin that the
+    pre-existing JSDoc rules survive the delta untouched.
+    """
+
+    LINT_CLEAN_MD = SKILL / "references" / "lint-clean.md"
+    PITFALLS_MD = SKILL / "knowledge" / "pitfalls.md"
+    KNOWLEDGE_INDEX_MD = SKILL / "knowledge" / "INDEX.md"
+
+    RULE_ANCHORS = (
+        # the form itself, stated as a rule
+        "JSDoc is a block-comment format",
+        # why it is a defect and not a style deviation
+        "silently inert, not merely mis-styled",
+        # the trap: comment form is decided per directive, not by taste
+        "`// @ts-expect-error` genuinely does work as a line comment",
+        # the habit that makes it self-checking
+        "confirm a new annotation by its effect",
+    )
+
+    PITFALL_ANCHORS = (
+        "## A JSDoc tag written with `//` is silently inert",
+        # the two inert forms, both named
+        "single-star",
+        # nothing in the stack reports it
+        "no-bad-blocks",
+        # re-executable evidence, with the environment it was executed in
+        "TypeScript 6.0.3",
+        "TS2322",
+    )
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        # Markdown hard-wraps prose, so a multi-word anchor can straddle a
+        # line break; collapse whitespace runs before searching.
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    def test_lint_reference_states_the_comment_form_rule(self):
+        text = self._flat(self.LINT_CLEAN_MD)
+        for anchor in self.RULE_ANCHORS:
+            self.assertIn(anchor, text, anchor)
+
+    def test_pitfall_records_the_failure_mode_with_re_executable_evidence(self):
+        text = self._flat(self.PITFALLS_MD)
+        for anchor in self.PITFALL_ANCHORS:
+            self.assertIn(anchor, text, anchor)
+
+    def test_knowledge_index_routes_to_the_new_pitfall(self):
+        self.assertIn("inert JSDoc comment form", self._flat(self.KNOWLEDGE_INDEX_MD))
+
+    def test_reproduction_detail_has_exactly_one_home(self):
+        # Duplication guard: the rule is in the reference, the reproduction is
+        # in the pitfall. SKILL.md stays short and neither file repeats the
+        # other (observations/ are provenance records and out of scope here).
+        carriers = sorted(
+            md.relative_to(SKILL).as_posix()
+            for md in [SKILL / "SKILL.md", *(SKILL / "references").glob("*.md"),
+                       *(SKILL / "knowledge").glob("*.md")]
+            if "TS2322" in md.read_text(encoding="utf-8")
+        )
+        self.assertEqual(carriers, ["knowledge/pitfalls.md"])
+
+    def test_pre_existing_jsdoc_rules_survive(self):
+        # Negative guard: the delta adds a form rule, it does not rewrite the
+        # two rules the section already carried.
+        text = self._flat(self.LINT_CLEAN_MD)
+        self.assertIn("carry a JSDoc block with a prose **description**", text)
+        self.assertIn("**Do not restate types in JSDoc**", text)
+
+    def test_pitfalls_contents_lists_every_pitfall(self):
+        # The file crosses the 100-line mark with this delta, so it needs the
+        # table of contents the validator requires — and a stale TOC is worse
+        # than none: every `##` pitfall heading must appear in it.
+        text = self.PITFALLS_MD.read_text(encoding="utf-8")
+        headings = [
+            line[3:].strip()
+            for line in text.splitlines()
+            if line.startswith("## ") and line[3:].strip() != "Contents"
+        ]
+        contents = text.split("## Contents", 1)[-1].split("\n## ", 1)[0]
+        self.assertTrue(headings)
+        for heading in headings:
+            self.assertIn(heading, contents, heading)
+
+
 class TestLiteralMasking(unittest.TestCase):
     """Rule text inside literals must not fire; interpolated code must."""
 

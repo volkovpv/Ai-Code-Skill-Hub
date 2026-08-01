@@ -5,6 +5,58 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.6.0] — 2026-08-01
+
+`typescript-coding` `1.8.0 → 1.9.0` — JSDoc has exactly one parsed form, and
+the skill now says so.
+
+### The gap
+
+The skill's JSDoc section stated which symbols must carry a block and what
+must not be restated inside it, but never what makes a comment a block at all.
+A field report from a consuming project found the consequence: a `@typedef`
+written with `//` line comments is inert — the compiler, the language service,
+the declaration emit and `eslint-plugin-jsdoc` all skip it, and none of them
+reports the mistake, so the type check the author believed they had written
+never ran. The reporting side classified it as a real defect rather than a
+style deviation, which is what it is: an inert `@typedef` or `@type` takes a
+check away with it.
+
+Re-executed against the compiler before the rule was written (TypeScript
+6.0.3, Node 26): under `checkJs`, `// @typedef …` + `// @type {User}` above
+`const u = { id: 1 };` compiles without the `TS2322` the same two tags in a
+`/** */` block report; the single-star `/* */` form yields no diagnostic at
+all; and under `--declaration` a `//` description above an export is dropped
+from the emitted `.d.ts` while a `/** */` one is carried into it.
+
+### The delta
+
+- `references/lint-clean.md` — one rule bullet in "JSDoc on the public
+  surface": JSDoc is a block-comment format (`/**` … `*/`), the two other
+  forms are silently inert rather than mis-styled, comment form is decided per
+  directive (`// @ts-expect-error` genuinely does work as a line comment), and
+  an annotation is confirmed by its effect, never by its presence.
+- `knowledge/pitfalls.md` — the failure mode with its re-executable
+  reproduction and the reason nothing in the stack catches it; the file
+  crossed 100 lines and gained the required table of contents. Routed from
+  `knowledge/INDEX.md`.
+- Observation `OBS-20260801-001` accepted, with the compiler run, the
+  pre-change inspection and the regression as evidence.
+- Regression `TestJsdocCommentFormGuidance` in
+  `__test__/skills/test_typescript_coding.py` (5 of 6 assertions red against
+  the pre-change text) pins the rule's load-bearing clauses, the pitfall's
+  evidence, the one-home rule for the reproduction, a negative guard that both
+  pre-existing JSDoc rules survive, and that the new table of contents lists
+  every pitfall. Two eval cases added — one behavioural, one negative guarding
+  against turning line-comment directives into JSDoc blocks.
+- `docs/history.{eng,rus}.md` — one new entry, "A comment that looked like an
+  annotation".
+
+Deliberately out of scope: teaching the bundled convention checker to flag the
+inert form. It is lexically detectable, but the checker masks comment
+delimiters before any rule runs, so it would mean reworking that masker — a
+change to an analyzer under mutation scope, to be raised on its own evidence.
+
 ## [3.5.1] — 2026-07-29
 
 No skill rule changed in this release. What changed is how much of those rules
