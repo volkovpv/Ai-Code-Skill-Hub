@@ -32,7 +32,7 @@ skills:
   # boundary-data-is-parsed-not-annotated.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.8.0
+    version: 1.9.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

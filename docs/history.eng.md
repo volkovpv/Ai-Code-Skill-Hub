@@ -36,6 +36,129 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A comment that looked like an annotation
+
+**Releases:** project `3.6.0` (`typescript-coding` `1.8.0 → 1.9.0`)
+**Type:** gap closed — a rule the skill relied on but never stated
+
+### In one sentence
+
+A `@typedef` written with `//` line comments is not JSDoc at all — the
+compiler, the editor, the declaration emit and the JSDoc linter all walk past
+it without a word — so the type check its author believed they had written
+never ran, and the skill, which said *what* to document but never in *what
+form*, had nothing to say about it.
+
+### The problem, precisely
+
+The JSDoc section of the skill carried two rules, and both of them presuppose
+a third one that was never written down:
+
+| What the skill said | What it left open |
+|---|---|
+| Exported symbols carry a block with a prose description | what makes a comment a *block* |
+| Do not restate types in the block — TypeScript is the source of truth | — |
+
+Three ways to write the same annotation, and only one of them exists as far as
+the toolchain is concerned:
+
+| Written as | Is it JSDoc? | What the toolchain says |
+|---|---|---|
+| `/** @type {User} */` | yes | applies the type, and reports it when violated |
+| `// @type {User}` | **no** | nothing — anywhere, ever |
+| `/* @type {User} */` | **no** | nothing, unless the project turned on `jsdoc/no-bad-blocks` |
+
+Two things make this hard to notice on your own. The failure is *silent in the
+direction of success*: no unknown-tag error, no lint finding, just an
+annotation that quietly is not there. And the habit that produces it is
+learned from directives that genuinely accept a line comment —
+`// @ts-expect-error`, `// @ts-check`, `// eslint-disable-next-line` all work
+exactly as written. Comment form is decided per directive; nothing announces
+which rule you are under.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart TD
+    A["Author writes\n// @typedef {{ id: string }} User\n// @type {User}"] --> B["tsc parses it\nas a plain comment"]
+    B --> C["No tag is read.\nNo type is applied."]
+    C --> D{"Anything red?"}
+    D -->|"compiler"| E["no — nothing to complain about"]
+    D -->|"eslint-plugin-jsdoc"| F["no — it never saw a block"]
+    D -->|"the skill's checker"| G["no — it is form-blind"]
+    E --> H["Green build,\nthe check never ran"]
+    F --> H
+    G --> H
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart TD
+    A["Annotation to write"] --> B{"Which directive is it?"}
+    B -->|"JSDoc tag or description"| C["/** ... */ — two asterisks,\nno other form is read"]
+    B -->|"ts / lint directive"| D["its own form —\n// @ts-expect-error stays a line comment"]
+    C --> E["Confirm by effect:\nthe error it makes appear\nwhen violated, the hovered type,\nthe emitted .d.ts"]
+    D --> E
+    E --> F["Annotation is real,\nnot merely present"]
+```
+
+### Example — the same four lines, twice
+
+```js
+// @ts-check
+// @typedef {{ id: string, name: string }} User
+// @type {User}
+const user = { id: 1 };
+```
+
+`tsc --noEmit --strict --allowJs --checkJs` says **nothing** about `id: 1`.
+Move the two tags into a block and the same compiler reports
+`TS2322: Type 'number' is not assignable to type 'string'`:
+
+```js
+// @ts-check
+/** @typedef {{ id: string, name: string }} User */
+/** @type {User} */
+const user = { id: 1 };
+```
+
+The single-star `/* ... */` version of the first snippet is quieter still —
+exit code 0, not one diagnostic. And the same split shows up in what you ship:
+under `--declaration`, a `/** ... */` description above an exported symbol is
+carried into the generated `.d.ts`, while a `//` description above the
+identical export is dropped. All three checked on TypeScript 6.0.3.
+
+### What the skill now says
+
+- **JSDoc is a block-comment format** — `/**` … `*/`, two asterisks, nothing
+  else. The same tags in `//` line comments, or in a single-star block, are
+  not JSDoc: nothing reads them, and nothing reports that nothing read them.
+- **It is a defect, not a style deviation.** An inert `@typedef` or `@type`
+  takes a type check away with it; the file says so in those words, so a
+  reviewer meeting one treats it as a broken check rather than a formatting
+  nit.
+- **Confirm an annotation by its effect**, never by its presence — the error
+  it makes appear when violated, the hovered type, the emitted `.d.ts`.
+- **The failure mode is recorded where failures live** (the skill's pitfalls
+  file), with the compiler run that establishes it, so the claim can be
+  re-executed rather than believed.
+
+### Where the rule stops
+
+- **It is about JSDoc, not about comments.** Directives whose own form is a
+  line comment stay line comments — `// @ts-expect-error`, `// @ts-check`,
+  `// eslint-disable-next-line`. "Always use a block" would be a different,
+  wrong rule.
+- **No tool is asked to catch it.** A lint stack can catch the single-star
+  half (`jsdoc/no-bad-blocks`, off by default) and nothing catches the `//`
+  half; the skill's own checker masks comment text before its rules run and is
+  form-blind by construction. Teaching it this rule would mean reworking that
+  masker — deliberately left out of this change, to be raised on its own
+  evidence.
+
+---
+
 ## Five skills, one box each — and the four that could not be shipped alone
 
 **Releases:** project `3.4.0` (`typescript-nestjs` `1.1.1 → 1.2.0`,

@@ -9,6 +9,19 @@ directory is Hub-only development content and does **not** ship in a
 `runtime` install (see `data/README.md`) — the citation is a plain code
 span, not a clickable link, for that reason.
 
+## Contents
+
+- The checker is lexical, not an AST
+- Truthy checks and `||` defaults fail a strict lint stack
+- `noUncheckedIndexedAccess` makes indexing return `T | undefined`
+- `exactOptionalPropertyTypes` distinguishes "absent" from "undefined"
+- Excess-property checking fires only on fresh literals
+- `Object.keys` returns `string[]` — by design
+- `.filter(Boolean)` does not narrow away null
+- `Readonly`, `Partial`, `Required` — and spread — are shallow
+- TS `private` does not survive to runtime
+- A JSDoc tag written with `//` is silently inert
+
 ## The checker is lexical, not an AST
 
 **Applies always.** `scripts/check_conventions.py` masks comments, string
@@ -96,3 +109,27 @@ where privacy is a runtime requirement; keep TS modifiers for compile-time
 encapsulation and parameter properties. Evidence:
 [../references/type-design.md](../references/type-design.md) (structural
 typing consequences).
+
+## A JSDoc tag written with `//` is silently inert
+
+**Applies when** an annotation lives in a comment — `@typedef`, `@type`,
+`@param`, `@template`, `@deprecated`, or a plain description on an exported
+symbol. Only a two-asterisk block is JSDoc; the identical text in `//` line
+comments, or in a single-star block, is an ordinary comment that every reader
+of JSDoc ignores — and none of them says so. Nothing goes red: no unknown-tag
+diagnostic, no lint finding, and the type the annotation was meant to impose
+is simply never applied, so the check the author believed they had written
+never runs. `eslint-plugin-jsdoc` can catch the single-star half of this
+(`jsdoc/no-bad-blocks`) and nothing at all catches the `//` half; the bundled
+convention checker sees neither, because it is form-blind by construction (it
+masks comment text before any rule looks at it). Past experience misleads
+here, because the form is decided per directive: `// @ts-expect-error` really
+does work as a line comment. Treat an annotation as real only once you have
+seen its effect — the error it makes appear when it is violated, the hovered
+type, the emitted `.d.ts`. Evidence: re-executed here on TypeScript 6.0.3
+(Node 26). Under `checkJs`, `// @typedef {{ id: string }} User` plus
+`// @type {User}` above `const u = { id: 1 };` compiles without the `TS2322`
+that the same two tags in a `/**` block report; the single-star form yields no
+diagnostic at all; and under `--declaration` a `//` description above an
+export is dropped from the generated `.d.ts` while a `/**` one is carried into
+it. Rule text: [../references/lint-clean.md](../references/lint-clean.md).

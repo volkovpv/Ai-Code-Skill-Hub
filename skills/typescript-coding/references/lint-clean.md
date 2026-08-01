@@ -141,6 +141,16 @@ The single biggest source of findings under a type-aware stack.
 - **Do not restate types in JSDoc** (`jsdoc/no-types`): TypeScript is the
   single source of truth — describe intent, not the signature. `@param` /
   `@returns` are optional, but if written must be valid and correctly named.
+- **JSDoc is a block-comment format** — `/**` … `*/`, two asterisks, nothing
+  else. The same tags written as `//` line comments, or inside a single-star
+  `/*` … `*/`, are not JSDoc: the compiler, the language service, the
+  declaration emit and `eslint-plugin-jsdoc` all skip them, and none of them
+  reports the mistake. Such a block is silently inert, not merely mis-styled —
+  and an inert `@typedef` or `@type` takes a type check away with it.
+  Comment form is decided per directive, not by taste (`// @ts-expect-error`
+  genuinely does work as a line comment), so confirm a new annotation by its
+  effect — the error it makes appear when violated, the hovered type, the
+  emitted `.d.ts` — never by its presence.
 
 ## Imports and modules
 

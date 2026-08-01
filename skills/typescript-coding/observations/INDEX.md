@@ -54,6 +54,14 @@ Reading rules for agents:
   library; source consumer occurrence: news-intel-docs RM-TASK-019; reviewed
   by HC-AGENT-010, 2026-07-28).
 
+- [OBS-20260801-001](accepted/OBS-20260801-001.md) — the JSDoc section said
+  which symbols must carry a block and what not to put in it, but never that
+  only a two-asterisk `/** */` block is read at all: the same tags in `//`
+  line comments, or in a single-star block, are inert and no tool in the
+  stack reports it (field report from a consuming project; the claim
+  re-executed locally against the compiler in three limbs; reviewed by the
+  operator, 2026-08-01).
+
 ## Candidates awaiting review
 
 - `OBS-20260713-001` (`candidates/`, development-only — not shipped in a
