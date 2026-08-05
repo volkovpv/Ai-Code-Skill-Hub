@@ -1,0 +1,7 @@
+# Vendor adapter for Anthropic models.
+# Interface wiring only: a skill's rules live in SKILL.md and are the same
+# for every vendor, so nothing normative may appear here. The file name must
+# match a vendor declared in vendors.yaml.
+interface:
+  display_name: __SKILL_NAME__
+  short_description: TODO one-line description for OpenAI harness UI.

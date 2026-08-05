@@ -38,6 +38,12 @@ jobs:
       - name: Validate all skills (structure + metadata)
         run: python scripts/validate_all.py
 
+      # Vendor facts are cached in vendors.yaml and refreshed only on purpose;
+      # this gate fails on a vendor in use whose documentation sync is pending
+      # and on any adapter or eval tier naming a vendor or model it does not know.
+      - name: Check the model-vendor registry
+        run: python scripts/skillctl.py vendor check
+
       - name: Enforce the language policy (English outside the allowlist)
         run: python scripts/check_language.py
 

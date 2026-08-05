@@ -1,0 +1,230 @@
+# Registry of model vendors, their models and effort levels.
+# Facts here are cached: they are refreshed only by `skillctl vendor refresh`
+# followed by `skillctl vendor apply`. No other work in this repository goes to
+# a vendor's documentation or edits this file.
+# A vendor is a model supplier, not a harness: the `platforms` list in
+# skills.yaml (universal, codex, opencode, claude, hermes) is a different axis.
+# `in_use: true` marks a vendor the library actually measures against; those are
+# the ones `skillctl vendor check` holds to a completed documentation sync.
+version: 1
+vendors:
+  - name: anthropic
+    display_name: Anthropic
+    in_use: true
+    effort_param: output_config.effort
+    effort_levels: [low, medium, high, xhigh, max]
+    default_effort: high
+    effort_env_var: CLAUDE_EFFORT
+    docs_models: https://platform.claude.com/docs/en/about-claude/models/overview.md
+    docs_effort: https://platform.claude.com/docs/en/build-with-claude/effort.md
+    docs_checked_at: 2026-08-05
+    docs_checked_by: repo-maintainer
+    docs_refresh_required: false
+    last_refresh_reason: operator-request
+  - name: openai
+    display_name: OpenAI
+    in_use: false
+    effort_param: reasoning.effort
+    effort_levels: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    effort_env_var: null
+    docs_models: https://developers.openai.com/api/docs/models
+    docs_effort: https://developers.openai.com/api/docs/guides/reasoning
+    docs_checked_at: 2026-08-05
+    docs_checked_by: repo-maintainer
+    docs_refresh_required: false
+    last_refresh_reason: operator-request
+  - name: google
+    display_name: Google
+    in_use: false
+    effort_param: thinking_level
+    effort_levels: [minimal, low, medium, high]
+    default_effort: high
+    effort_env_var: null
+    docs_models: https://ai.google.dev/gemini-api/docs/models
+    docs_effort: https://ai.google.dev/gemini-api/docs/thinking
+    docs_checked_at: 2026-08-05
+    docs_checked_by: repo-maintainer
+    docs_refresh_required: false
+    last_refresh_reason: operator-request
+  - name: xai
+    display_name: xAI
+    in_use: false
+    effort_param: reasoning.effort
+    effort_levels: [low, medium, high, xhigh]
+    default_effort: high
+    effort_env_var: null
+    docs_models: https://docs.x.ai/docs/models
+    docs_effort: https://docs.x.ai/docs/guides/reasoning
+    docs_checked_at: 2026-08-05
+    docs_checked_by: repo-maintainer
+    docs_refresh_required: false
+    last_refresh_reason: operator-request
+  - name: deepseek
+    display_name: DeepSeek
+    in_use: false
+    effort_param: thinking.reasoning_effort
+    effort_levels: [low, high, max]
+    default_effort: high
+    effort_env_var: null
+    docs_models: https://api-docs.deepseek.com/quick_start/pricing
+    docs_effort: https://api-docs.deepseek.com/api/create-chat-completion
+    docs_checked_at: 2026-08-05
+    docs_checked_by: repo-maintainer
+    docs_refresh_required: false
+    last_refresh_reason: operator-request
+models:
+  - id: claude-opus-5
+    vendor: anthropic
+    effort_levels: [low, medium, high, xhigh, max]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: claude-sonnet-5
+    vendor: anthropic
+    effort_levels: [low, medium, high, xhigh, max]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: claude-fable-5
+    vendor: anthropic
+    effort_levels: [low, medium, high, xhigh, max]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: claude-haiku-4-5
+    vendor: anthropic
+    effort_levels: []
+    default_effort: null
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: claude-opus-4-8
+    vendor: anthropic
+    effort_levels: [low, medium, high, xhigh, max]
+    default_effort: high
+    status: legacy
+    added_at: 2026-08-05
+    verified: true
+  - id: gpt-5.6
+    vendor: openai
+    effort_levels: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gpt-5.6-sol
+    vendor: openai
+    effort_levels: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gpt-5.6-terra
+    vendor: openai
+    effort_levels: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gpt-5.6-luna
+    vendor: openai
+    effort_levels: [none, low, medium, high, xhigh, max]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gpt-5.2
+    vendor: openai
+    effort_levels: [none, low, medium, high, xhigh]
+    default_effort: none
+    status: legacy
+    added_at: 2026-08-05
+    verified: false
+  - id: gemini-3.1-pro-preview
+    vendor: google
+    effort_levels: [low, medium, high]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gemini-3-flash-preview
+    vendor: google
+    effort_levels: [minimal, low, medium, high]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gemini-3.1-flash-lite
+    vendor: google
+    effort_levels: [minimal, low, medium, high]
+    default_effort: minimal
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: grok-4.5
+    vendor: xai
+    effort_levels: [low, medium, high]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: grok-4.20-multi-agent
+    vendor: xai
+    effort_levels: [low, medium, high, xhigh]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: deepseek-v4-pro
+    vendor: deepseek
+    effort_levels: [high, max]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: deepseek-v4-flash
+    vendor: deepseek
+    effort_levels: [low, high, max]
+    default_effort: high
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: deepseek-chat
+    vendor: deepseek
+    effort_levels: [high, max]
+    default_effort: high
+    status: retired
+    added_at: 2026-08-05
+    verified: true
+  - id: deepseek-reasoner
+    vendor: deepseek
+    effort_levels: [high, max]
+    default_effort: high
+    status: retired
+    added_at: 2026-08-05
+    verified: true
+  - id: gemini-3.6-flash
+    vendor: google
+    effort_levels: [minimal, low, medium, high]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gemini-3.5-flash
+    vendor: google
+    effort_levels: [minimal, low, medium, high]
+    default_effort: medium
+    status: current
+    added_at: 2026-08-05
+    verified: true
+  - id: gemini-3.5-flash-lite
+    vendor: google
+    effort_levels: [minimal, low, medium, high]
+    default_effort: minimal
+    status: current
+    added_at: 2026-08-05
+    verified: true

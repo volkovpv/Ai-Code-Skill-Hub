@@ -14,7 +14,13 @@ import sys
 from pathlib import Path
 from unittest import TestCase
 
-from .helpers import ROOT
+from .helpers import (
+    ANALYZER_DEADLINE_SECONDS,
+    ROOT,
+    DeadlineExceeded,
+    bound_analyzer,
+    deadline,
+)
 
 SCRIPTS = ROOT / "scripts"
 
@@ -168,3 +174,93 @@ class MainTests(TestCase):
         code, _, err = self._run(["--dry-run", "nonsense"])
         self.assertEqual(code, 2)
         self.assertIn("unknown scope", err)
+
+
+class AnalyzerDeadlineTests(TestCase):
+    """A non-terminating scanner must fail fast, not stall the run.
+
+    The skill analyzers are `while`-loop scanners imported in-process by their
+    dedicated tests. A mutation in a loop condition makes one of them run
+    forever; unbounded, the mutation runner waits minutes before recording a
+    timeout, and a timeout counts against the score exactly like a survivor.
+    Bounded, the call raises, the test fails, and the mutant is killed.
+    """
+
+    def test_a_call_that_overruns_its_budget_raises(self):
+        with self.assertRaises(DeadlineExceeded):
+            with deadline(0.05):
+                while True:
+                    pass
+
+    def test_a_call_within_budget_is_untouched(self):
+        with deadline(5.0):
+            result = sum(range(10))
+        self.assertEqual(result, 45)
+
+    def test_the_timer_is_disarmed_afterwards(self):
+        # A leaked timer would fire inside an unrelated later test.
+        import signal
+
+        before = signal.getsignal(signal.SIGALRM)
+        with deadline(5.0):
+            pass
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0.0)
+        self.assertIs(signal.getsignal(signal.SIGALRM), before)
+
+    def test_the_timer_is_disarmed_after_a_failure_too(self):
+        import signal
+
+        with self.assertRaises(DeadlineExceeded):
+            with deadline(0.05):
+                while True:
+                    pass
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0.0)
+
+    def test_a_nested_call_does_not_cancel_the_outer_budget(self):
+        # The analyzers call their own helpers; the entry point owns the budget.
+        with self.assertRaises(DeadlineExceeded):
+            with deadline(0.05):
+                with deadline(60.0):
+                    pass
+                while True:
+                    pass
+
+    def _module(self):
+        import re
+        import types
+
+        module = types.ModuleType("fake_analyzer")
+
+        def scan(text):
+            return text.upper()
+
+        def spin():
+            while True:
+                pass
+
+        class Marker:
+            pass
+
+        scan.__module__ = spin.__module__ = "fake_analyzer"
+        module.scan, module.spin, module.Marker, module.compile = scan, spin, Marker, re.compile
+        return module
+
+    def test_bound_analyzer_bounds_the_modules_own_functions(self):
+        module = bound_analyzer(self._module(), seconds=0.05)
+        self.assertEqual(module.scan("ok"), "OK")
+        with self.assertRaises(DeadlineExceeded):
+            module.spin()
+
+    def test_bound_analyzer_leaves_imports_and_classes_alone(self):
+        import re
+
+        module = bound_analyzer(self._module(), seconds=0.05)
+        # Wrapping a class would break isinstance; wrapping an imported helper
+        # would put an unrelated library under this budget.
+        self.assertIs(module.compile, re.compile)
+        self.assertTrue(isinstance(module.Marker(), module.Marker))
+        self.assertEqual(module.scan.__name__, "scan")
+
+    def test_the_default_budget_is_far_above_any_real_call(self):
+        # It exists to catch non-termination, not to police slow machines.
+        self.assertGreaterEqual(ANALYZER_DEADLINE_SECONDS, 5.0)

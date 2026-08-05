@@ -156,6 +156,17 @@ class TestReleaseGate(ReleaseRepoTestCase):
         problems = "\n".join(gate.check(self.repo))
         self.assertIn("only infrastructure changed", problems)
 
+    def test_a_vendor_registry_sync_is_not_a_release(self):
+        # vendors.yaml caches facts about someone else's models; it is never
+        # installed into a consumer, so recording a documentation sync must not
+        # force a version bump — otherwise every refresh publishes a release.
+        self.make_repo("0.1.0")
+        self.tag("v0.1.0")
+        (self.repo / "vendors.yaml").write_text("version: 1\n", encoding="utf-8")
+        self.commit_all()
+        self.assertEqual(gate.check(self.repo), [])
+        self.assertFalse(gate.in_release_paths("vendors.yaml"))
+
     def test_version_bump_alone_counts_as_infra_only(self):
         # Version lines in pyproject/__init__ and the CHANGELOG entry are not
         # "used code" — a bump without code changes is forbidden.

@@ -256,11 +256,14 @@ class TestEvalRunner(TempDirTestCase):
         # A green run is green for one model at one effort; the log has to say which.
         manifest = self._tiered_manifest(
             {
-                "gate": {"model": "gate-model", "effort": "medium"},
-                "debug": {"model": "debug-model", "effort": "low"},
+                "gate": {"vendor": "anthropic", "model": "claude-opus-5", "effort": "medium"},
+                "debug": {"vendor": "anthropic", "model": "claude-sonnet-5", "effort": "low"},
             }
         )
-        for tier, model, effort in (("gate", "gate-model", "medium"), ("debug", "debug-model", "low")):
+        for tier, model, effort in (
+            ("gate", "claude-opus-5", "medium"),
+            ("debug", "claude-sonnet-5", "low"),
+        ):
             with self.subTest(tier=tier):
                 outdir = self.tmp / f"answers-{tier}"
                 result = self.run_eval(
@@ -271,31 +274,37 @@ class TestEvalRunner(TempDirTestCase):
                     str(manifest),
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn(f"tier={tier} model={model} effort={effort}", result.stdout)
+                self.assertIn(
+                    f"tier={tier} vendor=anthropic model={model} effort={effort}", result.stdout
+                )
                 # ...and the same pair actually reached the harness, not just the log.
                 answer = (outdir / "example-skill--echoed--1.txt").read_text(encoding="utf-8")
                 self.assertTrue(answer.startswith(f"{model}|{effort}|"), answer)
 
     def test_explicit_flags_override_the_declared_tier(self):
-        manifest = self._tiered_manifest({"gate": {"model": "gate-model", "effort": "medium"}})
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium"}}
+        )
         result = self.run_eval(
             "--platform", "universal",
-            "--model", "override-model",
+            "--model", "claude-opus-5",
             "--effort", "max",
             "--command", self._echo_argv_command("model", "effort"),
             str(manifest),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("model=override-model effort=max", result.stdout)
+        self.assertIn("model=claude-opus-5 effort=max", result.stdout)
 
     def test_declared_dial_without_a_placeholder_is_refused(self):
         # Otherwise the header names an environment the harness never received.
-        for dial in ("model", "effort"):
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium"}}
+        )
+        for dial, given in (("model", "effort"), ("effort", "model")):
             with self.subTest(dial=dial):
-                manifest = self._tiered_manifest({"gate": {dial: "medium" if dial == "effort" else "m"}})
                 result = self.run_eval(
                     "--platform", "universal",
-                    "--command", self._echo_argv_command(),
+                    "--command", self._echo_argv_command(given),
                     str(manifest),
                 )
                 self.assertEqual(result.returncode, 2)
@@ -360,12 +369,75 @@ class TestEvalRunner(TempDirTestCase):
 
     def test_effort_level_is_validated_here_because_the_harness_fails_open(self):
         # `claude --effort` warns and silently uses its default on a bad value.
-        manifest = self._tiered_manifest({"gate": {"effort": "highest"}})
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "anthropic", "model": "claude-sonnet-5", "effort": "highest"}}
+        )
         result = self.run_eval("--validate-only", str(manifest))
         self.assertEqual(result.returncode, 2)
-        self.assertIn("tiers.gate.effort must be one of", result.stderr)
+        self.assertIn("effort 'highest' is not accepted by model", result.stderr)
 
-    def test_every_catalog_manifest_declares_both_dials_for_both_tiers(self):
+    def test_a_tier_that_does_not_name_its_vendor_is_rejected(self):
+        # Model and effort mean nothing without the vendor whose ladder they
+        # belong to: 'high' is a different setting for a different supplier.
+        manifest = self._tiered_manifest({"gate": {"model": "claude-sonnet-5", "effort": "medium"}})
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("tiers.gate is missing vendor", result.stderr)
+
+    def test_an_unknown_vendor_or_model_is_a_manifest_defect(self):
+        for tier, fragment in (
+            (
+                {"vendor": "acme", "model": "claude-sonnet-5", "effort": "medium"},
+                "unknown vendor 'acme'",
+            ),
+            (
+                {"vendor": "anthropic", "model": "claude-sonnet-9", "effort": "medium"},
+                "is not registered in vendors.yaml",
+            ),
+            (
+                {"vendor": "openai", "model": "claude-sonnet-5", "effort": "medium"},
+                "belongs to vendor 'anthropic'",
+            ),
+        ):
+            with self.subTest(tier=tier):
+                result = self.run_eval(
+                    "--validate-only", str(self._tiered_manifest({"gate": tier}))
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(fragment, result.stderr)
+
+    def test_a_level_the_vendor_has_but_the_model_does_not_is_rejected(self):
+        # The model's own ladder decides, not the vendor's superset — otherwise
+        # a green run would name a level that model never accepted.
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "google", "model": "gemini-3.1-pro-preview", "effort": "minimal"}}
+        )
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("is not accepted by model 'gemini-3.1-pro-preview'", result.stderr)
+
+    def test_a_model_that_takes_no_effort_at_all_cannot_be_declared(self):
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "anthropic", "model": "claude-haiku-4-5", "effort": "low"}}
+        )
+        result = self.run_eval("--validate-only", str(manifest))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("takes no effort level at all", result.stderr)
+
+    def test_an_override_cannot_route_around_the_registry(self):
+        manifest = self._tiered_manifest(
+            {"gate": {"vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium"}}
+        )
+        result = self.run_eval(
+            "--platform", "universal",
+            "--effort", "highest",
+            "--command", self._echo_argv_command("model", "effort"),
+            str(manifest),
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("is not accepted by model", result.stderr)
+
+    def test_every_catalog_manifest_declares_the_whole_environment_for_both_tiers(self):
         # The point of the tiers is that no live run is implicitly on whatever
         # the CLI and the operator's own settings happen to default to.
         for path in sorted((ROOT / "__test__" / "evals").glob("*/cases.json")):
@@ -373,7 +445,7 @@ class TestEvalRunner(TempDirTestCase):
                 tiers = json.loads(path.read_text(encoding="utf-8")).get("tiers", {})
                 self.assertEqual(sorted(tiers), ["debug", "gate"], path)
                 for tier, dials in tiers.items():
-                    self.assertEqual(sorted(dials), ["effort", "model"], (path, tier))
+                    self.assertEqual(sorted(dials), ["effort", "model", "vendor"], (path, tier))
 
 
 if __name__ == "__main__":

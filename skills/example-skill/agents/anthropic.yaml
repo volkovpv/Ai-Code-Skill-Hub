@@ -1,0 +1,7 @@
+# Vendor adapter for Anthropic models.
+# Interface wiring only: a skill's rules live in SKILL.md and are the same
+# for every vendor, so nothing normative may appear here. The file name must
+# match a vendor declared in vendors.yaml.
+interface:
+  display_name: Example Skill
+  short_description: Draft a Conventional Commits message from a git diff.

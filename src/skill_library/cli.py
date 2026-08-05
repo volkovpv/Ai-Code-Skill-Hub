@@ -8,13 +8,14 @@ Every command returns a process exit code: 0 on success, 1 on failure,
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 import unittest
 from datetime import date
 from pathlib import Path
 
-from . import __version__, installer, lockfile, observations, yamlio
+from . import __version__, installer, lockfile, observations, vendors, yamlio
 from .discovery import (
     CATALOG_FILENAME,
     SKILLS_DIRNAME,
@@ -26,6 +27,7 @@ from .discovery import (
 from .security import SecurityError, ensure_no_symlinks, validate_skill_name
 from .validator import (
     LAYER_DIRS,
+    known_vendor_names,
     validate_data_layer,
     validate_library,
     validate_skill_dir,
@@ -94,10 +96,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
         except DiscoveryError as exc:
             return _err(str(exc))
         policy = cat.content_policy if cat else None
-        problems = [
+        vendor_names, registry_problems = known_vendor_names(root)
+        problems = list(registry_problems)
+        problems += [
             f"{args.skill}: {p}"
             for p in validate_skill_dir(
-                skill_dir, policy, status=cat.status if cat else None
+                skill_dir, policy, status=cat.status if cat else None, vendor_names=vendor_names
             )
         ]
     else:
@@ -504,6 +508,163 @@ def cmd_data_validate(args: argparse.Namespace) -> int:
 
 
 # ----------------------------------------------------------------------------
+# Vendor commands
+# ----------------------------------------------------------------------------
+
+def _load_registry(root: Path) -> vendors.Registry | None:
+    try:
+        return vendors.load_registry(root)
+    except vendors.VendorError as exc:
+        _err(str(exc))
+        return None
+
+
+def cmd_vendor_list(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    width = max(len(v.name) for v in registry.vendors)
+    for vendor in registry.vendors:
+        sync = vendor.docs_checked_at or "never"
+        state = "refresh-required" if vendor.docs_refresh_required else "synced"
+        scope = "in-use" if vendor.in_use else "declared"
+        print(
+            f"{vendor.name.ljust(width)}  {scope:<8}  {state:<16}  checked={sync}  "
+            f"{vendor.effort_param}=[{', '.join(vendor.effort_levels)}] "
+            f"default={vendor.default_effort}"
+        )
+        for model in registry.models_of(vendor.name):
+            levels = ", ".join(model.effort_levels) or "no effort parameter"
+            mark = "verified" if model.verified else "unverified"
+            print(f"{' ' * width}    {model.id}  {model.status:<8}  {mark:<10}  [{levels}]")
+    return 0
+
+
+def cmd_vendor_show(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    vendor = registry.vendor(args.vendor)
+    if vendor is None:
+        return _err(f"unknown vendor {args.vendor!r}")
+    for key, value in vendor.as_dict().items():
+        rendered = ", ".join(value) if isinstance(value, list) else value
+        print(f"{key}: {rendered}")
+    print("models:")
+    for model in registry.models_of(vendor.name):
+        print(
+            f"  {model.id}  status={model.status}  verified={str(model.verified).lower()}  "
+            f"added_at={model.added_at}  effort=[{', '.join(model.effort_levels)}] "
+            f"default={model.default_effort}"
+        )
+    return 0
+
+
+def cmd_vendor_add_model(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    levels = (
+        [part.strip() for part in args.effort_levels.split(",") if part.strip()]
+        if args.effort_levels is not None
+        else None
+    )
+    try:
+        model = vendors.add_model(
+            registry,
+            args.vendor,
+            args.model_id,
+            added_at=args.added_at or date.today().isoformat(),
+            effort_levels=levels,
+            default_effort=args.default_effort,
+            status=args.status,
+        )
+        vendors.save_registry(args.library_root, registry)
+    except vendors.VendorError as exc:
+        return _err(str(exc))
+    print(f"{args.vendor}: registered {model.id} (status {model.status}, unverified)")
+    print(
+        f"next: skillctl vendor refresh {args.vendor} --model {model.id} "
+        "--reason new-model --reviewed-by <name>"
+    )
+    return 0
+
+
+def cmd_vendor_refresh(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    try:
+        plan = vendors.refresh_plan(
+            registry,
+            args.vendor,
+            reason=args.reason,
+            reviewed_by=args.reviewed_by,
+            model_id=args.model,
+        )
+    except vendors.VendorError as exc:
+        return _err(str(exc))
+    print(plan)
+    return 0
+
+
+def _read_result(path: Path):
+    """A sync result is JSON or the same YAML subset the library reads."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise vendors.VendorError(f"{path}: cannot read: {exc}") from exc
+    try:
+        return json.loads(text)
+    except ValueError:
+        pass
+    try:
+        return yamlio.loads(text)
+    except yamlio.YamlError as exc:
+        raise vendors.VendorError(f"{path}: not JSON and not the supported YAML subset: {exc}")
+
+
+def cmd_vendor_apply(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    try:
+        result = _read_result(Path(getattr(args, "from")))
+        if isinstance(result, dict) and result.get("vendor") != args.vendor:
+            raise vendors.VendorError(
+                f"the result file records vendor {result.get('vendor')!r}, "
+                f"but the command names {args.vendor!r}"
+            )
+        changes = vendors.apply_refresh(registry, result, reviewed_by=args.reviewed_by)
+        path = vendors.save_registry(args.library_root, registry)
+    except vendors.VendorError as exc:
+        return _err(str(exc))
+    print(f"{args.vendor}: recorded documentation sync in {path.name}")
+    for change in changes:
+        print(f"  {change}")
+    return 0
+
+
+def cmd_vendor_check(args: argparse.Namespace) -> int:
+    registry = _load_registry(args.library_root)
+    if registry is None:
+        return 1
+    problems = vendors.check_registry(registry, args.library_root)
+    pending = [v.name for v in registry.vendors if not v.in_use and v.docs_refresh_required]
+    if pending:
+        # Not a failure: these are declared groundwork, not measured against.
+        print(f"note: not yet synced (declared, not in use): {', '.join(pending)}")
+    if problems:
+        for problem in problems:
+            print(f"FAIL {problem}")
+        print(f"{len(problems)} problem(s) found")
+        return 1
+    in_use = [v.name for v in registry.vendors if v.in_use]
+    print(f"OK: vendor registry passed the check (in use: {', '.join(in_use) or 'none'})")
+    return 0
+
+
+# ----------------------------------------------------------------------------
 # Parser
 # ----------------------------------------------------------------------------
 
@@ -638,6 +799,60 @@ def build_parser() -> argparse.ArgumentParser:
         op.add_argument("--dry-run", action="store_true")
         op.set_defaults(func=func)
 
+    p = sub.add_parser(
+        "vendor",
+        help="inspect the model-vendor registry and its documentation-sync state",
+    )
+    vsub = p.add_subparsers(dest="subcommand", required=True)
+
+    vp = vsub.add_parser("list", help="list vendors, their models, levels and sync dates")
+    vp.set_defaults(func=cmd_vendor_list)
+
+    vp = vsub.add_parser("show", help="show one vendor entry in full")
+    vp.add_argument("vendor")
+    vp.set_defaults(func=cmd_vendor_show)
+
+    vp = vsub.add_parser(
+        "add-model",
+        help="register a model; marks the vendor as awaiting a documentation sync",
+    )
+    vp.add_argument("vendor")
+    vp.add_argument("model_id", metavar="model-id")
+    vp.add_argument(
+        "--effort-levels",
+        default=None,
+        metavar="LEVELS",
+        help="comma-separated effort levels (default: the vendor's own set)",
+    )
+    vp.add_argument("--default-effort", default=None)
+    vp.add_argument("--status", default="current", choices=vendors.MODEL_STATUSES)
+    vp.add_argument("--added-at", default=None, metavar="YYYY-MM-DD", help="default: today")
+    vp.set_defaults(func=cmd_vendor_add_model)
+
+    vp = vsub.add_parser(
+        "refresh",
+        help="print the documentation-sync plan (the library itself never goes online)",
+    )
+    vp.add_argument("vendor")
+    vp.add_argument("--model", default=None, help="narrow the plan to one model")
+    vp.add_argument(
+        "--reason",
+        required=True,
+        choices=vendors.REFRESH_REASONS,
+        help="the only two sanctioned reasons to go to a vendor's documentation",
+    )
+    vp.add_argument("--reviewed-by", required=True, help="human or role performing the sync")
+    vp.set_defaults(func=cmd_vendor_refresh)
+
+    vp = vsub.add_parser("apply", help="record the result of a documentation sync")
+    vp.add_argument("vendor")
+    vp.add_argument("--from", required=True, metavar="FILE", help="sync result (YAML or JSON)")
+    vp.add_argument("--reviewed-by", required=True, help="human or role performing the sync")
+    vp.set_defaults(func=cmd_vendor_apply)
+
+    vp = vsub.add_parser("check", help="gate: pending syncs and references to unknown vendors")
+    vp.set_defaults(func=cmd_vendor_check)
+
     p = sub.add_parser("data", help="inspect the data layer of a skill")
     dsub = p.add_subparsers(dest="subcommand", required=True)
     dp = dsub.add_parser("validate", help="validate data/README.md contract and content policy")
@@ -652,7 +867,7 @@ def main(argv: list[str] | None = None) -> int:
     args.library_root = Path(args.library_root).resolve()
     try:
         return args.func(args)
-    except (OSError, UnicodeDecodeError, DiscoveryError, SecurityError) as exc:
+    except (OSError, UnicodeDecodeError, DiscoveryError, SecurityError, vendors.VendorError) as exc:
         # Fail-closed safety net: an untrusted/broken input (non-UTF-8 file,
         # unreadable path) must yield 'error: ...' and exit 1, never a bare
         # traceback. Commands still catch these first for tailored messages;

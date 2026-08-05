@@ -36,6 +36,153 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A green gate that never said whose model it was green on
+
+**Releases:** project `3.7.0` (`example-skill` `0.3.0`, `hexagonal-service` `2.3.0`, `python-coding` `1.7.0`, `testing-discipline` `1.6.0`, `typescript-coding` `1.10.0`, `typescript-nestjs` `1.3.0`)
+**Type:** gap closed — a fact every measurement depended on but nothing recorded
+
+### In one sentence
+
+A skill's eval gate recorded the model and the effort it ran at but never the
+vendor those belonged to, and the list of allowed effort levels was frozen in
+the runner's own source — so a run could name an environment no supplier could
+actually serve, and nothing noticed.
+
+### AS IS
+
+```mermaid
+flowchart TD
+    M["cases.json<br/>model + effort"] --> R["run_skill_evals.py"]
+    R --> L["allowed levels<br/>hard-coded in the script"]
+    L --> H["harness"]
+    H --> G["green gate"]
+    G --> Q{"green for whom?"}
+    Q --> U["unknown: no vendor was ever recorded"]
+    M -.-> B["a model that rejects the effort<br/>parameter passes validation"]
+```
+
+### TO BE
+
+```mermaid
+flowchart TD
+    V["vendors.yaml<br/>vendors, models, effort levels"] --> R["run_skill_evals.py"]
+    M["cases.json<br/>vendor + model + effort"] --> R
+    R --> C{"does this model<br/>accept this level?"}
+    C -->|no| F["manifest error, run refused"]
+    C -->|yes| H["harness"]
+    H --> G["green gate for<br/>vendor + model + effort"]
+```
+
+### Example
+
+Before, this was a valid manifest; now it is a refused one:
+
+```bash
+$ python3 scripts/run_skill_evals.py --validate-only __test__/evals/example-skill/cases.json
+ERROR: tiers.debug: model 'claude-haiku-4-5' takes no effort level at all —
+declare a model that does, or run without the effort dial
+```
+
+That is not a hypothetical. The first sync of all five vendors found that four
+of them carried a wrong fact — including the one that mattered here: the cheap
+debug tier every skill declared named a model whose supplier rejects the effort
+parameter outright. The tier moved to a model that accepts it, and the saving
+now comes from the effort dial rather than from a weaker model.
+
+| Vendor | What the registry believed | What the documentation says |
+|---|---|---|
+| anthropic | its cheap model takes the effort dial | it rejects the parameter entirely |
+| openai | the default level is `none` | the default level is `medium` |
+| google | one default for the whole vendor | the default is per model — the lite model starts at the lowest level |
+| deepseek | a top-level effort field, no low level | the field is nested, and a low level does exist |
+| xai | — | confirmed unchanged |
+
+### What the library now says
+
+| Rule | Where it is enforced |
+|---|---|
+| A run's environment is a triple: vendor + model + effort | `tiers` in every `cases.json`; all three required |
+| Allowed effort levels come from the registry, not from code | `vendors.yaml` → the declared model's own levels |
+| A green gate belongs to that triple and to no other | `AGENTS.md`, "Vendor discipline" |
+| The effort variable scrubbed from the child environment is the vendor's | `effort_env_var`; a run naming no vendor scrubs them all |
+| Every skill carries one adapter per declared vendor, with no rules in it | `skillctl validate`, both directions |
+| Vendor facts are refreshed for two reasons only | `vendor add-model` (new model) or `--reason operator-request` |
+
+### When the vendor actually touches the skill
+
+The vendor does not turn up "a bit everywhere". It has four distinct roles, and
+in each one it decides strictly its own thing. The clearest way to see it is to
+follow a single rule from idea to consumer and mark the points the vendor
+touches.
+
+```mermaid
+flowchart LR
+    A["1 · Writing the rule"] --> B["2 · Running the eval gate"]
+    B --> E["3 · The skill at work<br/>in someone else's project"]
+    E --> C["4 · Observation from practice"]
+    C --> D["5 · Promotion into knowledge/"]
+    D --> A
+    V(("vendor")) -.->|"decides nothing"| A
+    V -.->|"sets the environment and<br/>the scope the result is green in"| B
+    V -.->|"display_name and<br/>default_prompt only"| E
+    V -.->|"becomes part of the record:<br/>vendor + model + effort"| C
+    V -.->|"bounds how far the<br/>generalization may travel"| D
+```
+
+| Moment | What the vendor decides | What it does not decide |
+|---|---|---|
+| **Writing the rule** | nothing | the text of the rule. A rule is stated neutrally; one that only holds for a single vendor is not a rule yet — it is an observation with a scope |
+| **Running the gate** | everything: the run environment is the triple vendor + model + effort, and the registry decides which levels that model has at all | what the rule says. The gate decides **where** it is proved, not **what** is written in it |
+| **The skill at work in someone else's project** — it was installed into their repository and an agent is doing work by it | the wrapper only — `agents/<vendor>.yaml`: the name the skill is shown under and the phrasing that invokes it by default | not one line of `SKILL.md` or `references/`. Which model runs is that project's harness's choice; the library takes no part at that moment |
+| **Observation (how the skill learns)** | the record's scope: vendor, model family, effort level | the right to rewrite the rule. An observation is a fact about an environment, not a new norm |
+| **Promotion into `knowledge/`** | the limit of the generalization: a statement travels exactly as far as it was measured | the appearance of an "on vendor X, do it differently" branch. No such branch enters a skill |
+| **Syncing the documentation** | the vendor facts in the registry | not one line of a skill. A sync updates the registry, not the rules |
+
+The third row is the one everything else is for, and the one most often read
+wrong. It looks like this: somebody ran `skillctl install` and the skill's files
+landed in their repository; a developer opens their agent in **their** project;
+the agent reads `SKILL.md` and writes code by its rules. The library is not
+present at that moment — it picks neither the model nor the effort level; those
+are that project's settings and its harness's.
+
+Hence the consequence that is easy to miss: **a green gate is a record of a
+measurement, not a promise to the consumer.** It says "on this triple the rules
+were followed" and says nothing about a project that runs the skill on a
+different vendor. If that vendor is to be supported in earnest, it is measured
+separately — which produces a second record, not a wider reading of the first.
+
+The asymmetry is deliberate and rests on one idea: **the vendor enters a skill
+as the scope of the evidence and never as a branch inside a rule.** A branch
+would mean the reader of the rule must first work out which vendor they are on —
+and a skill is installed one at a time into a project the library knows nothing
+about, so there is nobody to ask.
+
+What this looks like in practice. A rule works on one vendor's model and not on
+another's. What happens:
+
+1. it is **not** grounds for adding "on vendor X do it differently" to
+   `SKILL.md`;
+2. it is grounds for an observation candidate in that skill, naming the vendor,
+   the model family and the effort level the difference shows up on;
+3. then the ordinary review: the observation either becomes verified knowledge
+   with an explicit applicability scope, or it does not;
+4. and, as a separate step, a measurement on the second triple — if that vendor
+   is to be supported at all. Green on one vendor does not carry over to another
+   by inference, only by measurement.
+
+### Where the rule stops
+
+The library still never goes online. `skillctl vendor refresh` prints the plan —
+which pages to open, which fields to extract, where to put the answer — and
+`skillctl vendor apply` records what came back; the trip is made by whoever has
+network access. The gate holds a vendor to a completed sync only when it is
+marked `in_use: true`; a vendor declared as groundwork is not held to one, even
+though all five happen to be synced today. And a synced registry says what a
+supplier documents, not what a model does: that is still the eval gate's job,
+one triple at a time.
+
+---
+
 ## A comment that looked like an annotation
 
 **Releases:** project `3.6.0` (`typescript-coding` `1.8.0 → 1.9.0`)

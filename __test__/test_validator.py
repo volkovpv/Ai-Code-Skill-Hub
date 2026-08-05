@@ -7,6 +7,7 @@ import os
 from skill_library.validator import (
     HARD_MAX_FILE_BYTES,
     MAX_DESCRIPTION_LENGTH,
+    known_vendor_names,
     layer_has_content,
     validate_data_layer,
     validate_library,
@@ -337,6 +338,14 @@ class TestKnowledgeLayer(TempDirTestCase):
         )
 
 
+VALID_ADAPTER = (
+    "interface:\n"
+    "  display_name: Adapter Skill\n"
+    "  short_description: A synthetic adapter used by the test suite.\n"
+    '  default_prompt: "Use it."\n'
+)
+
+
 class TestAgentsAdapters(TempDirTestCase):
     """agents/*.yaml must parse in the YAML subset and be a mapping (fail-closed)."""
 
@@ -344,15 +353,12 @@ class TestAgentsAdapters(TempDirTestCase):
         skills_dir = self.make_dir("skills")
         skill = write_skill(skills_dir, "adapter-skill")
         agents = skill / "agents"
-        agents.mkdir()
+        agents.mkdir(exist_ok=True)
         (agents / filename).write_text(content, encoding="utf-8")
         return skill
 
     def test_valid_adapter_passes(self):
-        skill = self._skill_with_adapter(
-            "interface:\n  display_name: Adapter Skill\n  default_prompt: \"Use it.\"\n"
-        )
-        self.assertEqual(validate_skill_dir(skill), [])
+        self.assertEqual(validate_skill_dir(self._skill_with_adapter(VALID_ADAPTER)), [])
 
     def test_unparseable_adapter_is_reported(self):
         # A YAML anchor is outside the supported subset -> must be a problem.
@@ -372,9 +378,149 @@ class TestAgentsAdapters(TempDirTestCase):
         self.assertIn("agents/codex.yml: top level must be a mapping", problems)
 
     def test_non_yaml_files_in_agents_are_ignored(self):
-        skill = self._skill_with_adapter("interface:\n  display_name: X\n")
+        skill = self._skill_with_adapter(VALID_ADAPTER)
         (skill / "agents" / "notes.md").write_text("# adapter notes\n", encoding="utf-8")
         self.assertEqual(validate_skill_dir(skill), [])
+
+    def test_every_adapter_is_checked_even_after_a_broken_one(self):
+        # A malformed adapter must not stop the scan: the ones after it are
+        # still checked, and a valid one after them still counts as present
+        # rather than being reported missing.
+        skill = self._skill_with_adapter(
+            "interface: &anchor\n  display_name: X\n", "anthropic.yaml"
+        )
+        agents = skill / "agents"
+        (agents / "notes.md").write_text("# not an adapter\n", encoding="utf-8")
+        (agents / "openai.yaml").write_text("- just\n- a\n- list\n", encoding="utf-8")
+        (agents / "xai.yaml").write_text(VALID_ADAPTER, encoding="utf-8")
+        problems = validate_skill_dir(skill, vendor_names=("anthropic", "openai", "xai"))
+        self.assertTrue(any(p.startswith("agents/anthropic.yaml:") for p in problems), problems)
+        self.assertIn("agents/openai.yaml: top level must be a mapping", problems)
+        self.assertFalse(any("agents/xai.yaml is missing" in p for p in problems), problems)
+
+    def test_a_malformed_field_after_an_unknown_one_is_still_reported(self):
+        # The unknown-field branch skips to the next field; it must not stop
+        # the loop, or an unknown key would mask every problem behind it.
+        skill = self._skill_with_adapter(
+            "interface:\n"
+            "  effort: high\n"
+            '  display_name: ""\n'
+            "  short_description: A synthetic adapter.\n"
+        )
+        problems = validate_skill_dir(skill)
+        self.assertTrue(any("unknown interface field(s) effort" in p for p in problems), problems)
+        self.assertTrue(
+            any("interface.display_name must be a non-empty string" in p for p in problems),
+            problems,
+        )
+
+    def test_an_adapter_carries_interface_wiring_and_nothing_else(self):
+        # A rule placed here would bind one vendor only — the split SKILL.md
+        # exists to prevent.
+        skill = self._skill_with_adapter(VALID_ADAPTER + "rules:\n  - never do X\n")
+        problems = validate_skill_dir(skill)
+        self.assertTrue(any("only 'interface'" in p for p in problems), problems)
+
+    def test_interface_must_be_a_mapping_with_the_known_fields(self):
+        for content, fragment in (
+            ("interface: nope\n", "'interface' is missing or is not a mapping"),
+            ("display_name: X\n", "'interface' is missing or is not a mapping"),
+            (
+                "interface:\n  display_name: X\n",
+                "interface.short_description is required",
+            ),
+            (
+                "interface:\n  short_description: X\n",
+                "interface.display_name is required",
+            ),
+            (
+                VALID_ADAPTER + "  effort: high\n",
+                "unknown interface field(s) effort",
+            ),
+            (
+                "interface:\n  display_name: \"\"\n  short_description: X\n",
+                "interface.display_name must be a non-empty string",
+            ),
+            (
+                'interface:\n  display_name: X\n  short_description: "a\\nb"\n',
+                "interface.short_description must stay on one line",
+            ),
+        ):
+            with self.subTest(content=content):
+                problems = validate_skill_dir(self._skill_with_adapter(content))
+                self.assertTrue(any(fragment in p for p in problems), (fragment, problems))
+                # A problem the reader cannot locate is not actionable.
+                self.assertTrue(
+                    all(p.startswith("agents/openai.yaml:") for p in problems), problems
+                )
+
+
+class TestAdaptersAgainstTheVendorRegistry(TempDirTestCase):
+    """With a registry in hand the adapter set is checked in both directions."""
+
+    VENDORS = ("anthropic", "openai")
+
+    def _skill(self, *adapters: str):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "adapter-skill")
+        agents = skill / "agents"
+        agents.mkdir()
+        for name in adapters:
+            (agents / f"{name}.yaml").write_text(VALID_ADAPTER, encoding="utf-8")
+        return skill
+
+    def test_one_adapter_per_declared_vendor_passes(self):
+        skill = self._skill(*self.VENDORS)
+        self.assertEqual(validate_skill_dir(skill, vendor_names=self.VENDORS), [])
+
+    def test_a_declared_vendor_without_an_adapter_is_reported(self):
+        skill = self._skill("anthropic")
+        problems = validate_skill_dir(skill, vendor_names=self.VENDORS)
+        self.assertTrue(any("agents/openai.yaml is missing" in p for p in problems), problems)
+
+    def test_an_adapter_for_an_unknown_vendor_is_reported(self):
+        skill = self._skill(*self.VENDORS, "acme")
+        problems = validate_skill_dir(skill, vendor_names=self.VENDORS)
+        self.assertTrue(any("'acme' is not a vendor declared" in p for p in problems), problems)
+
+    def test_a_skill_without_an_agents_directory_is_reported(self):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "bare-skill")
+        problems = validate_skill_dir(skill, vendor_names=self.VENDORS)
+        self.assertEqual(len(problems), len(self.VENDORS), problems)
+
+    def test_the_vendor_yaml_naming_rule_applies_only_with_a_registry(self):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "named-skill")
+        (skill / "agents").mkdir()
+        (skill / "agents" / "openai.yml").write_text(VALID_ADAPTER, encoding="utf-8")
+        # Without a registry there is nothing that says what a vendor is named.
+        self.assertEqual(validate_skill_dir(skill), [])
+        problems = validate_skill_dir(skill, vendor_names=("openai",))
+        self.assertTrue(any("named <vendor>.yaml" in p for p in problems), problems)
+
+    def test_without_a_registry_the_cross_check_is_skipped(self):
+        # Fixtures and temporary libraries have no vendors.yaml; they must stay
+        # validatable without inheriting this repository's vendor list.
+        self.assertEqual(validate_skill_dir(self._skill("openai")), [])
+
+    def test_known_vendor_names_reports_a_broken_registry_and_skips_a_missing_one(self):
+        self.assertEqual(known_vendor_names(self.tmp), (None, []))
+        (self.tmp / "vendors.yaml").write_text("version: 2\n", encoding="utf-8")
+        names, problems = known_vendor_names(self.tmp)
+        self.assertIsNone(names)
+        self.assertTrue(any("vendors.yaml" in p for p in problems), problems)
+
+    def test_the_real_library_holds_an_adapter_for_every_declared_vendor(self):
+        names, problems = known_vendor_names(ROOT)
+        self.assertEqual(problems, [])
+        self.assertIsNotNone(names, f"{ROOT} has no readable vendors.yaml")
+        for skill in sorted((ROOT / "skills").iterdir()):
+            if not skill.is_dir():
+                continue
+            with self.subTest(skill=skill.name):
+                found = sorted(p.stem for p in (skill / "agents").glob("*.yaml"))
+                self.assertEqual(found, sorted(names), skill.name)
 
 
 class TestFrontmatterFields(TempDirTestCase):

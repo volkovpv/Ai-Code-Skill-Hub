@@ -5,6 +5,75 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.7.0] — 2026-08-05
+
+Model vendors become first-class: a registry, one adapter per vendor in every
+skill, and an eval gate that names the environment it is green on.
+
+`example-skill` `0.2.1 → 0.3.0` · `hexagonal-service` `2.2.0 → 2.3.0` ·
+`python-coding` `1.6.0 → 1.7.0` · `testing-discipline` `1.5.0 → 1.6.0` ·
+`typescript-coding` `1.9.0 → 1.10.0` · `typescript-nestjs` `1.2.0 → 1.3.0`
+
+### The gap
+
+A green eval gate recorded the model and the effort level it ran at, but not
+the vendor those belonged to — so "green" pointed at an environment that was
+only half named. Worse, the list of allowed effort levels was frozen in
+`scripts/run_skill_evals.py`, which made it a statement about one supplier
+written as if it were universal, and left no way to notice that a declared
+model rejects the effort parameter altogether.
+
+### What changed
+
+- **`vendors.yaml`** — a new root registry of vendors, their models and the
+  effort levels each model accepts, with the state of each vendor's
+  documentation sync. It is library data: never installed into a consumer, and
+  changing it does not require a project version bump.
+- **`skillctl vendor`** — `list`, `show`, `add-model`, `refresh`, `apply`,
+  `check`. The library still makes no network call: `refresh` prints the sync
+  plan and `apply` records the answer someone with network access brings back.
+  There are two sanctioned reasons to go to a vendor's documentation — a newly
+  registered model, or an explicit operator request — and `refresh` fails
+  without a reason from that closed set and a named reviewer.
+- **`skillctl vendor check`** (also a CI step) fails on a pending sync for a
+  vendor marked `in_use: true`, on a sync older than the newest model
+  registered for it, and on any adapter or eval tier naming a vendor or model
+  the registry does not know. Vendors declared as groundwork are reported as
+  pending and block nothing.
+- **Adapters** — every skill now carries one `agents/<vendor>.yaml` per
+  declared vendor, checked in both directions by `skillctl validate`. An
+  adapter holds interface wiring only (`display_name`, `short_description`,
+  `default_prompt`); a rule inside one is now a validation error, since it
+  would bind a single vendor. There is deliberately no `vendors/` directory
+  inside a skill.
+- **Eval manifests** — each tier declares `vendor` alongside `model` and
+  `effort`, all three required and all three resolved against the registry. An
+  unknown vendor, an unknown model, a model belonging to another vendor, or a
+  level that *model* does not accept is a manifest error rather than a silent
+  fallback, and `--model`/`--effort` overrides are held to the same registry.
+  The `RUN` header now names the vendor, and the effort environment variable
+  scrubbed from the harness comes from the vendor entry.
+- **First sync of all five vendors** — recorded on 2026-08-05 against each
+  vendor's own documentation. Four of the five carried a wrong fact:
+
+  | Vendor | What the sync corrected |
+  |---|---|
+  | anthropic | `claude-haiku-4-5` takes no effort level at all — the cheap `debug` tier of all six manifests had been declaring exactly that pair, and now runs on a model that accepts the dial |
+  | openai | the default is `medium`, not `none` |
+  | google | the default is per model, not per vendor; `gemini-3.1-flash-lite` defaults to `minimal`. Three newer general-purpose models registered |
+  | deepseek | the field is nested — `thinking.reasoning_effort`, not top-level; `low` does exist (`medium` does not); `deepseek-chat` and `deepseek-reasoner` were retired on 2026-07-24 |
+  | xai | confirmed unchanged (`reasoning.effort`, `low…xhigh`, default `high`; `xhigh` on the multi-agent model sets the agent count, not the depth) |
+
+  `gpt-5.2` is the one row left `verified: false`: its level set is confirmed
+  (no `max`), its own default is not documented anywhere reachable.
+- **Feedback-loop rules** (`AGENTS.md`) — an observation records the vendor,
+  model and effort it was seen on; proved for one vendor is not proved for
+  another; a new model triggers a documentation sync and a re-measurement, not
+  a rule rewrite; a behavioural difference between vendors is an observation,
+  never a per-vendor branch in `SKILL.md`.
+- The language gate additionally exempts the untracked `_promts/` working area,
+  alongside `_audit/` and `_temp/`.
+
 ## [3.6.0] — 2026-08-01
 
 `typescript-coding` `1.8.0 → 1.9.0` — JSDoc has exactly one parsed form, and
