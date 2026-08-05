@@ -83,10 +83,19 @@ ERROR: tiers.debug: model 'claude-haiku-4-5' takes no effort level at all —
 declare a model that does, or run without the effort dial
 ```
 
-That is not a hypothetical: the first documentation sync found that the cheap
+That is not a hypothetical. The first sync of all five vendors found that four
+of them carried a wrong fact — including the one that mattered here: the cheap
 debug tier every skill declared named a model whose supplier rejects the effort
 parameter outright. The tier moved to a model that accepts it, and the saving
 now comes from the effort dial rather than from a weaker model.
+
+| Vendor | What the registry believed | What the documentation says |
+|---|---|---|
+| anthropic | its cheap model takes the effort dial | it rejects the parameter entirely |
+| openai | the default level is `none` | the default level is `medium` |
+| google | one default for the whole vendor | the default is per model — the lite model starts at the lowest level |
+| deepseek | a top-level effort field, no low level | the field is nested, and a low level does exist |
+| xai | — | confirmed unchanged |
 
 ### What the library now says
 
@@ -105,9 +114,10 @@ The library still never goes online. `skillctl vendor refresh` prints the plan �
 which pages to open, which fields to extract, where to put the answer — and
 `skillctl vendor apply` records what came back; the trip is made by whoever has
 network access. The gate holds a vendor to a completed sync only when it is
-marked `in_use: true`; vendors declared as groundwork are reported as pending
-and block nothing. And a synced registry says what a supplier documents, not
-what a model does: that is still the eval gate's job, one triple at a time.
+marked `in_use: true`; a vendor declared as groundwork is not held to one, even
+though all five happen to be synced today. And a synced registry says what a
+supplier documents, not what a model does: that is still the eval gate's job,
+one triple at a time.
 
 ---
 

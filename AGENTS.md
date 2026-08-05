@@ -104,8 +104,8 @@ so it has exactly one refresh path and exactly two reasons to use it.
   `--reviewed-by` fails.
 - **`in_use` is a declaration, not a guess.** `skillctl vendor check` holds a
   vendor to a completed sync only when it is marked `in_use: true` — the vendor
-  the library actually measures against. The rest are declared groundwork; the
-  gate reports them as pending and does not fail. Referential integrity (an
+  the library actually measures against. The rest are declared groundwork: an
+  unfinished sync for them is reported, never a failure. Referential integrity (an
   adapter or an eval tier naming a vendor or model the registry does not know)
   is enforced for every vendor.
 - `vendors.yaml` is library data, not skill content: it is never installed into a

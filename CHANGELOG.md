@@ -53,13 +53,19 @@ model rejects the effort parameter altogether.
   fallback, and `--model`/`--effort` overrides are held to the same registry.
   The `RUN` header now names the vendor, and the effort environment variable
   scrubbed from the harness comes from the vendor entry.
-- **First Anthropic sync** — recorded on 2026-08-05. It confirmed
-  `output_config.effort` with levels `low … max` defaulting to `high`, and
-  found that `claude-haiku-4-5` does not accept the effort parameter at all.
-  The cheap `debug` tier of all six manifests had been declaring exactly that
-  pair; it now runs on a model that accepts the dial, with the saving coming
-  from the effort level instead. The other four vendors are declared
-  groundwork and await their first sync.
+- **First sync of all five vendors** — recorded on 2026-08-05 against each
+  vendor's own documentation. Four of the five carried a wrong fact:
+
+  | Vendor | What the sync corrected |
+  |---|---|
+  | anthropic | `claude-haiku-4-5` takes no effort level at all — the cheap `debug` tier of all six manifests had been declaring exactly that pair, and now runs on a model that accepts the dial |
+  | openai | the default is `medium`, not `none` |
+  | google | the default is per model, not per vendor; `gemini-3.1-flash-lite` defaults to `minimal`. Three newer general-purpose models registered |
+  | deepseek | the field is nested — `thinking.reasoning_effort`, not top-level; `low` does exist (`medium` does not); `deepseek-chat` and `deepseek-reasoner` were retired on 2026-07-24 |
+  | xai | confirmed unchanged (`reasoning.effort`, `low…xhigh`, default `high`; `xhigh` on the multi-agent model sets the agent count, not the depth) |
+
+  `gpt-5.2` is the one row left `verified: false`: its level set is confirmed
+  (no `max`), its own default is not documented anywhere reachable.
 - **Feedback-loop rules** (`AGENTS.md`) — an observation records the vendor,
   model and effort it was seen on; proved for one vendor is not proved for
   another; a new model triggers a documentation sync and a re-measurement, not
