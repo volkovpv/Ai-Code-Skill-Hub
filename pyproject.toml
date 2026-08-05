@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skill-library"
-version = "3.6.0"
+version = "3.7.0"
 description = "Self-contained, vendor-neutral Agent Skills library with a management CLI (skillctl)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -59,7 +59,7 @@ only_mutate = [
     "skills/typescript-nestjs/scripts/check_nest_conventions.py",
     "skills/python-coding/scripts/check_py_conventions.py",
 ]
-also_copy = ["__test__", "skills", "scripts", "skills.yaml", "pyproject.toml"]
+also_copy = ["__test__", "skills", "scripts", "skills.yaml", "vendors.yaml", "pyproject.toml"]
 pytest_add_cli_args = ["-q"]
 pytest_add_cli_args_test_selection = [
     "__test__/test_yamlio.py",

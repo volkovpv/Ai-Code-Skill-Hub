@@ -2,8 +2,8 @@
 
 Policy (AGENTS.md): Russian is allowed only in the root README.md,
 __test__/README.md, docs/history.rus.md and the untracked working areas
-_audit/ and _temp/; everywhere else the text must be English, with explicit
-per-line waivers for Unicode test data.
+_audit/, _temp/ and _promts/; everywhere else the text must be English, with
+explicit per-line waivers for Unicode test data.
 """
 
 from __future__ import annotations
@@ -52,6 +52,7 @@ class TestLanguagePolicy(TempDirTestCase):
         self.write("docs/history.rus.md", RU_LINE)
         self.write("_audit/2026-01-01-report.md", RU_LINE)
         self.write("_temp/notes.md", RU_LINE)
+        self.write("_promts/task.md", RU_LINE)
         result = self.run_scan(str(self.tmp))
         self.assertEqual(result.returncode, 0, result.stdout)
 

@@ -18,26 +18,23 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from skill_library.installer import AGENT_TARGET_DIRS, InstallError, install_skill  # noqa: E402
 from skill_library.security import SecurityError, safe_join  # noqa: E402
+from skill_library.vendors import Registry, VendorError, load_registry  # noqa: E402
 
 # A case id names a file under --save-output, so it may not carry separators.
 CASE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 # Which environment a manifest expects, by purpose.
-#   gate  — the model and effort the skill's users actually run; a green gate is
-#           green for that pair and says nothing about any other.
-#   debug — a cheap, fast pair for shaking manifest defects out between live
+#   gate  — the vendor, model and effort the skill's users actually run; a green
+#           gate is green for that triple and says nothing about any other.
+#   debug — a cheap, fast triple for shaking manifest defects out between live
 #           runs. Its failures may be the environment's limits, not the skill's,
 #           so a debug run never promotes anything.
 TIERS = ("gate", "debug")
+
+# Two of the three reach the harness through the command line; the vendor is the
+# environment they belong to and is resolved against vendors.yaml instead.
 TIER_DIALS = ("model", "effort")
-
-# `claude --effort` ignores an unknown level and silently falls back to its own
-# default, so the manifest is validated here rather than by the harness.
-EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
-
-# Effort also arrives from the launching shell. A run states its own effort or
-# none at all — it never inherits the operator's personal setting.
-EFFORT_ENV_VAR = "CLAUDE_EFFORT"
+TIER_KEYS = ("vendor", *TIER_DIALS)
 
 
 class EvalError(ValueError):
@@ -52,7 +49,49 @@ def _strings(value: object, field: str) -> list[str]:
     return value
 
 
-def load_manifest(path: Path) -> dict:
+def check_environment(
+    registry: Registry, vendor: str | None, model: str | None, effort: str | None, label: str
+) -> None:
+    """A declared environment must exist in the registry, exactly as declared.
+
+    Unknown vendor, unknown model, a model belonging to another vendor, or an
+    effort level that model does not accept are all manifest defects — never a
+    silent fallback to whatever the harness would have picked.
+    """
+    if vendor is not None:
+        if registry.vendor(vendor) is None:
+            raise EvalError(
+                f"{label}: unknown vendor {vendor!r} (known: {', '.join(registry.vendor_names)})"
+            )
+    if model is not None:
+        entry = registry.model(model)
+        if entry is None:
+            raise EvalError(f"{label}: model {model!r} is not registered in vendors.yaml")
+        if vendor is not None and entry.vendor != vendor:
+            raise EvalError(
+                f"{label}: model {model!r} belongs to vendor {entry.vendor!r}, not {vendor!r}"
+            )
+    if effort is None:
+        return
+    if model is not None:
+        levels = registry.effort_levels_for(registry.model(model).vendor, model)
+        if not levels:
+            raise EvalError(
+                f"{label}: model {model!r} takes no effort level at all — declare a model "
+                "that does, or run without the effort dial"
+            )
+        if effort not in levels:
+            raise EvalError(
+                f"{label}: effort {effort!r} is not accepted by model {model!r} "
+                f"(accepted: {', '.join(levels)})"
+            )
+        return
+    known = sorted({level for v in registry.vendors for level in v.effort_levels})
+    if effort not in known:
+        raise EvalError(f"{label}: effort {effort!r} is not a level any vendor declares")
+
+
+def load_manifest(path: Path, registry: Registry) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -77,20 +116,28 @@ def load_manifest(path: Path) -> dict:
         for tier, dials in tiers.items():
             if not isinstance(dials, dict) or not dials:
                 raise EvalError(f"{path}: tiers.{tier} must be a non-empty object")
-            unknown_dials = sorted(set(dials) - set(TIER_DIALS))
+            unknown_dials = sorted(set(dials) - set(TIER_KEYS))
             if unknown_dials:
                 raise EvalError(
                     f"{path}: unknown dials in tiers.{tier}: {', '.join(unknown_dials)} "
-                    f"(known: {', '.join(TIER_DIALS)})"
+                    f"(known: {', '.join(TIER_KEYS)})"
+                )
+            missing_dials = [key for key in TIER_KEYS if key not in dials]
+            if missing_dials:
+                raise EvalError(
+                    f"{path}: tiers.{tier} is missing {', '.join(missing_dials)}; a declared "
+                    f"environment names all of {', '.join(TIER_KEYS)}"
                 )
             for dial, value in dials.items():
                 if not isinstance(value, str) or not value.strip():
                     raise EvalError(f"{path}: tiers.{tier}.{dial} must be a non-empty string")
-            effort = dials.get("effort")
-            if effort is not None and effort not in EFFORT_LEVELS:
-                raise EvalError(
-                    f"{path}: tiers.{tier}.effort must be one of {', '.join(EFFORT_LEVELS)}"
-                )
+            check_environment(
+                registry,
+                dials["vendor"],
+                dials["model"],
+                dials["effort"],
+                f"{path}: tiers.{tier}",
+            )
     cases = data.get("cases")
     if not isinstance(cases, list) or not cases:
         raise EvalError(f"{path}: cases must be a non-empty list")
@@ -186,22 +233,29 @@ def resolve_dial(
     return value
 
 
-def run_manifest(path: Path, data: dict, args: argparse.Namespace) -> int:
+def run_manifest(path: Path, data: dict, registry: Registry, args: argparse.Namespace) -> int:
     if args.platform not in data.get("platforms", []):
         raise EvalError(f"{path}: platform {args.platform!r} is not declared")
     command = shlex.split(args.command)
     if not command or not any("{prompt}" in token for token in command):
         raise EvalError("--command must contain a {prompt} placeholder")
     dials = {dial: resolve_dial(dial, path, data, args, command) for dial in TIER_DIALS}
+    vendor = data.get("tiers", {}).get(args.tier, {}).get("vendor")
+    # An override on the command line is held to the same registry as the
+    # manifest — otherwise --model/--effort would be the way around the gate.
+    check_environment(registry, vendor, dials["model"], dials["effort"], f"{path}: tier {args.tier}")
 
     # Effort also reaches the harness through the shell that launched this run;
-    # drop it so the manifest is the only thing that decides.
-    child_env = {k: v for k, v in os.environ.items() if k != EFFORT_ENV_VAR}
+    # drop it so the manifest is the only thing that decides. A run that names
+    # no vendor scrubs every vendor's variable rather than guessing.
+    inherited = registry.effort_env_vars(vendor)
+    child_env = {k: v for k, v in os.environ.items() if k not in inherited}
 
     # A green run is green for one environment; the log has to name it.
     named = " ".join(f"{dial}={dials[dial] or '(harness default)'}" for dial in TIER_DIALS)
     print(
-        f"RUN {data['skill']} platform={args.platform} tier={args.tier} {named} "
+        f"RUN {data['skill']} platform={args.platform} tier={args.tier} "
+        f"vendor={vendor or '(not declared)'} {named} "
         f"repeat={args.repeat} cases={len(data['cases'])} command={args.command!r}"
     )
 
@@ -262,8 +316,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", help="override the model declared for the tier")
     parser.add_argument(
         "--effort",
-        choices=EFFORT_LEVELS,
-        help="override the reasoning effort declared for the tier",
+        help="override the reasoning effort declared for the tier; validated against "
+        "the levels vendors.yaml records for the model, not a list frozen here",
     )
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=120.0)
@@ -282,20 +336,21 @@ def main(argv: list[str] | None = None) -> int:
         args.save_output.mkdir(parents=True, exist_ok=True)
 
     try:
-        loaded = [(path, load_manifest(path)) for path in args.manifests]
+        registry = load_registry(ROOT)
+        loaded = [(path, load_manifest(path, registry)) for path in args.manifests]
         if args.validate_only:
             for path, data in loaded:
                 tiers = data.get("tiers", {})
                 declared = "; ".join(
-                    f"{tier}: " + " ".join(f"{d}={tiers[tier][d]}" for d in TIER_DIALS if d in tiers[tier])
+                    f"{tier}: " + " ".join(f"{d}={tiers[tier][d]}" for d in TIER_KEYS if d in tiers[tier])
                     for tier in TIERS
                     if tier in tiers
                 )
                 suffix = f" — {declared}" if declared else ""
                 print(f"OK {path}: {len(data['cases'])} case(s){suffix}")
             return 0
-        failures = sum(run_manifest(path, data, args) for path, data in loaded)
-    except (EvalError, InstallError, SecurityError, KeyError) as exc:
+        failures = sum(run_manifest(path, data, registry, args) for path, data in loaded)
+    except (EvalError, InstallError, SecurityError, VendorError, KeyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     return 1 if failures else 0

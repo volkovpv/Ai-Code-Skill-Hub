@@ -3,8 +3,8 @@
   "skill": "python-coding",
   "platforms": ["claude", "codex", "opencode", "universal"],
   "tiers": {
-    "gate": { "model": "claude-sonnet-5", "effort": "medium" },
-    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+    "gate": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium" },
+    "debug": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "low" }
   },
   "cases": [
     {

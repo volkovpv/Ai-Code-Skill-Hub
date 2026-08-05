@@ -1,6 +1,9 @@
-# Vendor-specific adapter for OpenAI harnesses (Codex).
-# Other harnesses ignore this file; keep SKILL.md vendor-neutral.
-# Note: the in-house YAML subset has no multiline scalars, so default_prompt is one line.
+# Vendor adapter for OpenAI models.
+# Interface wiring only: a skill's rules live in SKILL.md and are the same
+# for every vendor, so nothing normative may appear here. The file name must
+# match a vendor declared in vendors.yaml.
+# Note: the in-house YAML subset has no multiline scalars, so default_prompt
+# is one line.
 interface:
   display_name: Python Coding (universal)
   short_description: Universal strictly-typed, secure-by-default Python coding standard, free of framework and architecture assumptions.

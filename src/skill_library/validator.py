@@ -20,7 +20,7 @@ import os
 import re
 from pathlib import Path
 
-from . import yamlio
+from . import vendors, yamlio
 from .discovery import (
     ORIGIN_FILENAME,
     SKILL_FILENAME,
@@ -39,6 +39,8 @@ __all__ = [
     "HARD_MAX_FILE_BYTES",
     "KNOWN_SKILL_DIRS",
     "LAYER_DIRS",
+    "ADAPTER_FIELDS",
+    "known_vendor_names",
     "resolve_content_policy",
     "layer_has_content",
     "validate_data_layer",
@@ -75,6 +77,11 @@ _MD_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 _CODE_PATH_RE = re.compile(
     r"`((?:references|scripts|assets|agents|knowledge|data|observations)/[A-Za-z0-9._/-]+)`"
 )
+
+# A vendor adapter is interface wiring: how a harness announces the skill and
+# how it phrases the default invocation. Nothing normative belongs here.
+ADAPTER_FIELDS = ("display_name", "short_description", "default_prompt")
+ADAPTER_REQUIRED_FIELDS = ("display_name", "short_description")
 
 _TOC_RE = re.compile(r"^#{1,3}\s+(contents|table of contents)\s*$",
                      re.IGNORECASE | re.MULTILINE)
@@ -237,27 +244,88 @@ def _check_layout(skill_dir: Path, problems: list[str]) -> None:
             problems.append(f"{rel_posix}: unexpected executable bit outside scripts/")
 
 
-def _check_agents_dir(skill_dir: Path, problems: list[str]) -> None:
-    """Vendor adapters must stay machine-readable (fail-closed).
+def _check_adapter_interface(data: dict, rel: str, problems: list[str]) -> None:
+    """An adapter carries interface wiring and nothing else.
+
+    A rule that lived here would apply to one vendor only, which is exactly the
+    split ``SKILL.md`` exists to prevent — so the accepted shape is closed.
+    """
+    unknown = sorted(set(data) - {"interface"})
+    if unknown:
+        problems.append(
+            f"{rel}: unexpected top-level key(s) {', '.join(unknown)}; an adapter carries "
+            "only 'interface' — skill rules live in SKILL.md, the same for every vendor"
+        )
+    interface = data.get("interface")
+    if not isinstance(interface, dict):
+        problems.append(f"{rel}: 'interface' is missing or is not a mapping")
+        return
+    unknown_fields = sorted(set(interface) - set(ADAPTER_FIELDS))
+    if unknown_fields:
+        problems.append(
+            f"{rel}: unknown interface field(s) {', '.join(unknown_fields)}; "
+            f"allowed: {', '.join(ADAPTER_FIELDS)}"
+        )
+    for required in ADAPTER_REQUIRED_FIELDS:
+        if required not in interface:
+            problems.append(f"{rel}: interface.{required} is required")
+    for field_name, value in interface.items():
+        if field_name not in ADAPTER_FIELDS:
+            continue
+        if not isinstance(value, str) or not value.strip():
+            problems.append(f"{rel}: interface.{field_name} must be a non-empty string")
+        elif "\n" in value:
+            # The YAML subset has no multiline scalars; a value that survived
+            # parsing with a newline in it came from an escape and would not
+            # round-trip through every consumer.
+            problems.append(f"{rel}: interface.{field_name} must stay on one line")
+
+
+def _check_agents_dir(
+    skill_dir: Path, problems: list[str], vendor_names: tuple[str, ...] | None = None
+) -> None:
+    """Vendor adapters must stay machine-readable and complete (fail-closed).
 
     Every ``agents/*.yaml`` file has to parse in the in-house YAML subset and
-    hold a mapping at the top level — a broken adapter would otherwise ship
-    silently and fail only on the consumer's side.
+    hold an ``interface`` mapping — a broken adapter would otherwise ship
+    silently and fail only on the consumer's side. When the vendor registry is
+    available the set of files is checked against it in both directions: no
+    adapter for an unknown vendor, and no declared vendor without an adapter.
     """
     agents_dir = skill_dir / "agents"
-    if not agents_dir.is_dir():
+    seen: set[str] = set()
+    if agents_dir.is_dir():
+        for path in sorted(agents_dir.rglob("*")):
+            if not path.is_file() or path.suffix not in (".yaml", ".yml"):
+                continue
+            rel = path.relative_to(skill_dir).as_posix()
+            try:
+                data = yamlio.load_file(path)
+            except yamlio.YamlError as exc:
+                problems.append(f"{rel}: {exc}")
+                continue
+            if not isinstance(data, dict):
+                problems.append(f"{rel}: top level must be a mapping")
+                continue
+            _check_adapter_interface(data, rel, problems)
+            seen.add(path.stem)
+            if vendor_names is not None and path.name != f"{path.stem}.yaml":
+                problems.append(
+                    f"{rel}: an adapter is named <vendor>.yaml after a vendor in "
+                    f"{vendors.VENDORS_FILENAME}"
+                )
+    if vendor_names is None:
         return
-    for path in sorted(agents_dir.rglob("*")):
-        if not path.is_file() or path.suffix not in (".yaml", ".yml"):
-            continue
-        rel = path.relative_to(skill_dir).as_posix()
-        try:
-            data = yamlio.load_file(path)
-        except yamlio.YamlError as exc:
-            problems.append(f"{rel}: {exc}")
-            continue
-        if not isinstance(data, dict):
-            problems.append(f"{rel}: top level must be a mapping")
+    for unknown in sorted(seen - set(vendor_names)):
+        problems.append(
+            f"agents/{unknown}.yaml: {unknown!r} is not a vendor declared in "
+            f"{vendors.VENDORS_FILENAME} (declared: {', '.join(vendor_names)})"
+        )
+    for missing in sorted(set(vendor_names) - seen):
+        problems.append(
+            f"agents/{missing}.yaml is missing; every vendor declared in "
+            f"{vendors.VENDORS_FILENAME} needs an adapter"
+        )
 
 
 def _check_knowledge_layer(skill_dir: Path, problems: list[str]) -> None:
@@ -326,8 +394,28 @@ def _check_observations_layer(skill_dir: Path, problems: list[str]) -> None:
     problems.extend(collect_observation_problems(skill_dir))
 
 
+def known_vendor_names(library_root: Path) -> tuple[tuple[str, ...] | None, list[str]]:
+    """Declared vendor names, or ``None`` when the library has no registry.
+
+    A missing ``vendors.yaml`` means the caller is validating a bare skill tree
+    (a fixture, a temporary library) and the cross-check is skipped; a *broken*
+    one is a problem, never a silent skip.
+    """
+    library_root = Path(library_root)
+    if not (library_root / vendors.VENDORS_FILENAME).is_file():
+        return None, []
+    try:
+        return vendors.load_registry(library_root).vendor_names, []
+    except vendors.VendorError as exc:
+        return None, [str(exc)]
+
+
 def validate_skill_dir(
-    skill_dir: Path, policy: dict | None = None, *, status: str | None = None
+    skill_dir: Path,
+    policy: dict | None = None,
+    *,
+    status: str | None = None,
+    vendor_names: tuple[str, ...] | None = None,
 ) -> list[str]:
     """Validate one skill directory. Returns a list of problems (empty = OK)."""
     skill_dir = Path(skill_dir)
@@ -390,7 +478,7 @@ def validate_skill_dir(
 
     _check_origin(skill_dir, problems)
     _check_layout(skill_dir, problems)
-    _check_agents_dir(skill_dir, problems)
+    _check_agents_dir(skill_dir, problems, vendor_names)
     _check_local_links(body, skill_dir, skill_dir, SKILL_FILENAME, problems)
     _check_knowledge_layer(skill_dir, problems)
     problems.extend(validate_data_layer(skill_dir, policy, scan_policy=False))
@@ -436,6 +524,9 @@ def validate_library(library_root: Path) -> list[str]:
     skills, discovery_problems = discover_skills(library_root)
     problems.extend(discovery_problems)
 
+    vendor_names, registry_problems = known_vendor_names(library_root)
+    problems.extend(registry_problems)
+
     try:
         catalog = load_catalog(library_root)
     except DiscoveryError as exc:
@@ -451,7 +542,7 @@ def validate_library(library_root: Path) -> list[str]:
             cat = catalog_by_name.get(entry.name)
             policy = cat.content_policy if cat else None
             for problem in validate_skill_dir(
-                entry, policy, status=cat.status if cat else None
+                entry, policy, status=cat.status if cat else None, vendor_names=vendor_names
             ):
                 problems.append(f"{entry.name}: {problem}")
 

@@ -36,6 +36,81 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A green gate that never said whose model it was green on
+
+**Releases:** project `3.7.0` (`example-skill` `0.3.0`, `hexagonal-service` `2.3.0`, `python-coding` `1.7.0`, `testing-discipline` `1.6.0`, `typescript-coding` `1.10.0`, `typescript-nestjs` `1.3.0`)
+**Type:** gap closed — a fact every measurement depended on but nothing recorded
+
+### In one sentence
+
+A skill's eval gate recorded the model and the effort it ran at but never the
+vendor those belonged to, and the list of allowed effort levels was frozen in
+the runner's own source — so a run could name an environment no supplier could
+actually serve, and nothing noticed.
+
+### AS IS
+
+```mermaid
+flowchart TD
+    M["cases.json<br/>model + effort"] --> R["run_skill_evals.py"]
+    R --> L["allowed levels<br/>hard-coded in the script"]
+    L --> H["harness"]
+    H --> G["green gate"]
+    G --> Q{"green for whom?"}
+    Q --> U["unknown: no vendor was ever recorded"]
+    M -.-> B["a model that rejects the effort<br/>parameter passes validation"]
+```
+
+### TO BE
+
+```mermaid
+flowchart TD
+    V["vendors.yaml<br/>vendors, models, effort levels"] --> R["run_skill_evals.py"]
+    M["cases.json<br/>vendor + model + effort"] --> R
+    R --> C{"does this model<br/>accept this level?"}
+    C -->|no| F["manifest error, run refused"]
+    C -->|yes| H["harness"]
+    H --> G["green gate for<br/>vendor + model + effort"]
+```
+
+### Example
+
+Before, this was a valid manifest; now it is a refused one:
+
+```bash
+$ python3 scripts/run_skill_evals.py --validate-only __test__/evals/example-skill/cases.json
+ERROR: tiers.debug: model 'claude-haiku-4-5' takes no effort level at all —
+declare a model that does, or run without the effort dial
+```
+
+That is not a hypothetical: the first documentation sync found that the cheap
+debug tier every skill declared named a model whose supplier rejects the effort
+parameter outright. The tier moved to a model that accepts it, and the saving
+now comes from the effort dial rather than from a weaker model.
+
+### What the library now says
+
+| Rule | Where it is enforced |
+|---|---|
+| A run's environment is a triple: vendor + model + effort | `tiers` in every `cases.json`; all three required |
+| Allowed effort levels come from the registry, not from code | `vendors.yaml` → the declared model's own levels |
+| A green gate belongs to that triple and to no other | `AGENTS.md`, "Vendor discipline" |
+| The effort variable scrubbed from the child environment is the vendor's | `effort_env_var`; a run naming no vendor scrubs them all |
+| Every skill carries one adapter per declared vendor, with no rules in it | `skillctl validate`, both directions |
+| Vendor facts are refreshed for two reasons only | `vendor add-model` (new model) or `--reason operator-request` |
+
+### Where the rule stops
+
+The library still never goes online. `skillctl vendor refresh` prints the plan —
+which pages to open, which fields to extract, where to put the answer — and
+`skillctl vendor apply` records what came back; the trip is made by whoever has
+network access. The gate holds a vendor to a completed sync only when it is
+marked `in_use: true`; vendors declared as groundwork are reported as pending
+and block nothing. And a synced registry says what a supplier documents, not
+what a model does: that is still the eval gate's job, one triple at a time.
+
+---
+
 ## A comment that looked like an annotation
 
 **Releases:** project `3.6.0` (`typescript-coding` `1.8.0 → 1.9.0`)

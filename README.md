@@ -54,6 +54,8 @@ Skill здесь — не одна инструкция, а **версионир
 ├── LICENSE                    # MIT
 ├── AGENTS.md                  # правила для разработчиков и coding harness
 ├── CHANGELOG.md               # история версий проекта; верхняя запись = release notes
+├── vendors.yaml               # реестр вендоров моделей: модели и уровни усилий;
+│                              #   данные библиотеки, потребителю НЕ устанавливаются
 │
 ├── docs/
 │   ├── history.rus.md         # история улучшений skills простым языком (AS IS / TO BE)
@@ -176,7 +178,11 @@ skills/<имя>/
 │                              #   агенту НЕ нужен и в runtime-режиме НЕ устанавливается
 │
 ├── agents/                    # vendor-адаптеры; канонический SKILL.md остаётся нейтральным
-│   └── openai.yaml            #   метаданные интерфейса для OpenAI harness (Codex)
+│   ├── anthropic.yaml         #   по одному файлу на каждого вендора из vendors.yaml;
+│   ├── openai.yaml            #   имя файла = имя вендора, проверяется в обе стороны;
+│   ├── google.yaml            #   внутри ТОЛЬКО обвязка интерфейса: display_name,
+│   ├── xai.yaml               #   short_description, default_prompt — правил skill
+│   └── deepseek.yaml          #   в адаптере нет и быть не может
 ├── references/                # справочные материалы; агент читает по ссылкам из SKILL.md
 ├── scripts/                   # детерминированные offline-помощники, запускаемые агентом
 ├── assets/                    # статические файлы (шаблоны, образцы)
@@ -206,7 +212,9 @@ skills/<имя>/
   исключения — `README.md` в корне skill (документация для пользователей
   библиотеки, см. «Документация skills») и `data/README.md` (контракт данных);
 - разрешены только перечисленные каталоги — неизвестная папка (в т.ч.
-  `history/`) не пройдёт валидацию;
+  `history/` или `vendors/`) не пройдёт валидацию: каталоги делят содержимое по
+  *статусу* знания, а вендор — это *область применимости* записи, то есть
+  значение атрибута, а не статус;
 - пустые слои не создаются «для галочки»: слой существует, только когда в нём
   есть содержимое, и тогда его `INDEX.md`/`README.md` обязателен;
 - исполняемые файлы допустимы только в `scripts/`; symlink'и запрещены везде.
@@ -287,6 +295,39 @@ python scripts/skillctl.py validate example-skill  # один skill
 python scripts/skillctl.py data validate example-skill   # только контракт data/
 python scripts/skillctl.py knowledge list example-skill   # файлы knowledge с заголовками
 ```
+
+### Реестр вендоров моделей
+
+Вендор — это поставщик модели (`vendors.yaml`), а не харнесс: список
+`platforms` в `skills.yaml` описывает харнессы и остаётся отдельной осью.
+Библиотека сама в сеть не ходит: `vendor refresh` печатает план сверки, а
+`vendor apply` записывает то, что принёс человек или агент с доступом в сеть.
+
+```bash
+python scripts/skillctl.py vendor list             # вендоры, модели, уровни, даты сверки
+python scripts/skillctl.py vendor show anthropic   # одна запись целиком
+python scripts/skillctl.py vendor check            # гейт (запускается и в CI)
+
+# новая версия модели — первый из двух поводов пойти к документации вендора
+python scripts/skillctl.py vendor add-model anthropic claude-opus-6 \
+    --effort-levels low,medium,high,xhigh,max --default-effort high
+
+# второй повод — явная просьба оператора
+python scripts/skillctl.py vendor refresh anthropic \
+    --reason operator-request --reviewed-by <имя>
+
+# записать результат сверки (YAML или JSON того же подмножества)
+python scripts/skillctl.py vendor apply anthropic --from sync.yaml --reviewed-by <имя>
+```
+
+`vendor add-model` ставит вендору `docs_refresh_required: true`, а `vendor
+apply` снимает флаг и записывает `docs_checked_at`, `docs_checked_by` и
+`last_refresh_reason`. `vendor check` падает, когда: у вендора с `in_use: true`
+сверка не пройдена, его `docs_checked_at` старше `added_at` новейшей модели,
+или в `agents/` либо в eval-манифесте встретился вендор/модель, которых в
+реестре нет. Вендоры с `in_use: false` — задел на будущее: гейт печатает их как
+pending и не падает. Изменение `vendors.yaml` **не** требует поднятия версии
+проекта: это кэш чужих фактов, а не поставляемое содержимое.
 
 ### Установка в проект: два режима распространения
 
@@ -608,7 +649,8 @@ uv run mutmut results                                    # разбор выжи
 # Offline-проверка eval-манифестов (без запуска модели)
 uv run python scripts/run_skill_evals.py --validate-only __test__/evals/*/cases.json
 
-# Живой прогон. Среда (модель + effort) объявлена в манифесте, блок `tiers`:
+# Живой прогон. Среда (вендор + модель + effort) объявлена в манифесте, блок
+# `tiers`; все три поля обязательны и проверяются по vendors.yaml:
 # gate — среда, в которой skill будут использовать (ею двигают draft → stable),
 # debug — дешёвая, для отладки самих ожиданий между живыми прогонами.
 uv run python scripts/run_skill_evals.py --repeat 3 --save-output /tmp/eval-out \
@@ -618,6 +660,9 @@ uv run python scripts/run_skill_evals.py --tier debug \
 
 # Языковая политика (без русского текста вне allowlist)
 uv run python scripts/check_language.py
+
+# Гейт реестра вендоров (в CI — рядом с валидацией)
+uv run skillctl vendor check
 
 # Zero-tooling fallback (без uv), как в CI на 3.12/3.13
 python3 scripts/skillctl.py validate

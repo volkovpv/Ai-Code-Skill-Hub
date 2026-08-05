@@ -6,9 +6,24 @@
 - All tests live only in `__test__/`; the directory name is fixed (not `tests`).
 - `templates/skill/` is a scaffold, not a published skill — never validate or
   install it directly.
-- Keep canonical skills vendor-neutral. Anything specific to one harness goes
-  into the skill's `agents/` adapter files or into installer code, never into
-  `SKILL.md`.
+- Keep canonical skills vendor-neutral. Anything specific to one harness or one
+  model vendor goes into the skill's `agents/` adapter files or into installer
+  code, never into `SKILL.md`.
+- A **vendor** is a model supplier (`vendors.yaml`); a **platform** is a harness
+  (`platforms` in `skills.yaml`). They are separate axes — never conflate them.
+  Every skill carries exactly one `agents/<vendor>.yaml` per declared vendor,
+  and an adapter holds interface wiring only (`interface.display_name`,
+  `interface.short_description`, `interface.default_prompt`). A rule in an
+  adapter would bind one vendor and not the others, which is the split
+  `SKILL.md` exists to prevent.
+- There is no `vendors/` directory inside a skill and there will not be one. A
+  skill's directories divide content by the *status* of the knowledge (rule,
+  verified generalization, observation, data); a vendor is the *scope* of a
+  record — an attribute value, not a status. A directory per attribute value
+  gives a second, crossing division: a rule with one vendor-specific exception
+  loses its single address, and the same logic would next demand directories
+  per language and per framework. Installation copies directories whole, so
+  `vendors/` would also ship every vendor's corpus to every consumer.
 - Do not put product- or project-specific decisions into universal skills.
 - **Skills are installed one at a time and must stand alone.** No skill may
   depend on another being present: a rule is never stated only by pointing at
@@ -69,6 +84,56 @@
   the approval. Agents never push to `main`, never tag and never publish
   releases (release publication stays the `main`-push automation triggered by
   the human merge).
+
+## Vendor discipline
+
+`vendors.yaml` is the registry of model vendors, their models and the effort
+levels each model accepts. It is cached knowledge about somebody else's product,
+so it has exactly one refresh path and exactly two reasons to use it.
+
+- **The library never goes to the network.** `skillctl vendor refresh` prints
+  the sync plan — which pages to open, which fields to extract, where to put the
+  answer — and `skillctl vendor apply` records what came back. The trip itself
+  is made by a human or an agent that has network access.
+- **Two, and only two, reasons to go to a vendor's documentation:** a new model
+  version enters the registry (`skillctl vendor add-model` raises
+  `docs_refresh_required`), or the operator asks explicitly
+  (`--reason operator-request`). Ordinary skill edits, installs, gate runs,
+  reviews, releases and CI never consult a vendor and never touch `vendors.yaml`.
+  `vendor refresh` without a `--reason` from the closed set and without
+  `--reviewed-by` fails.
+- **`in_use` is a declaration, not a guess.** `skillctl vendor check` holds a
+  vendor to a completed sync only when it is marked `in_use: true` — the vendor
+  the library actually measures against. The rest are declared groundwork; the
+  gate reports them as pending and does not fail. Referential integrity (an
+  adapter or an eval tier naming a vendor or model the registry does not know)
+  is enforced for every vendor.
+- `vendors.yaml` is library data, not skill content: it is never installed into a
+  consumer and — unlike `skills/`, `src/`, `scripts/` and `templates/` — a change
+  to it does not require a project version bump. A sync is not a release.
+
+### How the feedback loop uses all this
+
+1. **An observation records its environment.** A record in `observations/` names
+   the vendor, the model and the effort level it was seen on, next to the
+   skill's version and commit. Without them "a defect of the skill" is not
+   checkable: nobody knows which edition failed in which environment.
+2. **Proved for one vendor is not proved for another.** A green eval gate
+   belongs to the declared vendor + model + effort triple. Carrying a rule over
+   to another vendor is a separate measurement and a separate record, never an
+   inference.
+3. **A new model is a reason to sync the documentation, not to rewrite rules.**
+   The sequence is `vendor add-model` → `vendor refresh --reason new-model` →
+   `vendor apply`, and then the gate is re-measured. The skill's text does not
+   change: the sync updates the registry, not the rules.
+4. **A behavioural difference between vendors is an observation, not an edit.**
+   If one vendor's model reliably fails to apply a rule another vendor's model
+   applies, that becomes an observation candidate in the skill concerned, scoped
+   to "vendor + model family + effort level". Promotion into `knowledge/` is an
+   ordinary reviewed change. Neither `SKILL.md` nor `references/` gains a
+   per-vendor branch.
+5. **Outside the two reasons, nobody goes to a vendor.** Not triage, not a rule
+   edit, not a release.
 
 ## History docs discipline
 
@@ -142,8 +207,9 @@ installed into a consumer.
 - Keep `README.md` (Russian) in sync with actual CLI behaviour; never document
   features that do not exist. Only the root `README.md`, `__test__/README.md`
   and `docs/history.rus.md` are written in Russian; every other document is in
-  English. The untracked working areas `_audit/` (review reports) and `_temp/`
-  (scratch notes) are exempt — they are not repository content.
+  English. The untracked working areas `_audit/` (review reports), `_temp/`
+  (scratch notes) and `_promts/` (task briefs) are exempt — they are not
+  repository content.
 - Bump the skill's `version` in `skills.yaml` whenever its content changes.
 
 ## Release discipline
@@ -178,7 +244,8 @@ installed into a consumer.
 - Version bump rules, enforced by `scripts/check_release_gate.py` (runs on PRs
   to `main` and on `main` pushes):
   - changing used code (`skills/`, `src/`, `scripts/`, `templates/`,
-    `skills.yaml`, `pyproject.toml`, `LICENSE`) requires bumping the version
+    `skills.yaml`, `pyproject.toml`, `LICENSE`; **not** `vendors.yaml`, which is
+    cached vendor facts rather than shipped content) requires bumping the version
     (via `scripts/bump_version.py`) and describing the change in
     `CHANGELOG.md`;
   - infrastructure-only changes (`__test__/`, `.github/`, `README.md`,

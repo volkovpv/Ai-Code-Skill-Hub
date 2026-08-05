@@ -115,6 +115,7 @@ __test__/
 ├── test_observations.py
 ├── test_release_gates.py
 ├── test_security.py
+├── test_vendors.py
 ├── test_validator.py
 └── test_yamlio.py
 ```
@@ -128,14 +129,15 @@ __test__/
 |---|---|---|---|
 | `test_cli.py` | Аргументы, exit codes, `new`, CLI-lifecycle, stable test-gate и команды слоёв | неверные флаги/имена, target, rollback scaffold/catalog, ненулевой код ошибки | не проверяет внутреннюю корректность installer/validator и поведение агента |
 | `test_discovery.py` | Поиск skills, frontmatter, каталог и директории | отсутствующий `SKILL.md`, broken frontmatter, лишний/пропущенный skill, порядок | не оценивает смысл `description` и trigger-выбор моделью |
-| `test_evals.py` | Schema, ошибки manifest, install + запуск локального fake-harness | дубли ID, неверные expectations/platforms, сломанный runner contract | не запускает реальную модель и не подтверждает качество её ответа |
+| `test_evals.py` | Schema, ошибки manifest, install + запуск локального fake-harness | дубли ID, неверные expectations/platforms, тир без вендора, чужая модель или недопустимый для неё effort, сломанный runner contract | не запускает реальную модель и не подтверждает качество её ответа |
 | `test_installer.py` | `install/diff/update/remove/status`, copy/link, runtime/full и failure injection | потеря правок, удаление чужих файлов, неидемпотентность, checksum, rollback после сбоя | не проверяет discovery и workflow в реальном harness |
 | `test_layers.py` | Knowledge/data/observations, content policy и capabilities | слой без index/контракта, рассинхронизация flags, секреты, размеры, observation без evidence/review | не доказывает истинность knowledge и достаточность evidence |
 | `test_lockfile.py` | CRUD lock-файла и поддерживаемое подмножество YAML | потеря записей, malformed YAML, duplicate keys, tabs, сериализация строк | не проверяет конкурентную запись и физический сбой диска |
 | `test_observations.py` | `add/approve/reject/list`, dry-run и audit metadata | прямой candidate→accepted, approval без evidence/reviewer, потеря audit trail | не оценивает качество evidence и корректность promotion в правило |
 | `test_release_gates.py` | Drift версий, release classification, `bump_version.py` и mutation-score gate | релиз без bump/changelog, downgrade, drift версий/`uv.lock`, mutation score ниже порога | не проверяет фактическую публикацию GitHub Release и эквивалентность surviving mutants |
 | `test_security.py` | Имена, пути, traversal, symlink escape, очищенное окружение и Python network-deny | выход за target, symlink escape, утечка env/сети в Python subprocess | не является pentest и не заменяет сетевую изоляцию ОС для нативных программ |
-| `test_validator.py` | Skill/library validation, fixtures, links, origin, catalog consistency | ложный успех сломанного skill, mismatch имени, dead/escaping links, uncatalogued/missing skill | не проверяет installer, качество инструкций и следование им моделью |
+| `test_validator.py` | Skill/library validation, fixtures, links, origin, catalog consistency, состав и форма `agents/*.yaml` | ложный успех сломанного skill, mismatch имени, dead/escaping links, uncatalogued/missing skill, адаптер под неизвестного вендора или пропущенный адаптер, правило внутри адаптера | не проверяет installer, качество инструкций и следование им моделью |
+| `test_vendors.py` | Схема `vendors.yaml`, `vendor add-model/refresh/apply/check` и CLI-обвязка | небезопасное имя, чужой уровень усилия у модели, потерянный default, сверка без повода или рецензента, непройденная сверка у вендора «в работе», ссылка на неизвестного вендора/модель | не ходит к вендору и не подтверждает, что записанные факты соответствуют его документации |
 | `test_yamlio.py` | Парсер/сериализатор YAML-подмножества: quoting, escapes, комментарии, flow-списки, диагностика ошибок (строка/текст), round-trip dump→load | молчаливое принятие anchors/tabs/незакрытых кавычек, неверная строка в ошибке, потеря escape-последовательностей при dump | не проверяет полноту YAML-спецификации — подмножество зафиксировано намеренно |
 
 Последний столбец показывает, какой соседний тест, eval или review должен
@@ -224,20 +226,29 @@ harness проверяются перед публикацией.
 
 ### Среда прогона: два уровня
 
-Ответ модели определяет не только сама модель, но и reasoning effort. Обе
-ручки объявляются в manifest вместе, как одна среда:
+Ответ модели определяет не только сама модель, но и её поставщик и reasoning
+effort. Все три ручки объявляются в manifest вместе, как одна среда, и все три
+обязательны:
 
 ```json
 {
   "tiers": {
-    "gate":  { "model": "claude-sonnet-5",           "effort": "medium" },
-    "debug": { "model": "claude-haiku-4-5-20251001", "effort": "low" }
+    "gate":  { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium" },
+    "debug": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "low" }
   }
 }
 ```
 
+`vendor` и `model` разрешаются по `vendors.yaml`. Неизвестный вендор,
+незарегистрированная модель, модель чужого вендора и уровень усилия, которого у
+**этой модели** нет (даже если он есть у вендора), — это дефект манифеста, а не
+молчаливый откат на то, что выбрал бы harness. `--model` и `--effort` проверяются
+по тому же реестру, иначе override был бы обходом гейта.
+
 `gate` — среда, в которой skill будут реально использовать. Зелёный гейт
-зелёный **для этой пары** и не говорит ничего про другие, поэтому уровень
+зелёный **для этой тройки «вендор + модель + усилие»** и не говорит ничего про
+другие: доказанное для одного вендора не доказано для другого, перенос правила
+на другого вендора — отдельное измерение и отдельная запись. Поэтому уровень
 `gate` (по умолчанию) — единственный, которым можно двигать `draft → stable`.
 Если аудитория неизвестна, берите нижнюю границу поддержки: skill, прошедший
 на низком effort, почти наверняка пройдёт и на высоком, обратное неверно.
@@ -252,7 +263,8 @@ skill обязан «работать заметнее», и кейсы, кот�
     uv run python scripts/run_skill_evals.py --tier debug --command 'claude -p --model {model} --effort {effort} {prompt}' __test__/evals/example-skill/cases.json
 
 `--model` и `--effort` перекрывают объявленный уровень для разового
-эксперимента.
+эксперимента — но обе перекрышки проверяются по `vendors.yaml` так же строго,
+как сам манифест.
 
 Правило fail-closed работает для каждой ручки в обе стороны: значение задано,
 но в `--command` нет соответствующего placeholder — ошибка (harness молча взял
@@ -262,16 +274,29 @@ skill обязан «работать заметнее», и кейсы, кот�
 
 Effort проверяется здесь, а не harness: `claude --effort` на неизвестном
 значении **не падает**, а печатает warning и берёт свой default. Допустимые
-значения — `low`, `medium`, `high`, `xhigh`, `max`.
+значения берутся не из кода runner'а, а из `vendors.yaml` — из уровней
+объявленной модели, с откатом на уровни вендора, когда модель не названа. У
+Anthropic это `low`, `medium`, `high`, `xhigh`, `max`; у другого вендора набор
+свой, и у отдельной модели он может быть уже вендорского. Модель, которая
+параметр усилия не принимает вовсе (`effort_levels: []`), в тире объявить
+нельзя.
 
-Effort приходит и третьим путём — из переменной `CLAUDE_EFFORT` того шелла,
-который запустил прогон. Runner вычищает её из окружения дочернего процесса:
-среду прогона задаёт manifest, а не личные настройки того, кто нажал Enter.
+Именно этим правилом первая сверка документации Anthropic поймала реальный
+дефект: `debug` был объявлен на `claude-haiku-4-5`, а эта модель параметр
+усилия отвергает. Дешёвый тир переехал на `claude-sonnet-5` с `effort: low` —
+экономию теперь даёт ручка усилия, а не более слабая модель.
+
+Effort приходит и третьим путём — из переменной окружения того шелла, который
+запустил прогон. Имя переменной берётся из `effort_env_var` вендора
+(`CLAUDE_EFFORT` у Anthropic; `null` означает, что вычищать нечего). Runner
+вычищает её из окружения дочернего процесса, а прогон, не назвавший вендора,
+вычищает переменные всех вендоров: среду прогона задаёт manifest, а не личные
+настройки того, кто нажал Enter.
 
 Каждый прогон начинается со строки, называющей свою среду, чтобы у зелёного
 результата было указано, где именно он зелёный:
 
-    RUN testing-discipline platform=claude tier=gate model=claude-sonnet-5 effort=medium repeat=3 cases=40 command='claude -p --model {model} --effort {effort} {prompt}'
+    RUN testing-discipline platform=claude tier=gate vendor=anthropic model=claude-sonnet-5 effort=medium repeat=3 cases=40 command='claude -p --model {model} --effort {effort} {prompt}'
 
 Вердикт называет промахнувшийся оракул, но не ответ harness, а временный
 проект к этому моменту уже удалён. Чтобы разбирать падения не переснимая
@@ -326,10 +351,12 @@ placeholders, Python network-deny, атомарный lock, rollback mutating
 | `references/` или `knowledge/` | ссылки, routing, applicability scope, evidence |
 | `scripts/` | unit, error paths, side effects, integration; mutation для критичного кода |
 | `data/` | data contract, schema/format, license, PII/secret scan, reproducibility |
-| `observations/` | lifecycle, evidence, review metadata, regression after promotion |
+| `observations/` | lifecycle, evidence, review metadata, regression after promotion; запись называет вендора, модель и уровень усилия, на которых наблюдался сбой |
 | Installer или lockfile | contract, runtime/full, idempotency, local-change protection, rollback |
 | Security/path logic | positive/negative boundary cases, property/fuzz, mutation |
 | Заявленная новая платформа | install smoke и E2E на этой платформе |
+| Новый вендор или новая модель | `vendor add-model` → `vendor refresh --reason new-model` → `vendor apply`, затем переизмерение гейта; правила skill при этом не меняются |
+| Расхождение поведения между вендорами | кандидат наблюдения с областью «вендор + семейство моделей + уровень усилия»; развилок в `SKILL.md` и `references/` не появляется |
 
 Если строка применима к изменению, перечисленные проверки обязательны или в PR
 должно быть объяснено, почему конкретная проверка неприменима.
