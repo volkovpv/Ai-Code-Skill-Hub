@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from __test__.helpers import sandboxed_env, skip_in_mutants_sandbox
+from __test__.helpers import bound_analyzer, sandboxed_env, skip_in_mutants_sandbox
 from __test__.skills.scanner_conformance import ScannerConformanceMixin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,7 +41,10 @@ def load_checker():
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module
+    # Bounded in one place so every in-process call site inherits the deadline:
+    # a mutation that turns a scanner loop non-terminating must fail the test,
+    # not hang the process (see helpers.bound_analyzer).
+    return bound_analyzer(module)
 
 
 CHECKER = load_checker()

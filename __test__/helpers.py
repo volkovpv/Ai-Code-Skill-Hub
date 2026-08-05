@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import functools
+import inspect
 import os
 import shutil
+import signal
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -13,6 +18,86 @@ ROOT = Path(__file__).resolve().parents[1]
 MUTANTS_SANDBOX_REASON = (
     "mutmut sandbox: the trampoline-rewritten analyzer exceeds the size policy"
 )
+
+
+# A scanner that does not terminate is a defect, not a slow test. The analyzers
+# are `while`-loop scanners imported in-process by their dedicated tests (that is
+# what puts them under coverage and mutation testing), so a mutation in a loop
+# condition hangs the whole test process. Bounded, it raises instead — the test
+# fails, and the mutant is killed rather than recorded as a multi-minute timeout.
+# The budget is deliberately far above any real call (the whole nestjs file runs
+# in well under a second) so a loaded machine never trips it.
+ANALYZER_DEADLINE_SECONDS = 15.0
+
+
+class DeadlineExceeded(AssertionError):
+    """An in-process analyzer call ran past its wall-clock budget."""
+
+
+_deadline_depth = 0
+
+
+@contextlib.contextmanager
+def deadline(seconds: float = ANALYZER_DEADLINE_SECONDS):
+    """Bound a call by wall-clock time, raising :class:`DeadlineExceeded`.
+
+    Only the outermost call arms the timer, so a wrapped function calling another
+    wrapped function in the same module keeps one budget for the whole entry.
+    Where ``SIGALRM`` is unavailable (Windows) or the caller is not the main
+    thread, this is a no-op — the deadline is a diagnostic, never a correctness
+    requirement.
+    """
+    global _deadline_depth
+    unavailable = not hasattr(signal, "SIGALRM") or (
+        threading.current_thread() is not threading.main_thread()
+    )
+    if unavailable or _deadline_depth:
+        _deadline_depth += 0 if unavailable else 1
+        try:
+            yield
+        finally:
+            _deadline_depth -= 0 if unavailable else 1
+        return
+
+    def _fire(signum, frame):  # noqa: ARG001 - signal handler signature
+        raise DeadlineExceeded(
+            f"call did not finish within {seconds}s — a non-terminating scanner?"
+        )
+
+    previous = signal.signal(signal.SIGALRM, _fire)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    _deadline_depth = 1
+    try:
+        yield
+    finally:
+        _deadline_depth = 0
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def bound_analyzer(module, seconds: float = ANALYZER_DEADLINE_SECONDS):
+    """Give every function *module* defines a wall-clock budget; return *module*.
+
+    Applied once where the analyzer is imported, so all of its call sites are
+    covered without touching them. Only functions defined in the module itself
+    are wrapped — imported names and classes are left alone.
+    """
+    for name, value in list(vars(module).items()):
+        if name.startswith("__") or not inspect.isfunction(value):
+            continue
+        if getattr(value, "__module__", None) != module.__name__:
+            continue
+        setattr(module, name, _bounded(value, seconds))
+    return module
+
+
+def _bounded(function, seconds: float):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        with deadline(seconds):
+            return function(*args, **kwargs)
+
+    return wrapper
 
 
 def skip_in_mutants_sandbox(reason: str = MUTANTS_SANDBOX_REASON):
