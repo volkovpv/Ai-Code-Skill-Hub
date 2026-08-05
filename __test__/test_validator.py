@@ -382,6 +382,38 @@ class TestAgentsAdapters(TempDirTestCase):
         (skill / "agents" / "notes.md").write_text("# adapter notes\n", encoding="utf-8")
         self.assertEqual(validate_skill_dir(skill), [])
 
+    def test_every_adapter_is_checked_even_after_a_broken_one(self):
+        # A malformed adapter must not stop the scan: the ones after it are
+        # still checked, and a valid one after them still counts as present
+        # rather than being reported missing.
+        skill = self._skill_with_adapter(
+            "interface: &anchor\n  display_name: X\n", "anthropic.yaml"
+        )
+        agents = skill / "agents"
+        (agents / "notes.md").write_text("# not an adapter\n", encoding="utf-8")
+        (agents / "openai.yaml").write_text("- just\n- a\n- list\n", encoding="utf-8")
+        (agents / "xai.yaml").write_text(VALID_ADAPTER, encoding="utf-8")
+        problems = validate_skill_dir(skill, vendor_names=("anthropic", "openai", "xai"))
+        self.assertTrue(any(p.startswith("agents/anthropic.yaml:") for p in problems), problems)
+        self.assertIn("agents/openai.yaml: top level must be a mapping", problems)
+        self.assertFalse(any("agents/xai.yaml is missing" in p for p in problems), problems)
+
+    def test_a_malformed_field_after_an_unknown_one_is_still_reported(self):
+        # The unknown-field branch skips to the next field; it must not stop
+        # the loop, or an unknown key would mask every problem behind it.
+        skill = self._skill_with_adapter(
+            "interface:\n"
+            "  effort: high\n"
+            '  display_name: ""\n'
+            "  short_description: A synthetic adapter.\n"
+        )
+        problems = validate_skill_dir(skill)
+        self.assertTrue(any("unknown interface field(s) effort" in p for p in problems), problems)
+        self.assertTrue(
+            any("interface.display_name must be a non-empty string" in p for p in problems),
+            problems,
+        )
+
     def test_an_adapter_carries_interface_wiring_and_nothing_else(self):
         # A rule placed here would bind one vendor only — the split SKILL.md
         # exists to prevent.
@@ -417,6 +449,10 @@ class TestAgentsAdapters(TempDirTestCase):
             with self.subTest(content=content):
                 problems = validate_skill_dir(self._skill_with_adapter(content))
                 self.assertTrue(any(fragment in p for p in problems), (fragment, problems))
+                # A problem the reader cannot locate is not actionable.
+                self.assertTrue(
+                    all(p.startswith("agents/openai.yaml:") for p in problems), problems
+                )
 
 
 class TestAdaptersAgainstTheVendorRegistry(TempDirTestCase):
@@ -453,6 +489,16 @@ class TestAdaptersAgainstTheVendorRegistry(TempDirTestCase):
         problems = validate_skill_dir(skill, vendor_names=self.VENDORS)
         self.assertEqual(len(problems), len(self.VENDORS), problems)
 
+    def test_the_vendor_yaml_naming_rule_applies_only_with_a_registry(self):
+        skills_dir = self.make_dir("skills")
+        skill = write_skill(skills_dir, "named-skill")
+        (skill / "agents").mkdir()
+        (skill / "agents" / "openai.yml").write_text(VALID_ADAPTER, encoding="utf-8")
+        # Without a registry there is nothing that says what a vendor is named.
+        self.assertEqual(validate_skill_dir(skill), [])
+        problems = validate_skill_dir(skill, vendor_names=("openai",))
+        self.assertTrue(any("named <vendor>.yaml" in p for p in problems), problems)
+
     def test_without_a_registry_the_cross_check_is_skipped(self):
         # Fixtures and temporary libraries have no vendors.yaml; they must stay
         # validatable without inheriting this repository's vendor list.
@@ -463,7 +509,7 @@ class TestAdaptersAgainstTheVendorRegistry(TempDirTestCase):
         (self.tmp / "vendors.yaml").write_text("version: 2\n", encoding="utf-8")
         names, problems = known_vendor_names(self.tmp)
         self.assertIsNone(names)
-        self.assertTrue(problems)
+        self.assertTrue(any("vendors.yaml" in p for p in problems), problems)
 
     def test_the_real_library_holds_an_adapter_for_every_declared_vendor(self):
         names, problems = known_vendor_names(ROOT)

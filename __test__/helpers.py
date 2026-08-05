@@ -2,12 +2,29 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+MUTANTS_SANDBOX_REASON = (
+    "mutmut sandbox: the trampoline-rewritten analyzer exceeds the size policy"
+)
+
+
+def skip_in_mutants_sandbox(reason: str = MUTANTS_SANDBOX_REASON):
+    """Skip a test that asserts a property of the *pristine* repository tree.
+
+    Inside mutmut's copied tree the skill analyzers are trampoline-rewritten to
+    megabytes, so installing or validating a real skill raises on the content
+    size policy before the test can assert anything. Unlike
+    :func:`ignore_mutants_size_artifact`, which filters a returned problem list,
+    this covers the paths where the same artifact arrives as an exception.
+    """
+    return unittest.skipIf(os.environ.get("MUTANT_UNDER_TEST") is not None, reason)
 
 
 def ignore_mutants_size_artifact(problems: list[str]) -> list[str]:

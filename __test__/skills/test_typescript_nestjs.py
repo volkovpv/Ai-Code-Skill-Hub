@@ -9,14 +9,13 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
-import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from __test__.helpers import sandboxed_env
+from __test__.helpers import sandboxed_env, skip_in_mutants_sandbox
 from __test__.skills.scanner_conformance import ScannerConformanceMixin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -387,10 +386,7 @@ class TestDriverAndErrors(TempDirMixin):
 
 
 class TestSkillStructure(unittest.TestCase):
-    @unittest.skipIf(
-        os.environ.get("MUTANT_UNDER_TEST") is not None,
-        "mutmut sandbox: the trampoline-rewritten script exceeds the size policy",
-    )
+    @skip_in_mutants_sandbox()
     def test_skill_directory_validates_clean(self):
         self.assertEqual(validate_skill_dir(SKILL), [])
 

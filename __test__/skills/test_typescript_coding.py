@@ -23,7 +23,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from __test__.helpers import sandboxed_env
+from __test__.helpers import sandboxed_env, skip_in_mutants_sandbox
 from __test__.skills.scanner_conformance import ScannerConformanceMixin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -173,6 +173,7 @@ class TestFixtureContract(TempDirMixin):
         self.assertEqual(list(self.tmp.iterdir()), [])
 
 
+@skip_in_mutants_sandbox()
 class TestRuntimeInstallLinkResolution(TempDirMixin):
     """Regression for OBS-20260721-002 (SFL, transferred as OBS-20260724-001):
     shipped content must not reference paths a ``runtime`` install strips
