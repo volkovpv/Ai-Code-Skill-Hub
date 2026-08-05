@@ -108,6 +108,55 @@ now comes from the effort dial rather than from a weaker model.
 | Every skill carries one adapter per declared vendor, with no rules in it | `skillctl validate`, both directions |
 | Vendor facts are refreshed for two reasons only | `vendor add-model` (new model) or `--reason operator-request` |
 
+### When the vendor actually touches the skill
+
+The vendor does not turn up "a bit everywhere". It has four distinct roles, and
+in each one it decides strictly its own thing. The clearest way to see it is to
+follow a single rule from idea to consumer and mark the points the vendor
+touches.
+
+```mermaid
+flowchart LR
+    A["1 · Writing the rule"] --> B["2 · Running the eval gate"]
+    B --> E["3 · Execution at the consumer"]
+    E --> C["4 · Observation from practice"]
+    C --> D["5 · Promotion into knowledge/"]
+    D --> A
+    V(("vendor")) -.->|"decides nothing"| A
+    V -.->|"sets the environment and<br/>the scope the result is green in"| B
+    V -.->|"display_name and<br/>default_prompt only"| E
+    V -.->|"becomes part of the record:<br/>vendor + model + effort"| C
+    V -.->|"bounds how far the<br/>generalization may travel"| D
+```
+
+| Moment | What the vendor decides | What it does not decide |
+|---|---|---|
+| **Writing the rule** | nothing | the text of the rule. A rule is stated neutrally; one that only holds for a single vendor is not a rule yet — it is an observation with a scope |
+| **Running the gate** | everything: the run environment is the triple vendor + model + effort, and the registry decides which levels that model has at all | what the rule says. The gate decides **where** it is proved, not **what** is written in it |
+| **Execution at the consumer** | the wrapper only — `agents/<vendor>.yaml`: how the skill is announced and how it is invoked by default | not one line of `SKILL.md` or `references/`. Which model runs is the consumer's harness's choice; the library takes no part at that moment |
+| **Observation (how the skill learns)** | the record's scope: vendor, model family, effort level | the right to rewrite the rule. An observation is a fact about an environment, not a new norm |
+| **Promotion into `knowledge/`** | the limit of the generalization: a statement travels exactly as far as it was measured | the appearance of an "on vendor X, do it differently" branch. No such branch enters a skill |
+| **Syncing the documentation** | the vendor facts in the registry | not one line of a skill. A sync updates the registry, not the rules |
+
+The asymmetry is deliberate and rests on one idea: **the vendor enters a skill
+as the scope of the evidence and never as a branch inside a rule.** A branch
+would mean the reader of the rule must first work out which vendor they are on —
+and a skill is installed one at a time into a project the library knows nothing
+about, so there is nobody to ask.
+
+What this looks like in practice. A rule works on one vendor's model and not on
+another's. What happens:
+
+1. it is **not** grounds for adding "on vendor X do it differently" to
+   `SKILL.md`;
+2. it is grounds for an observation candidate in that skill, naming the vendor,
+   the model family and the effort level the difference shows up on;
+3. then the ordinary review: the observation either becomes verified knowledge
+   with an explicit applicability scope, or it does not;
+4. and, as a separate step, a measurement on the second triple — if that vendor
+   is to be supported at all. Green on one vendor does not carry over to another
+   by inference, only by measurement.
+
 ### Where the rule stops
 
 The library still never goes online. `skillctl vendor refresh` prints the plan —
