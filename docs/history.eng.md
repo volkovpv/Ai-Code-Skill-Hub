@@ -118,7 +118,7 @@ touches.
 ```mermaid
 flowchart LR
     A["1 · Writing the rule"] --> B["2 · Running the eval gate"]
-    B --> E["3 · Execution at the consumer"]
+    B --> E["3 · The skill at work<br/>in someone else's project"]
     E --> C["4 · Observation from practice"]
     C --> D["5 · Promotion into knowledge/"]
     D --> A
@@ -133,10 +133,23 @@ flowchart LR
 |---|---|---|
 | **Writing the rule** | nothing | the text of the rule. A rule is stated neutrally; one that only holds for a single vendor is not a rule yet — it is an observation with a scope |
 | **Running the gate** | everything: the run environment is the triple vendor + model + effort, and the registry decides which levels that model has at all | what the rule says. The gate decides **where** it is proved, not **what** is written in it |
-| **Execution at the consumer** | the wrapper only — `agents/<vendor>.yaml`: how the skill is announced and how it is invoked by default | not one line of `SKILL.md` or `references/`. Which model runs is the consumer's harness's choice; the library takes no part at that moment |
+| **The skill at work in someone else's project** — it was installed into their repository and an agent is doing work by it | the wrapper only — `agents/<vendor>.yaml`: the name the skill is shown under and the phrasing that invokes it by default | not one line of `SKILL.md` or `references/`. Which model runs is that project's harness's choice; the library takes no part at that moment |
 | **Observation (how the skill learns)** | the record's scope: vendor, model family, effort level | the right to rewrite the rule. An observation is a fact about an environment, not a new norm |
 | **Promotion into `knowledge/`** | the limit of the generalization: a statement travels exactly as far as it was measured | the appearance of an "on vendor X, do it differently" branch. No such branch enters a skill |
 | **Syncing the documentation** | the vendor facts in the registry | not one line of a skill. A sync updates the registry, not the rules |
+
+The third row is the one everything else is for, and the one most often read
+wrong. It looks like this: somebody ran `skillctl install` and the skill's files
+landed in their repository; a developer opens their agent in **their** project;
+the agent reads `SKILL.md` and writes code by its rules. The library is not
+present at that moment — it picks neither the model nor the effort level; those
+are that project's settings and its harness's.
+
+Hence the consequence that is easy to miss: **a green gate is a record of a
+measurement, not a promise to the consumer.** It says "on this triple the rules
+were followed" and says nothing about a project that runs the skill on a
+different vendor. If that vendor is to be supported in earnest, it is measured
+separately — which produces a second record, not a wider reading of the first.
 
 The asymmetry is deliberate and rests on one idea: **the vendor enters a skill
 as the scope of the evidence and never as a branch inside a rule.** A branch
