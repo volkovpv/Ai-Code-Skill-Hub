@@ -5,6 +5,42 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.8.0] — 2026-08-08
+
+`testing-discipline` `1.6.0 → 1.7.0`
+
+### The gap
+
+A field report from a consuming project (`OBS-20260808-001`, C3, five occurrences across
+five consecutive tasks in two distinct modules, plus a deterministic, project-independent
+minimal reproduction): a line whose entire content is a wiring/DI decision — a factory
+call, the registration of its result — has no return value of its own, so line/branch
+coverage reports it as protected the moment *any* test executes it, including a
+pre-existing test that boots the real startup path for an unrelated reason and reaches
+the line only as a side effect. Deleting the line reddened no test. Rule 12 ("exercise the
+production wiring, not a hand-built copy of it") and the hygiene coverage guidance ("use
+coverage to find untested areas, not as a target") both approach this from adjacent
+angles and neither told an author how to detect it — the test satisfied rule 12's letter
+while proving nothing about the new line.
+
+### What changed
+
+- **`references/isolation-and-fakes.md`** — a new section, "A pure wiring/DI line has no
+  return value for coverage to protect": coverage produced by an unrelated test is not
+  evidence for such a line; the regression check is a targeted mutation of the line,
+  verified by a fake/spy at the collaborator's own construction seam, asserting the call,
+  its argument, and — where the mounted resource owns teardown — that the teardown was
+  registered.
+- **`SKILL.md`** — rule 12 gained one clause naming the same distinction, and the `Rules`
+  section gained one bullet stating it in imperative form.
+- **`__test__/evals/testing-discipline/cases.json`** — two new cases (40 → 42): one
+  `behavior` case pinning that a wiring line covered only by an unrelated test is not
+  sufficient, one `negative` false-positive guard confirming a wiring line with its own
+  targeted spy test is *not* flagged.
+- The skill's `stable` gate-bar comment in `skills.yaml` now flags this content as
+  unmeasured against the declared bar (`scripts/run_skill_evals.py --tier gate --repeat 3`
+  pending) rather than silently carrying a stale case count.
+
 ## [3.7.0] — 2026-08-05
 
 Model vendors become first-class: a registry, one adapter per vendor in every

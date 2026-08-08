@@ -223,6 +223,35 @@
       }
     },
     {
+      "id": "coverage-of-a-wiring-line-by-an-unrelated-test-is-not-evidence",
+      "kind": "behavior",
+      "requirement": "A line whose entire content is a wiring/DI decision (a factory call, the registration of its result) has no return value of its own; being executed by a pre-existing, unrelated test as a side effect is not evidence, however green the coverage report stays. Protection requires a targeted mutation/spy at the line's own construction seam.",
+      "prompt": "I added two lines to our composition root: one that builds a new NotificationModule via its factory, and one that registers its shutdown as a teardown callback. No test asserts either line directly, but our coverage report shows both lines as covered, because an existing test that boots the real startup path for an unrelated reason (it asserts a request-timeout setting) happens to execute them on its way through. Is the coverage report enough to call these two lines protected?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not evidence|not (?:enough|sufficient|protected))"
+        ],
+        "stdout_not_contains": [
+          "yes, the coverage report is enough",
+          "yes, that test protects both lines"
+        ]
+      }
+    },
+    {
+      "id": "wiring-line-covered-by-its-own-targeted-test-not-flagged",
+      "kind": "negative",
+      "requirement": "A wiring/DI line that already has its own targeted test — a spy/fake at its construction seam asserting the call, its argument, and its registered teardown — is correctly protected and must not be flagged as the covered-but-unasserted gap.",
+      "prompt": "I added a line to our composition root that builds a NotificationModule via its factory and registers its shutdown as a teardown callback. I wrote a dedicated unit test that monkeypatches the factory with a spy, asserts it was called with the loaded settings, and asserts the returned module's shutdown was registered as a teardown callback. Is this line still an example of the covered-but-unasserted wiring gap?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "yes, this is still the covered-but-unasserted gap",
+          "yes, this line is still unprotected"
+        ]
+      }
+    },
+    {
       "id": "school-is-declared-by-the-project-not-by-the-skill",
       "kind": "behavior",
       "requirement": "The unit-testing school (London/mockist vs classical/Detroit) is a project declaration; the skill never picks one behind the project's back.",

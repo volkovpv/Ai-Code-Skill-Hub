@@ -95,7 +95,9 @@ project uses it, apply that skill on top of this one.
 12. **Exercise the production wiring, not a hand-built copy of it.** How a
     collaborator gets constructed, and what a client substitutes on the way
     out of a call, are only testable where the product itself does them —
-    see [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
+    and a pure wiring/DI line reached only as a side effect of an unrelated
+    test is not evidence, however green the coverage report — see
+    [references/isolation-and-fakes.md](references/isolation-and-fakes.md).
 13. **Where the test is asynchronous, wait for success and time out for
     failure** — never sleep, never assert a state the system was already
     in, and separate what an object computes from how it schedules — see
@@ -209,6 +211,12 @@ Do not preload the whole skill; open a file only when its trigger fires.
 - A property that lives in the product's own construction or on the way out
   of a call is tested through the production factory or entry point, never
   through an instance the test assembled itself.
+- A line whose entire content is a wiring/DI decision (a factory call, the
+  registration of its result, a teardown callback) has no return value of
+  its own; being executed by an unrelated pre-existing test is not evidence.
+  Protect it with a targeted mutation/spy at its own construction seam,
+  asserting the call and its argument and, where it owns teardown, that the
+  teardown was registered.
 - An asynchronous test waits for success and treats the timeout as the
   failure — never a fixed sleep, and never an assertion the system could
   already have satisfied before it started. **A wait whose condition

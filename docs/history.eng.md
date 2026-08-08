@@ -36,6 +36,102 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A wiring line the coverage report already believed in
+
+**Releases:** project `3.8.0` (`testing-discipline` `1.6.0 → 1.7.0`)
+**Type:** gap closed — the previous wiring rule stated *where* to test, not *what counts as testing it*
+
+### In one sentence
+
+A line that only wires a collaborator together — a factory call, the
+registration of its teardown — has no return value of its own, so a coverage
+report calls it "protected" the instant *any* test walks through it, even a
+test that is asserting something else entirely three lines later.
+
+### The gap, precisely
+
+An earlier fix already said: test the production wiring, not a hand-built copy
+of it. That is a rule about *which seam* to exercise. It says nothing about
+*what it means to have exercised it*. A composition root can pass that rule to
+the letter — the real startup path really does run — and still leave a brand
+new wiring line completely unchecked, because the test that runs the real path
+was written to prove something else.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["New line added to the\ncomposition root: build + register"] --> B["Existing test boots the\nreal startup path"]
+    B -->|"for an unrelated reason,\ne.g. a queue-prefetch assertion"| C["New line executes\nas a side effect"]
+    C --> D["Coverage tool marks\nthe line covered"]
+    D --> E{"Delete the line"}
+    E -->|"suite re-run"| F["No test goes red"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["New line is a pure\nwiring/DI decision?"] -->|"yes"| B["Coverage from an unrelated\ntest is not evidence"]
+    B --> C["Add a targeted mutation/spy\nat its own construction seam"]
+    C --> D["Assert the call, its argument,\nand any registered teardown"]
+    A -->|"no — it computes or\nbranches on its own"| E["Ordinary unit-test\nrules apply"]
+```
+
+### Example you can run in your head
+
+```python
+def _build_lifespan(settings, logger):
+    module = build_module(settings, logger=logger)   # <- new line
+    stack.callback(module.shutdown)                    # <- new line
+    ...
+
+def test_lifespan_wires_the_queue_prefetch_limit():
+    with app_lifespan(settings) as state:
+        assert state.queue.prefetch_count == settings.prefetch_limit
+```
+
+`test_lifespan_wires_the_queue_prefetch_limit` runs the real `_build_lifespan`,
+so both new lines execute — the coverage tool sees them go green. Delete either
+line and this test still passes: it never looked at `module` or at whether
+`shutdown` was ever registered. The fix is a second, targeted test:
+
+```python
+def test_lifespan_builds_and_registers_the_module():
+    spy = Mock(wraps=build_module)
+    with patch("composition_root.build_module", spy):
+        with app_lifespan(settings) as state:
+            spy.assert_called_once_with(settings, logger=state.logger)
+            assert state.module.shutdown in state.exit_stack.callbacks
+```
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| A pure wiring/DI line has no return value | Coverage from a test that asserts something else is not protection for it |
+| The check is a targeted mutation/spy | Delete or mutate the line itself, at its own construction seam, and assert the call, its argument, and any registered teardown |
+
+### Where the rule stops
+
+A line that computes or branches on its own is not a "pure" wiring line and is
+covered by the ordinary unit-test rules, not this one. A wiring line that
+already has its own targeted spy test — asserting the call and its teardown
+registration directly — is correctly protected and is not flagged again; the
+skill ships a dedicated negative case to keep the new rule from over-applying
+to a line that is already tested the right way.
+
+### How the change was made
+
+Test first: a regression pinning the new rule text and its own reproduction
+was written and confirmed genuinely red against the pre-change reference file
+→ the minimal guidance (one new section, one rule-12 clause, one `Rules`
+bullet) was added → the regression went green → one behavior and one negative
+evaluation case were added → the skill's own test suite and the whole
+library's suite ran with no regressions.
+
+---
+
 ## A green gate that never said whose model it was green on
 
 **Releases:** project `3.7.0` (`example-skill` `0.3.0`, `hexagonal-service` `2.3.0`, `python-coding` `1.7.0`, `testing-discipline` `1.6.0`, `typescript-coding` `1.10.0`, `typescript-nestjs` `1.3.0`)
