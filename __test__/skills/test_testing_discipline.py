@@ -117,9 +117,14 @@ class TestStructure(unittest.TestCase):
             self.assertIn(f"references/{name}", body, name)
 
     def test_no_optional_layers_created_for_structure(self):
-        # The skill is references-only; empty layer dirs would violate AGENTS.md.
-        for layer in ("knowledge", "data", "observations"):
+        # The skill carries references plus, since OBS-20260808-001, an
+        # observations/ layer with its first accepted record (capabilities.
+        # observations: true in skills.yaml); knowledge/ and data/ remain
+        # unopened — empty layer dirs would violate AGENTS.md.
+        for layer in ("knowledge", "data"):
             self.assertFalse((SKILL / layer).exists(), layer)
+        self.assertTrue((SKILL / "observations").is_dir())
+        self.assertTrue((SKILL / "observations" / "INDEX.md").is_file())
 
     def test_no_dangling_markdown_links_in_a_runtime_install(self):
         from skill_library.installer import install_skill

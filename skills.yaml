@@ -111,6 +111,8 @@ skills:
     summary: Rules for writing and reviewing unit and integration tests, and nothing beyond those two levels - the two unit-testing schools (London/mockist and classical/Detroit) declared per project and drawing the unit/integration line, interface discovery where London is declared, the red/green/refactor cycle declared the same way, the evidence rule that a test counts only once seen red and its failure message is legible, tests read as design feedback, structure, naming, data and builders, test value, verification styles and interaction precision, isolation, peers versus internals, fake provenance, wiring-level evidence, asynchrony and concurrency, adapters and persistence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
     license: MIT
+    capabilities:
+      observations: true
     content_policy:
       max_tracked_file_bytes: 262144
       pii_allowed: false
