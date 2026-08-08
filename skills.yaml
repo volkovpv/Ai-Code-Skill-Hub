@@ -96,16 +96,17 @@ skills:
       pii_allowed: false
       secrets_allowed: false
       observation_review_required: true
-  # Stable since 2026-07-29 on the declared bar: every one of the 40 cases in
-  # __test__/evals/testing-discipline/cases.json passes at least 2 of 3
-  # attempts on the gate tier (vendor anthropic, claude-sonnet-5, effort
-  # medium) — measured
-  # 118/120, two cases at 2/3. The bar is per-case majority, not a clean
-  # sweep: the two are run-to-run variance, not missing rules. Re-measure with
-  # scripts/run_skill_evals.py --tier gate --repeat 3 after changing the skill.
+  # Stable since 2026-07-29 on the declared bar (measured 118/120 of the then
+  # 40 cases, two cases at 2/3, run-to-run variance not missing rules). The
+  # bar is per-case majority, not a clean sweep. 1.6.0 -> 1.7.0 (a field
+  # report from a consuming project, C3, five occurrences) added two eval
+  # cases (40 -> 42) and a rule clause; the gate bar above is UNMEASURED for
+  # this content — no vendor/network access in the agent environment that
+  # authored the change. Re-measure with
+  # scripts/run_skill_evals.py --tier gate --repeat 3 before/at merge.
   - name: testing-discipline
     path: skills/testing-discipline
-    version: 1.6.0
+    version: 1.7.0
     status: stable
     summary: Rules for writing and reviewing unit and integration tests, and nothing beyond those two levels - the two unit-testing schools (London/mockist and classical/Detroit) declared per project and drawing the unit/integration line, interface discovery where London is declared, the red/green/refactor cycle declared the same way, the evidence rule that a test counts only once seen red and its failure message is legible, tests read as design feedback, structure, naming, data and builders, test value, verification styles and interaction precision, isolation, peers versus internals, fake provenance, wiring-level evidence, asynchrony and concurrency, adapters and persistence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

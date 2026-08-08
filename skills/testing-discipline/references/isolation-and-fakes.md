@@ -276,3 +276,33 @@ achievable, never that the product's own wiring achieves it.
   tool would flag as "removed, no test failed," which is exactly the
   signal to route the test through the factory instead of adding another
   hand-built-client test.
+
+## A pure wiring/DI line has no return value for coverage to protect
+
+A line whose entire content is a wiring or dependency-injection decision — a
+call to a factory, the registration of its result, a callback added only for
+teardown — computes nothing and asserts nothing on its own. Line and branch
+coverage report it as protected the moment any test executes it, including a
+pre-existing test that asserts an unrelated property and reaches the line
+only as a side effect of running the real startup path. A line reached only
+as a side effect of running the real startup path is not evidence: deleting
+it changes no assertion, so nothing goes red, however green the coverage
+report stays. This is a different failure from the construction-seam gap
+above — the test *does* exercise the production wiring, on the real seam,
+for a genuine reason; exercising the real wiring path for an unrelated
+reason is not the same as making a claim about the new line, and rule 12's
+letter is satisfied while its substance is not.
+
+The regression check for a pure-wiring line is a targeted mutation of that
+exact line — delete it, or swap the argument it wires — verified by a
+fake/spy at the collaborator's own construction seam, asserting both the
+call (with its expected argument) and, where the mounted resource owns
+teardown, that its teardown was registered.
+
+- **Minimal reproduction.** A composition root already has one test
+  exercising its real startup path for an unrelated reason (asserting a
+  resource limit, a route, a header). A new line is added alongside it that
+  constructs a collaborator via a factory and stores or registers it, with
+  no other observable effect. Coverage reports the new line as covered;
+  deleting it leaves the suite green, because the pre-existing test's
+  assertion never named it.

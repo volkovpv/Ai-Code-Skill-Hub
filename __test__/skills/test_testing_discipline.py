@@ -455,6 +455,94 @@ class TestOutboundMutationAndWiringLevelFakeGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestPureWiringLineCoverageIsNotEvidenceGuidance(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3, five occurrences
+    across five consecutive tasks in two distinct modules, plus a
+    deterministic, project-independent minimal reproduction).
+
+    Distinct from the class above (``TestOutboundMutationAndWiringLevelFakeGuidance``):
+    that class is about *which seam* a wiring-construction test must exercise
+    (the production factory, not a hand-built copy). This one is about a line
+    that already sits inside the production wiring path and is already
+    "exercised" by an existing, unrelated test — a composition-root line with
+    no return value of its own, executed only as a side effect of a test that
+    asserts a different collaborator entirely. Rule 12 ("exercise the
+    production wiring") and the hygiene coverage guidance ("use coverage to
+    find untested areas, not as a target") both approach this from adjacent
+    angles and neither states it: passing rule 12's letter is exactly what
+    happens here, and it still proves nothing about the new line.
+    """
+
+    DOC = REFERENCES / "isolation-and-fakes.md"
+
+    RULE_NO_RETURN_VALUE = (
+        "computes nothing and asserts nothing on its own"
+    )
+    RULE_SIDE_EFFECT_NOT_EVIDENCE = (
+        "reached only as a side effect of running the real startup path is "
+        "not evidence"
+    )
+    RULE_TARGETED_CHECK = (
+        "a targeted mutation of that exact line"
+    )
+    RULE_LETTER_NOT_ENOUGH = (
+        "exercising the real wiring path for an unrelated reason is not the "
+        "same as making a claim about the new line"
+    )
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_no_return_value_framing_is_present(self):
+        self.assertIn(self.RULE_NO_RETURN_VALUE, self._text())
+
+    def test_side_effect_coverage_is_not_evidence_rule_is_present(self):
+        self.assertIn(self.RULE_SIDE_EFFECT_NOT_EVIDENCE, self._text())
+
+    def test_targeted_mutation_check_rule_is_present(self):
+        self.assertIn(self.RULE_TARGETED_CHECK, self._text())
+
+    def test_rule_12_letter_vs_substance_distinction_is_present(self):
+        self.assertIn(self.RULE_LETTER_NOT_ENOUGH, self._text())
+
+    def test_rule_ships_its_reproduction(self):
+        text = self._text()
+        self.assertIn(
+            "constructs a collaborator via a factory and stores or registers it",
+            text,
+        )
+        self.assertIn("deleting it leaves the suite green", text)
+
+    def test_negative_sibling_reproductions_survive_untouched(self):
+        # False-positive guard: the adjacent construction-seam rule and its
+        # own reproduction must not have been replaced or duplicated.
+        text = self._text()
+        needle = (
+            "A test that constructs the collaborator itself establishes "
+            "nothing about"
+        )
+        self.assertIn(needle, text)
+        self.assertEqual(text.count(needle), 1, needle)
+
+    def test_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_NO_RETURN_VALUE,
+            self.RULE_SIDE_EFFECT_NOT_EVIDENCE,
+            self.RULE_TARGETED_CHECK,
+            self.RULE_LETTER_NOT_ENOUGH,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+    def test_skill_md_rule_12_carries_the_pointer_clause(self):
+        skill_text = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "a pure wiring/DI line reached only as a side effect of an "
+            "unrelated test is not evidence",
+            skill_text,
+        )
+
+
 class TestSchoolsAreCatalogedButNeverChosen(unittest.TestCase):
     """The skill carries both unit-testing schools and picks neither.
 
