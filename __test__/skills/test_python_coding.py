@@ -1019,5 +1019,163 @@ class TestInProcessDriver(TempDirMixin):
         self.assertIn("PY-PRINT", out.getvalue())
 
 
+class TestChainedValidationExceptionDisclosureGuidance(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3; ``SFL-INV-08`` met
+    via the deterministic, project-independent minimal-reproduction limb, not
+    the recurrence limb — ``occurrences: 1``).
+
+    "Wrap at most once, preserve the cause" and "report with the stack,
+    ``__cause__`` included" are each correct read alone. Composed, they become
+    a disclosure channel whenever the wrapped cause is a third-party
+    validation/parsing exception that echoes the rejected input in its own
+    ``str``/``repr`` for debuggability (Pydantic's
+    ``ValidationError.input_value`` on a model-level validator is one
+    instance; the same shape recurs for any schema-validation library with
+    the same habit) — a careful author can satisfy the wrapper's own
+    name-only message *and* "report with the stack," and still leak the
+    value through the chained cause's own ``repr``.
+
+    Distinct from the adjacent, pre-existing rule "never a secret or a whole
+    request body" (``## Logging``): that rule governs what the *author's own*
+    message says; this gap is about what a *chained third-party* exception's
+    own string form says once "report with the stack" logs ``__cause__``.
+    """
+
+    ERRORS_DOC = SKILL / "references" / "errors-config-logging.md"
+    SKILL_MD = SKILL / "SKILL.md"
+
+    RULE_COMPOSITION_NAMED = 'can turn "report with the stack" into a disclosure channel'
+    RULE_ECHOES_INPUT = "echoes the rejected input in its own"
+    RULE_TWO_REMEDIES = "do not log `__cause__` there and log only the wrapper's own"
+    RULE_SKILL_MD_POINTER = 'turns logging the full chain into a disclosure channel'
+
+    def _errors_text(self) -> str:
+        # Markdown hard-wraps prose, so a multi-word anchor can straddle a
+        # line break; collapse whitespace runs before searching.
+        return " ".join(self.ERRORS_DOC.read_text(encoding="utf-8").split())
+
+    def _skill_text(self) -> str:
+        return " ".join(self.SKILL_MD.read_text(encoding="utf-8").split())
+
+    def test_composition_named_in_errors_reference(self):
+        self.assertIn(self.RULE_COMPOSITION_NAMED, self._errors_text())
+
+    def test_echo_condition_named(self):
+        self.assertIn(self.RULE_ECHOES_INPUT, self._errors_text())
+
+    def test_two_remedies_offered(self):
+        self.assertIn(self.RULE_TWO_REMEDIES, self._errors_text())
+
+    def test_skill_md_carries_pointer_clause(self):
+        self.assertIn(self.RULE_SKILL_MD_POINTER, self._skill_text())
+
+    def test_new_clauses_not_accidentally_duplicated(self):
+        text = self._errors_text()
+        for needle in (
+            self.RULE_COMPOSITION_NAMED,
+            self.RULE_ECHOES_INPUT,
+            self.RULE_TWO_REMEDIES,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+    def test_adjacent_pre_existing_rules_survive_untouched(self):
+        # False-positive guard: the two individually-correct rules this
+        # clause connects — and the pre-existing "author's own message"
+        # secrets rule it is distinct from — must still each appear, unedited
+        # and not duplicated by the new clause.
+        text = self._errors_text()
+        self.assertEqual(
+            text.count("Wrap at most once, at the source, preserving the cause"), 1
+        )
+        # Appears twice: the pre-existing "## Logging" bullet, and the new
+        # clause's own citation of it (a cross-reference, not a restatement
+        # of the rule's substance).
+        self.assertEqual(text.count("never a secret or a whole request body"), 2)
+        # "log the full chain" stays exactly where it was — the pre-existing
+        # "Report with the stack" bullet; the new clause names the risk
+        # without restating that exact phrase.
+        self.assertEqual(text.count("log the full chain"), 1)
+
+    def test_reproduction_leaks_a_value_derived_fragment_never_the_whole_secret(self):
+        """Executable evidence for the claim above, stdlib-only — this Hub
+        pins no third-party dependency (``pyproject.toml``: "Intentionally no
+        dependencies"), so the reproduction stands in for "any
+        schema-validation library that attaches the rejected value to its own
+        exception for debuggability," per the field report's own
+        universality check, rather than importing Pydantic itself.
+
+        A real validation library's own ``repr`` is free to truncate a long
+        value (Pydantic does, by its own internal length limit — the field
+        report's own filing measured this in the wild). Asserting that the
+        *whole* secret reaches the log would pass or fail on that
+        implementation detail; the only claim this pins is that *some*
+        value-derived fragment does, which is deterministic regardless of
+        where a library's own truncation happens to fall.
+        """
+        import logging
+
+        class _ThirdPartyValidationError(ValueError):
+            """Stands in for ``pydantic.ValidationError`` and its siblings:
+            its own ``str()`` echoes the rejected input, truncated past a
+            length limit — the shape that makes a full-value assertion
+            flaky and a fragment assertion the honest one."""
+
+            def __init__(self, offending_value: str) -> None:
+                super().__init__("1 validation error for Settings")
+                self._offending_value = offending_value
+
+            def __str__(self) -> str:
+                shown = self._offending_value[:24]  # a library-realistic cap
+                return f"1 validation error for Settings\n  input_value={shown!r} (truncated)"
+
+        class NameOnlySettingsError(RuntimeError):
+            """The project's own wrapper — deliberately value-free."""
+
+        secret_marker = "sk-synthetic-obs20260813-do-not-use-9f31ac"
+        # The value leads the offending representation (a model-level
+        # validator's "offending value" is the whole rejected mapping, not
+        # one field — this keeps the value itself first regardless of how
+        # many sibling fields a real library's repr would list after it).
+        offending_mapping_repr = f"{secret_marker} (and 6 more rejected fields)"
+        leaked_fragment = secret_marker[:16]  # a value-derived substring, never the whole secret
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        logger = logging.getLogger("obs20260813-repro")
+        logger.setLevel(logging.ERROR)
+        logger.addHandler(handler)
+        try:
+            try:
+                try:
+                    raise _ThirdPartyValidationError(offending_mapping_repr)
+                except _ThirdPartyValidationError as err:
+                    # "Wrap at most once, preserve the cause" — applied to
+                    # the letter: the wrapper's own message names no value.
+                    raise NameOnlySettingsError(
+                        "settings refused: see variable names above"
+                    ) from err
+            except NameOnlySettingsError:
+                # "Report with the stack" — applied to the letter.
+                logger.exception("settings construction failed")
+        finally:
+            logger.removeHandler(handler)
+
+        emitted = stream.getvalue()
+        self.assertIn(
+            leaked_fragment,
+            emitted,
+            "the chained cause's own str() echoes a fragment of the "
+            "rejected value even though the wrapper's own message is "
+            "deliberately value-free — the gap the new rule names",
+        )
+        self.assertNotIn(
+            secret_marker,
+            emitted,
+            "this pins a value-derived FRAGMENT, never the whole secret — "
+            "asserting the full value would flicker on a library's own "
+            "repr-length limit, exactly the pitfall the field report flagged",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

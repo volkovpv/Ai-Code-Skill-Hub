@@ -23,4 +23,10 @@ Reading rules for agents:
 
 ## Accepted observations
 
-(none yet)
+- [OBS-20260814-001](accepted/OBS-20260814-001.md) — "wrap at most once, preserve the
+  cause" and "report with the stack, `__cause__` included" are each correct read alone,
+  but compose into a disclosure channel once the wrapped cause is a third-party
+  validation/parsing exception that echoes the rejected input in its own `str`/`repr`
+  (field report from a consuming project; C3, occurrences: 1, `SFL-INV-08` met via the
+  deterministic, project-independent minimal-reproduction limb; reviewed by
+  HC-AGENT-010, 2026-08-14, provisional pending PR merge by the operator).

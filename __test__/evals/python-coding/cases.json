@@ -252,6 +252,26 @@
         "exit_code": 0,
         "stdout_matches": ["list\\[str\\]", "bool \\| None", "dict\\[str, int\\]"]
       }
+    },
+    {
+      "id": "chained-validation-error-not-logged-raw-at-the-boundary",
+      "kind": "behavior",
+      "requirement": "A chained third-party validation/parsing exception whose own str()/repr() echoes the rejected input must not reach a log sink unscrubbed, even when the wrapper's own message is deliberately value-free.",
+      "prompt": "Our settings loader catches a schema-validation library's ValidationError — its own str() embeds the rejected input value — and re-raises `raise SettingsRefused(\"invalid configuration: see variable names above\") from err`, naming no value. At the top-level handler we call `logger.exception(err)` so the full chain, `__cause__` included, reaches the logs. Is this logging call safe to leave exactly as written, given the input can contain a secret? Answer in one short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(leak|disclos|expos)", "(?i)(scrub|redact|do not log|not safe|strip)"]
+      }
+    },
+    {
+      "id": "ordinary-chained-cause-logging-not-flagged-as-a-leak",
+      "kind": "negative",
+      "requirement": "An ordinary internal exception, chained and logged with the full stack per \"report with the stack,\" is not a disclosure risk and must not be flagged as one — the new guidance is scoped to a third-party validation/parsing cause that echoes untrusted input, not to chaining in general.",
+      "prompt": "Our storage adapter catches `OSError` and re-raises `raise StorageUnavailableError(\"connect failed\") from err`; the top-level handler logs the full chain via `logger.exception(...)`. Is this a secret-disclosure risk?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["this leaks a secret", "this is a disclosure risk", "this is a secret-disclosure risk"]
+      }
     }
   ]
 }
