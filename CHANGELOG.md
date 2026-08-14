@@ -5,6 +5,39 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.9.0] — 2026-08-14
+
+`python-coding` `1.7.0 → 1.8.0`
+
+### The gap
+
+A field report from a consuming project (`OBS-20260814-001`, C3, occurrences: 1,
+`SFL-INV-08` met via the deterministic, project-independent minimal-reproduction limb):
+"wrap at most once, preserve the cause" and "report with the stack, `__cause__`
+included" are each correct read alone, but compose into a disclosure channel the moment
+the wrapped cause is a third-party validation/parsing exception that echoes the rejected
+input in its own `str`/`repr` for debuggability — a careful author can satisfy both
+rules individually, including keeping the wrapper's own message deliberately name-only
+and value-free, and still leak the value through the chained cause's own text once the
+full chain reaches a log sink. Neither rule named the interaction.
+
+### What changed
+
+- **`references/errors-config-logging.md`** — a new clause under "Report with the
+  stack" naming the composition explicitly and offering two remedies: do not log
+  `__cause__` at that boundary and log only the wrapper's own scrubbed message, or
+  re-render the cause through the project's own log-scrubber before it reaches any sink
+  governed by "report with the stack."
+- **`SKILL.md`** — the exception-handling Rules bullet gained one clause pointing to the
+  new guidance.
+- **`__test__/evals/python-coding/cases.json`** — two new cases (24 → 26): one
+  `behavior` case pinning that a chained validation error must not reach a log sink
+  unscrubbed, one `negative` false-positive guard confirming an ordinary internal
+  exception's chained-and-logged cause is not flagged as a leak.
+- The skill's `stable` gate-bar comment in `skills.yaml` now flags the case count as
+  unmeasured against the declared bar since this addition, rather than silently
+  carrying a stale count.
+
 ## [3.8.0] — 2026-08-08
 
 `testing-discipline` `1.6.0 → 1.7.0`

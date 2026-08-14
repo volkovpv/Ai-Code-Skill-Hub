@@ -146,7 +146,11 @@ has been promoted into `knowledge/` or this workflow.
   `except Exception` belongs only at a top-level boundary that logs the
   full chain. Never swallow an error; when wrapping, preserve the original
   via `raise NewError(...) from err` and wrap at most once at the source.
-  No control flow (`return`/`break`/`continue`) inside `finally`.
+  No control flow (`return`/`break`/`continue`) inside `finally`. A chained
+  cause that echoes untrusted input in its own `repr` (a third-party
+  validation/parsing exception, most often) turns logging the full chain
+  into a disclosure channel — see
+  [references/errors-config-logging.md](references/errors-config-logging.md#errors).
 - Explicit boolean expressions: `is not None` for optionals, `!= ""` /
   `> 0` for strings and numbers, an explicit emptiness check
   (`len(x) > 0`) where a collection's size is the point; truthiness only on

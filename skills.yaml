@@ -78,11 +78,12 @@ skills:
       pii_allowed: false
       secrets_allowed: false
       observation_review_required: true
-  # python-coding: 24 cases, 70/72 — 2/3 on cancellederror-propagates and
-  # concurrent-fanout-uses-taskgroup.
+  # python-coding: 26 cases (OBS-20260814-001 added 2) — unmeasured against
+  # the declared bar since; the prior measurement was 24 cases, 70/72 — 2/3
+  # on cancellederror-propagates and concurrent-fanout-uses-taskgroup.
   - name: python-coding
     path: skills/python-coding
-    version: 1.7.0
+    version: 1.8.0
     status: stable
     summary: Universal strictly-typed, secure-by-default Python coding standard (typing, security, structured concurrency, runtime correctness, version-gated 3.12-3.14 features) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

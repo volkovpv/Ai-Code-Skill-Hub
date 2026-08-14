@@ -36,6 +36,108 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## Two correct rules that leak a secret when chained together
+
+**Releases:** project `3.9.0` (`python-coding` `1.7.0 → 1.8.0`)
+**Type:** gap closed — two individually-correct rules composed into a disclosure channel neither one named
+
+### In one sentence
+
+"Wrap the cause at most once" and "log the full chain when you finally
+report" are each right on their own — but chain a third-party validation
+exception that echoes the rejected input in its own text, and reporting "the
+full chain" reports that echoed input too, even when the wrapper's own
+message never names a value.
+
+### The gap, precisely
+
+A settings-validation boundary follows both rules to the letter: it catches
+the library's own validation exception, re-raises a typed error whose message
+lists only variable *names*, and chains it with `from err` so the cause
+survives. The top-level handler then does exactly what "report with the
+stack" asks: it logs the full chain, `__cause__` included. Neither rule is
+wrong. The gap is that the *chained* exception is not the author's message —
+it is a third-party object whose own `str()`/`repr()` was written for a
+library maintainer's debugging convenience, and that convenience routinely
+means "show me what was rejected."
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Validation library rejects\nthe whole input mapping"] --> B["Library exception's own\nstr()/repr() echoes it"]
+    B --> C["Wrapped once, from err —\nwrapper message names no value"]
+    C --> D["Top-level handler logs\nthe full chain, __cause__ included"]
+    D --> E["Chained cause's own text\nreaches the log sink"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Boundary catches a chained\ncause before reporting it"] --> B{"Is the cause a third-party\nvalidation/parsing exception?"}
+    B -->|"yes"| C["Do not log __cause__ here —\nlog only the wrapper's scrubbed message,\nor scrub the cause's own text first"]
+    B -->|"no — an ordinary internal\nexception"| D["Report with the stack,\nexactly as before"]
+```
+
+### Example you can run in your head
+
+```python
+class SettingsRefused(RuntimeError):
+    """Deliberately value-free — names variables, never values."""
+
+try:
+    Settings.model_validate(raw_env)          # a third-party validator
+except ValidationError as err:                # its str() echoes raw_env
+    raise SettingsRefused(
+        "invalid configuration: see variable names above"
+    ) from err                                # wrap once, preserve the cause
+```
+
+```python
+except SettingsRefused:
+    logger.exception("settings construction failed")   # logs __cause__ too —
+                                                         # ValidationError's own
+                                                         # text, secrets included
+```
+
+`SettingsRefused`'s own message never names a value. The chained
+`ValidationError` still does, and `logger.exception` puts it in the record
+anyway — a fragment survives even where the library's own `repr` truncates a
+long value, which is why the rule anchors on "a fragment reaches the log,"
+never on the whole value surviving intact.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Name the composition | "Wrap once, preserve the cause" plus "report with the stack" is right for an ordinary exception, wrong once the cause is a third-party validation/parsing exception that echoes untrusted input |
+| Two remedies | Either stop logging `__cause__` at that boundary and log only the wrapper's own scrubbed message, or re-render the cause through the project's log-scrubber first |
+
+### Where the rule stops
+
+An ordinary internal exception — one this project's own code raises, whose
+text was written by this project's own author — is unaffected: "report with
+the stack" still applies exactly as before, and the skill ships a dedicated
+negative case so this new rule does not start flagging every chained-and-logged
+exception as a leak. Which scrubbing mechanism to use, and whether the
+underlying code should also stop echoing the value in the first place, are
+left to the host project.
+
+### How the change was made
+
+Test first: a regression pinning the new rule text — plus a stdlib-only,
+library-independent reproduction proving the leak is real, whose own
+assertion checks for a value-*derived fragment*, never the whole value, since
+a real validation library is free to truncate its own `repr` — was confirmed
+genuinely red against the pre-change reference file → the minimal guidance
+(one new clause in `references/errors-config-logging.md`, one pointer clause
+in `SKILL.md`) was added → the regression went green → one behavior and one
+negative evaluation case were added → the skill's own test suite and the
+whole library's suite ran with no regressions.
+
+---
+
 ## A wiring line the coverage report already believed in
 
 **Releases:** project `3.8.0` (`testing-discipline` `1.6.0 → 1.7.0`)

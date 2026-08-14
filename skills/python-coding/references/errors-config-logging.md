@@ -64,6 +64,22 @@ skill's scope.
   (top-level handler, CLI exit path), log the full chain — `__cause__`
   included — with the traceback (`logger.exception(...)`), not just
   `str(err)`.
+- **A chained third-party validation/parsing exception can turn "report
+  with the stack" into a disclosure channel.** "Wrap at most once, preserve
+  the cause" and "report with the stack, `__cause__` included" are each
+  correct read alone — the composition breaks when the wrapped cause is a
+  third-party library exception that echoes the rejected input in its own
+  `str`/`repr` for debuggability (Pydantic's `ValidationError.input_value`
+  on a model-level validator is one instance; the same shape recurs for any
+  schema-validation library with the same habit). A wrapper whose own
+  message is deliberately name-only or value-free does not stop the
+  chained cause's own text from carrying the value once "report with the
+  stack" logs `__cause__`. At the boundary where such a cause is first
+  caught: either (a) do not log `__cause__` there and log only the
+  wrapper's own scrubbed message, or (b) re-render the cause through the
+  project's own log-scrubber before it reaches any sink governed by
+  "report with the stack" — see [Logging](#logging), "never a secret or a
+  whole request body."
 - **`assert` is not error handling.** Assertions vanish under `python -O`;
   in shipped code raise a typed error. `assert` belongs in tests and in
   checker-visible narrowing of genuinely impossible states.
