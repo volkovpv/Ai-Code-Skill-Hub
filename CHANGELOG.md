@@ -5,6 +5,103 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.11.0] — 2026-08-18
+
+`python-coding` `1.8.0 → 1.9.0`
+
+### The gap
+
+A field report from a consuming project (`OBS-20260818-001`, C3, several independently
+occurring clusters across unrelated tasks, `SFL-INV-08` met on both limbs). The original
+filing claimed the skill states no implementation-level duplication rule at all; that
+claim was **false as stated** — `references/lint-clean.md` already carries "no
+duplicated or identical branches, conditions, or functions — factor the shared body
+out," unscoped. Had that been the whole gap it would be C2 (a project tightening an
+already-correct rule), not C3. Two things remain genuinely absent, independent of any
+project's rules: (a) nothing states that this stack's blocking linter (`ruff`) carries
+no rule of this class at any configuration, and that the advisory line-based detector
+that does exist for it (`pylint`'s `duplicate-code`/`R0801`) is blind to identifier
+renaming — re-executed live, a cross-module copy with five identifiers renamed scores
+`10.00/10`, zero findings, while the verbatim control fires as expected; (b) no rule
+states that a defensive/parsing routine standing over untrusted input (e.g. model
+output) must be collapsed to the union of every caller's cases rather than duplicated
+per caller, each covering only what its own author tested against.
+
+### What changed
+
+- **`references/lint-clean.md`** — the duplication bullet gained a clause naming the
+  detection boundary: not backed by the blocking linter, and the advisory detector is
+  blind to renaming, so a green run does not confirm the rule.
+- **`references/security.md`** — a new section, "A defensive routine over untrusted
+  input has one home, the union of every caller's cases," added to the Contents ToC.
+- **`SKILL.md`** — the lint-clean and untrusted-input `Rules` bullets each gained one
+  pointer clause to the corresponding new guidance.
+- **`__test__/evals/python-coding/cases.json`** — four new cases (26 → 30): two
+  `behavior` cases (a renamed duplicate still needs extraction despite clean blocking
+  lint; a defensive parser over untrusted input needs one shared, union-covering home),
+  two `negative` false-positive guards (an exact cross-module copy is still credited as
+  caught by the duplicate-code detector; a single-caller validator is not flagged as
+  needing to anticipate callers that do not exist).
+- The skill's `stable` gate-bar comment in `skills.yaml` now flags the case count as
+  unmeasured against the declared bar since this addition.
+
+### How the change was made
+
+Test first: a regression pinning the new clause text in `references/lint-clean.md` and
+the new section in `references/security.md`, plus both `SKILL.md` pointer clauses (5 of
+7 assertions red before the delta, green after), plus a stdlib-only reproduction of the
+union-rule failure mode (two independently-maintained copies of a parser, each patched
+only for its own caller's historical case) confirmed genuinely failing on the
+unpatched-copy leg before the delta and unaffected by it after. Minimal delta: one
+extended bullet in `lint-clean.md`, one new section in `security.md`, two pointer
+clauses in `SKILL.md`. Negative/false-positive-guard assertions confirm the adjacent
+pre-existing rules in both reference files are untouched and not duplicated.
+
+Deliberately out of scope: teaching the bundled convention checker
+(`scripts/check_py_conventions.py`) to detect cross-file or renamed duplication itself
+— a structural, cross-file comparison its current per-file design does not do.
+
+
+## [3.10.0] — 2026-08-18
+
+`typescript-coding` `1.10.0 → 1.11.0`
+
+### The gap
+
+A field report from a consuming project (`OBS-20260818-001`, C3, several independently
+occurring clusters across unrelated tasks weeks apart, `SFL-INV-08` met on both limbs):
+the "No duplicated or identical branches, conditions, or functions" bullet names four
+SonarJS/ESLint rules and stops at "factor the shared body out", with no statement of
+what those rules actually cover. Re-executed against `eslint` 10.7.0 +
+`eslint-plugin-sonarjs` 4.2.2 on a four-file scratch tree outside this library: all four
+rules are same-file, textual-identity checks — renaming so much as one identifier
+silences them even inside a single file, and none of the family ever compares two
+different files. A project whose only duplication discipline is this skill's guidance
+can run its lint stack fully green while an identical implementation, renamed and/or
+moved to another file, sits undetected — the gap is the false assurance, not merely the
+missing rule.
+
+### What changed
+
+- **`references/lint-clean.md`** — the duplication bullet gained a scope statement
+  naming what the four cited rules do and do not catch, plus the obligation the census
+  shows actually matters: an identical implementation has exactly one home regardless of
+  which file it lives in.
+- **`SKILL.md`** — the corresponding `Rules` bullet gained one pointer clause to the new
+  scope note.
+- **`__test__/evals/typescript-coding/cases.json`** — two new cases (19 → 21): one
+  `behavior` case pinning that a renamed, cross-file duplicate still needs extraction
+  despite a green lint run; one `negative` false-positive guard confirming an exact,
+  unrenamed, same-file duplicate is still credited as caught by the linter itself.
+- The skill's `stable` gate-bar comment in `skills.yaml` now flags the case count as
+  unmeasured against the declared bar since this addition, rather than silently carrying
+  a stale count.
+
+Deliberately out of scope: teaching the bundled convention checker
+(`scripts/check_conventions.py`) to detect cross-file or renamed duplication itself —
+that is a structural, cross-file comparison the checker's current lexical/AST-per-file
+design does not do, and reworking it is not a delta-sized change.
+
 ## [3.9.0] — 2026-08-14
 
 `python-coding` `1.7.0 → 1.8.0`

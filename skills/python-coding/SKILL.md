@@ -137,7 +137,10 @@ has been promoted into `knowledge/` or this workflow.
   subprocess as an argument list (no `shell=True`), no `eval`/`exec` on
   data, no pickle/`yaml.load` on anything you didn't write yourself, paths
   resolved and containment-checked, archives extracted with an explicit
-  safety filter — see [references/security.md](references/security.md).
+  safety filter — see [references/security.md](references/security.md). A
+  defensive/parsing routine over such input has exactly one home holding
+  the union of every caller's cases, never a per-caller copy — see
+  [references/security.md](references/security.md).
 - **Security primitives are non-negotiable**: `secrets` (never `random`)
   for tokens, `hmac.compare_digest` for secret comparison, memory-hard
   password hashing, `tempfile.mkstemp`-family (never `mktemp`), TLS
@@ -179,7 +182,9 @@ has been promoted into `knowledge/` or this workflow.
   concatenation, early returns over `else` towers, small shallow functions,
   import groups ordered stdlib → third-party → local, docstrings with a
   prose description on the exported surface — see
-  [references/lint-clean.md](references/lint-clean.md).
+  [references/lint-clean.md](references/lint-clean.md). Its duplicate-branch
+  and duplicate-function rule is not backed by this stack's blocking
+  linter — verify it by hand, not by a green lint run.
 - Prefer the modern form for the project's Python floor and purge banned
   legacy spellings (`Optional`, `typing.List`, `utcnow`, `pytz`,
   `get_event_loop`, `os.path` plumbing) — the version-gated list is in

@@ -61,6 +61,16 @@ Reading rules for agents:
   stack reports it (field report from a consuming project; the claim
   re-executed locally against the compiler in three limbs; reviewed by the
   operator, 2026-08-01).
+- [OBS-20260818-001](accepted/OBS-20260818-001.md) — the duplication bullet
+  named four SonarJS/ESLint rules and stopped at "factor the shared body
+  out", with no statement that all four are same-file, textual-identity
+  checks — renaming even one identifier silences them inside a single file,
+  and none ever compares two different files, so a fully green lint run is
+  not evidence that a repeated implementation is absent (field report from a
+  consuming project; C3, SFL-INV-08 met on both limbs; the rule-scope claim
+  re-executed live against eslint 10.7.0 + eslint-plugin-sonarjs 4.2.2;
+  reviewed by HC-AGENT-010, 2026-08-18, provisional pending PR merge by the
+  operator).
 
 ## Candidates awaiting review
 

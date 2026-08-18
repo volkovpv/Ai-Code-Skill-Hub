@@ -10,6 +10,7 @@ file, an environment variable, a queue, or another process.
 
 ## Contents
 
+- [A defensive routine over untrusted input has one home, the union of every caller's cases](#a-defensive-routine-over-untrusted-input-has-one-home-the-union-of-every-callers-cases)
 - [Injection: keep data out of code](#injection-keep-data-out-of-code)
 - [Deserialization: only data-only formats for untrusted input](#deserialization-only-data-only-formats-for-untrusted-input)
 - [Files, paths, and archives](#files-paths-and-archives)
@@ -18,6 +19,20 @@ file, an environment variable, a queue, or another process.
 - [TLS](#tls)
 - [Regular expressions on untrusted input](#regular-expressions-on-untrusted-input)
 - [Secrets hygiene](#secrets-hygiene)
+
+## A defensive routine over untrusted input has one home, the union of every caller's cases
+
+A parsing/validation routine that stands over untrusted input — a network
+payload, an external API's or model's output, file content — is not safely
+collapsed to whichever call site wrote it first. When the same defensive
+logic is duplicated per caller instead, **each copy tends to cover only the
+cases its own author anticipated**, and a case only one caller's input can
+produce is silently unguarded in every other copy — including a fix: a bug
+found and patched against one caller's own reproduction does not reach a
+sibling copy that was never told about it. Give the routine exactly one
+home and make its case coverage the **union of every calling site's
+inputs** — malformed, partial, and adversarial included — **never a pick of
+one caller's slice of the input space**.
 
 ## Injection: keep data out of code
 

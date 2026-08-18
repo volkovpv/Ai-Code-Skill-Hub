@@ -36,6 +36,217 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A rule with no check behind it, and a parser that only knew its own caller
+
+**Releases:** project `3.11.0` (`python-coding` `1.8.0 → 1.9.0`)
+**Type:** gap closed — a duplication rule with no enforcing check, and a missing rule for sharing a defensive routine across callers
+
+### In one sentence
+
+"No duplicated or identical branches, conditions, or functions" was already
+in the skill, unscoped and correct — but nothing said the stack's own
+blocking linter cannot check it at all, and nothing told a defensive
+routine standing over untrusted input to cover the union of every caller's
+cases instead of being copied once per caller.
+
+### The gap, precisely
+
+The first framing of this gap claimed the skill states no
+implementation-level duplication rule at all. That claim turned out to be
+false: `references/lint-clean.md` already carries the rule, unscoped, in
+plain prose. What was genuinely missing, once the false claim was
+withdrawn, was narrower and more useful: (a) nothing said that this
+stack's blocking linter enforces none of it, and that the advisory
+detector which does exist for this class is blind to identifier renaming —
+so a green run of both checks is not confirmation; (b) nothing said that a
+defensive/parsing routine sitting over untrusted input (a network payload,
+an external API's or model's output) needs to be collapsed to one shared
+implementation covering the union of every caller's cases, rather than
+duplicated per caller with each copy knowing only the cases its own author
+tested against.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Duplication rule exists in prose,\nunscoped, correct"] --> D
+    B["Blocking linter has no\nrule for this class at all"] --> D
+    C["Advisory detector exists,\nbut renaming defeats it"] --> D
+    D["Both checks report clean —\nreader reads this as confirmation"]
+    E["Defensive parser over untrusted\ninput duplicated per caller"] --> F["Each copy tested only against\nits own caller's cases"]
+    F --> G["A case only one caller's input\nproduces is missing everywhere else"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Duplication rule states its own\ndetection boundary explicitly"] --> B["Reader knows a clean run of\nboth checks proves nothing"]
+    B --> C["Renamed/duplicated implementation\nis found and extracted by hand"]
+    D["Defensive parser over untrusted\ninput needed by several callers"] --> E["One shared implementation,\nunion of every caller's cases"]
+    E --> F["A new caller's case joins the\nunion instead of starting a new copy"]
+```
+
+### Example you can run in your head
+
+```python
+# pkg_a/adapter.py
+def to_int_or_none(raw: object) -> int | None:
+    if raw is None:
+        return None
+    try:
+        return int(str(raw))
+    except ValueError:
+        return None
+```
+
+```python
+# pkg_b/adapter.py — a different module, the function name and the parameter renamed
+def coerce_optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(str(value))
+    except ValueError:
+        return None
+```
+
+Run a line-based duplicate-code check (e.g. `pylint`'s `duplicate-code`/
+`R0801`) over both: zero findings, `10.00/10` — renaming the function name and the parameter
+is enough to make a byte-identical implementation invisible to it. The
+stack's blocking linter has no rule of this class at any configuration, so
+the class is invisible to the blocking gate unconditionally. Copy the file
+verbatim, with no rename, into a third module instead: the same detector
+now reports the pair — confirming it was working, and that the rename is
+exactly what defeated it.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Name the detection boundary | The duplication rule is not backed by the stack's blocking linter, and the advisory detector that exists is blind to renaming — a clean run of both proves nothing |
+| State the union rule | A defensive/parsing routine over untrusted input gets one shared home covering the union of every caller's cases, never a copy per caller |
+
+### Where the rule stops
+
+An exact, unrenamed cross-module copy **is** still caught by the advisory
+line-based detector today — the new clause narrows what the checks are
+credited with, it does not claim they catch nothing; a dedicated negative
+case pins that this one case still counts. The union rule applies where a
+defensive routine genuinely has more than one caller — a validator with
+exactly one caller is not asked to anticipate callers that do not exist,
+and a dedicated negative case pins that too. Teaching the skill's own
+bundled convention checker to detect cross-file or renamed duplication
+itself is left undone here.
+
+### How the change was made
+
+Test first: a regression pinning the new clause in
+`references/lint-clean.md`, the new section in `references/security.md`,
+and both `SKILL.md` pointer clauses was confirmed genuinely red against the
+pre-change files, together with a stdlib-only reproduction of the
+union-rule failure mode (two independently-maintained copies of a parser,
+each patched only for its own caller's case) that was already green on its
+own terms and unaffected by the prose delta → the minimal guidance was
+added → the regression went green → four new evaluation cases (two
+behavior, two negative) were added → the skill's own test suite and the
+whole library's suite ran with no regressions.
+
+---
+
+
+## A clean lint run that never looked at the other file
+
+**Releases:** project `3.10.0` (`typescript-coding` `1.10.0 → 1.11.0`)
+**Type:** gap closed — the duplication rule named its checkers but never their scope, so a green run read as proof of absence
+
+### In one sentence
+
+The four SonarJS/ESLint rules this skill cites for "no duplicated or
+identical functions" only ever compare two spots **inside the same file**,
+and only when they are **textually identical** — rename one identifier, or
+move the copy to a different file, and every one of them goes quiet.
+
+### The gap, precisely
+
+The rule bullet named four checkers and stopped at "factor the shared body
+out," with nothing said about what those checkers actually look at. A reader
+who follows the skill literally, gets a fully green lint run, and concludes
+the codebase has no duplicated implementations is wrong exactly when it
+matters most: the checkers were never looking across files, and identifier
+renaming defeats them even within one file.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Function body copied,\nrenamed, moved to another file"] --> B["Lint stack runs the four\ncited duplication rules"]
+    B --> C["Every rule is a same-file,\ntextual-identity check"]
+    C --> D["Zero findings — lint is green"]
+    D --> E["Reader concludes: no duplicate\nimplementation exists"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Function body copied,\nrenamed, moved to another file"] --> B["Lint stack runs the four\ncited duplication rules"]
+    B --> C["Zero findings — lint is still green,\nthe checkers have not changed"]
+    C --> D{"Skill's own scope note:\ngreen here proves nothing\nabout cross-file/renamed copies"}
+    D --> E["Reader checks by hand —\nan identical implementation has\nexactly one home, wherever it sits"]
+```
+
+### Example you can run in your head
+
+```ts
+// a.ts
+export function computeTotal(value: number): number {
+  return value * 2 + 1;
+}
+```
+
+```ts
+// b.ts — a different file
+export function deriveTotal(input: number): number {
+  return input * 2 + 1;   // identical body, function + parameter renamed
+}
+```
+
+Run `eslint` with `eslint-plugin-sonarjs`'s `no-identical-functions` (and the
+other three cited rules) over both files: zero findings, exit `0`. Put the
+same two (renamed) bodies in **one** file instead: `no-identical-functions`
+still reports nothing — the rename alone is enough, independent of the file
+boundary. Only an **exact, unrenamed** copy in the **same** file is caught.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Name the scope | The four cited rules are same-file, textual-identity checks; none tolerates a rename and none ever compares two files |
+| State the obligation directly | An identical implementation has exactly one home regardless of which file it lives in — a green lint run is not evidence otherwise |
+
+### Where the rule stops
+
+An exact, unrenamed duplicate sitting in the same file **is** caught by
+`no-identical-functions` today — the scope note narrows what the family is
+credited with, it does not claim the family catches nothing; the skill ships
+a dedicated negative case pinning that this one case still counts. Teaching
+the skill's own bundled convention checker to detect cross-file or renamed
+duplication itself is a separate, larger change, left undone here.
+
+### How the change was made
+
+Test first: a regression pinning the new scope-note text in
+`references/lint-clean.md` and its pointer clause in `SKILL.md` was confirmed
+genuinely red against the pre-change files, re-executed live against
+`eslint` 10.7.0 + `eslint-plugin-sonarjs` 4.2.2 on a four-file scratch tree
+to confirm the underlying claim → the minimal delta was added → the
+regression went green → one behavior and one negative evaluation case were
+added → the skill's own test suite and the whole library's suite ran with no
+regressions.
+
+---
+
 ## Two correct rules that leak a secret when chained together
 
 **Releases:** project `3.9.0` (`python-coding` `1.7.0 → 1.8.0`)

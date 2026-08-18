@@ -126,7 +126,14 @@ The single biggest source of findings under a type-aware stack.
 - **No duplicated or identical branches, conditions, or functions**
   (`sonarjs/no-all-duplicated-branches`, `no-duplicated-branches`,
   `no-identical-conditions`, `no-identical-functions`) — factor the shared
-  body out.
+  body out. These four are a **same-file, textual-identity check**: renaming
+  so much as one identifier silences them even inside a single file, and no
+  rule in this family ever compares two different files — a clean run here
+  is **not evidence that a repeated implementation is absent**, it only
+  says no *unrenamed* copy sits in the *same* file as its twin. An identical
+  implementation has exactly one home regardless of where it sits — a
+  renamed copy, a copy in another file, or both — so find and extract it
+  rather than reading the linter's silence as clearance.
 - **Prefer the idiom the linter wants:** template strings over `+`
   (`prefer-template`), object spread over `Object.assign` (`prefer-object-spread`),
   `find` / `includes` / `startsWith` / `for-of` over manual equivalents, no
