@@ -38,7 +38,7 @@ Three conventions hold everywhere in this file:
 
 ## A rule with no check behind it, and a parser that only knew its own caller
 
-**Releases:** project `3.10.0` (`python-coding` `1.8.0 → 1.9.0`)
+**Releases:** project `3.11.0` (`python-coding` `1.8.0 → 1.9.0`)
 **Type:** gap closed — a duplication rule with no enforcing check, and a missing rule for sharing a defensive routine across callers
 
 ### In one sentence
