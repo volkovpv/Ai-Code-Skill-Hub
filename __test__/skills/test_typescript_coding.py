@@ -848,5 +848,102 @@ class TestInProcessDriver(TempDirMixin):
         self.assertIn("cannot read", err)
 
 
+class TestDuplicationRuleScopeGuidance(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3; ``SFL-INV-08``
+    met on both limbs — independent occurrences across unrelated files/tasks
+    on the reporting project's own tree, plus a deterministic,
+    project-independent minimal reproduction re-executed here).
+
+    The "No duplicated or identical branches, conditions, or functions"
+    bullet names four SonarJS/ESLint rules and stops at "factor the shared
+    body out," with no statement of what those rules actually cover. Each of
+    the four is a same-file, textual-identity check: renaming so much as one
+    identifier silences it even inside a single file, and none of the family
+    ever compares two different files. Read literally and followed to the
+    letter, a project's lint stack goes fully green while an identical
+    implementation — renamed, or moved to another file, or both — sits
+    undetected. The gap is the false assurance a clean lint run produces,
+    not merely the missing rule.
+
+    Re-executed against ``eslint`` 10.7.0 + ``eslint-plugin-sonarjs`` 4.2.2
+    (``--no-config-lookup``, no project config) on a four-file scratch tree
+    outside this library, the same environment the field report cited:
+
+    ============================  ==========  ========================
+    placement                     rename       ``no-identical-functions``
+    ============================  ==========  ========================
+    same file                     none         fires, exit 1
+    same file                     renamed      0 findings
+    different files               none         0 findings
+    different files               renamed      0 findings
+    ============================  ==========  ========================
+
+    Only the first row is caught; the other three — including the same-file
+    renamed case, which the rule's name might suggest it would catch — are
+    not. This confirms the delta below, not merely a claim about it.
+    """
+
+    LINT_CLEAN_MD = SKILL / "references" / "lint-clean.md"
+    SKILL_MD = SKILL / "SKILL.md"
+
+    RULE_ANCHORS = (
+        # the scope limit, stated for all four named rules together
+        "same-file, textual-identity check",
+        # the counter-intuitive half: rename defeats it even inside one file
+        "renaming so much as one identifier",
+        # no cross-file comparison exists in the family at all
+        "no rule in this family ever compares two different files",
+        # the false-assurance framing: a clean run is not evidence of absence
+        "not evidence that a repeated implementation is absent",
+        # the obligation stated independently of the rule list
+        "has exactly one home regardless of where it sits",
+    )
+
+    SKILL_MD_ANCHOR = "duplication rules there catch only same-file, textual-identical bodies"
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        # Markdown hard-wraps prose, so a multi-word anchor can straddle a
+        # line break; collapse whitespace runs before searching.
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    def test_lint_reference_states_the_rule_scope(self):
+        text = self._flat(self.LINT_CLEAN_MD)
+        for anchor in self.RULE_ANCHORS:
+            self.assertIn(anchor, text, anchor)
+
+    def test_skill_md_carries_pointer_clause(self):
+        self.assertIn(self.SKILL_MD_ANCHOR, self._flat(self.SKILL_MD))
+
+    def test_new_clauses_not_accidentally_duplicated(self):
+        text = self._flat(self.LINT_CLEAN_MD)
+        for anchor in self.RULE_ANCHORS:
+            self.assertEqual(text.count(anchor), 1, anchor)
+
+    def test_pre_existing_rule_list_and_names_survive_untouched(self):
+        # Negative guard: the delta adds a scope statement, it does not
+        # rewrite or drop the four rule names or the pre-existing
+        # "factor the shared body out" instruction.
+        text = self._flat(self.LINT_CLEAN_MD)
+        for needle in (
+            "sonarjs/no-all-duplicated-branches",
+            "no-duplicated-branches",
+            "no-identical-conditions",
+            "no-identical-functions",
+            "factor the shared",
+        ):
+            self.assertIn(needle, text, needle)
+        self.assertEqual(text.count("factor the shared body out"), 1)
+
+    def test_exact_same_file_duplicate_still_credited_as_caught(self):
+        # False-positive guard: the scope note narrows what the rules are
+        # claimed to catch, it must not overclaim that they catch nothing.
+        # The one case the family DOES catch (an exact, unrenamed duplicate
+        # in the same file) must not be described as invisible to it.
+        text = self._flat(self.LINT_CLEAN_MD)
+        self.assertNotIn("invisible in every placement", text)
+        self.assertNotIn("never catches a duplicate", text)
+
+
 if __name__ == "__main__":
     unittest.main()

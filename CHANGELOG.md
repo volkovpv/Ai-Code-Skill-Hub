@@ -5,6 +5,46 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.10.0] — 2026-08-18
+
+`typescript-coding` `1.10.0 → 1.11.0`
+
+### The gap
+
+A field report from a consuming project (`OBS-20260818-001`, C3, several independently
+occurring clusters across unrelated tasks weeks apart, `SFL-INV-08` met on both limbs):
+the "No duplicated or identical branches, conditions, or functions" bullet names four
+SonarJS/ESLint rules and stops at "factor the shared body out", with no statement of
+what those rules actually cover. Re-executed against `eslint` 10.7.0 +
+`eslint-plugin-sonarjs` 4.2.2 on a four-file scratch tree outside this library: all four
+rules are same-file, textual-identity checks — renaming so much as one identifier
+silences them even inside a single file, and none of the family ever compares two
+different files. A project whose only duplication discipline is this skill's guidance
+can run its lint stack fully green while an identical implementation, renamed and/or
+moved to another file, sits undetected — the gap is the false assurance, not merely the
+missing rule.
+
+### What changed
+
+- **`references/lint-clean.md`** — the duplication bullet gained a scope statement
+  naming what the four cited rules do and do not catch, plus the obligation the census
+  shows actually matters: an identical implementation has exactly one home regardless of
+  which file it lives in.
+- **`SKILL.md`** — the corresponding `Rules` bullet gained one pointer clause to the new
+  scope note.
+- **`__test__/evals/typescript-coding/cases.json`** — two new cases (19 → 21): one
+  `behavior` case pinning that a renamed, cross-file duplicate still needs extraction
+  despite a green lint run; one `negative` false-positive guard confirming an exact,
+  unrenamed, same-file duplicate is still credited as caught by the linter itself.
+- The skill's `stable` gate-bar comment in `skills.yaml` now flags the case count as
+  unmeasured against the declared bar since this addition, rather than silently carrying
+  a stale count.
+
+Deliberately out of scope: teaching the bundled convention checker
+(`scripts/check_conventions.py`) to detect cross-file or renamed duplication itself —
+that is a structural, cross-file comparison the checker's current lexical/AST-per-file
+design does not do, and reworking it is not a delta-sized change.
+
 ## [3.9.0] — 2026-08-14
 
 `python-coding` `1.7.0 → 1.8.0`

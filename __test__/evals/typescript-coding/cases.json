@@ -202,6 +202,26 @@
         "stdout_matches": ["// @ts-expect-error"],
         "stdout_not_contains": ["/** @ts-expect-error", "/* @ts-expect-error"]
       }
+    },
+    {
+      "id": "renamed-cross-file-duplicate-still-needs-extraction",
+      "kind": "behavior",
+      "requirement": "A byte-for-byte duplicate function, renamed and moved to a different file, passes the four cited duplication rules cleanly; the skill guidance must still call it a duplicate needing extraction rather than treat a green lint run as clearance.",
+      "prompt": "Our lint stack (typescript-eslint strictTypeChecked + SonarJS, exactly as this skill configures) is fully green, zero errors and zero warnings. I have computeTotal in a.ts and, in a different module, deriveTotal in b.ts with the identical body — only the function name and one parameter renamed. Is this fine to leave as is because lint passed, or should I do something about it? Answer in one short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(extract|factor|shared|one home|duplicat)", "(?i)(lint|green|pass|clean)"]
+      }
+    },
+    {
+      "id": "same-file-exact-duplicate-is-caught-by-the-linter-itself",
+      "kind": "negative",
+      "requirement": "An exact, unrenamed duplicate function body inside the SAME file is already caught by no-identical-functions; the skill guidance must not be read as claiming the linter is blind to this specific case — only to renamed and/or cross-file copies.",
+      "prompt": "In one file I have two functions with byte-identical bodies and different names — no renamed internal variables, nothing else different. Will the configured lint stack (typescript-eslint + SonarJS, no-identical-functions) flag this on its own, or do I need a separate manual check just to catch this particular case?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["the linter will not catch this", "lint will not flag this", "no rule catches this", "invisible to the linter"]
+      }
     }
   ]
 }

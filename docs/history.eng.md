@@ -36,6 +36,98 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A clean lint run that never looked at the other file
+
+**Releases:** project `3.10.0` (`typescript-coding` `1.10.0 → 1.11.0`)
+**Type:** gap closed — the duplication rule named its checkers but never their scope, so a green run read as proof of absence
+
+### In one sentence
+
+The four SonarJS/ESLint rules this skill cites for "no duplicated or
+identical functions" only ever compare two spots **inside the same file**,
+and only when they are **textually identical** — rename one identifier, or
+move the copy to a different file, and every one of them goes quiet.
+
+### The gap, precisely
+
+The rule bullet named four checkers and stopped at "factor the shared body
+out," with nothing said about what those checkers actually look at. A reader
+who follows the skill literally, gets a fully green lint run, and concludes
+the codebase has no duplicated implementations is wrong exactly when it
+matters most: the checkers were never looking across files, and identifier
+renaming defeats them even within one file.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Function body copied,\nrenamed, moved to another file"] --> B["Lint stack runs the four\ncited duplication rules"]
+    B --> C["Every rule is a same-file,\ntextual-identity check"]
+    C --> D["Zero findings — lint is green"]
+    D --> E["Reader concludes: no duplicate\nimplementation exists"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Function body copied,\nrenamed, moved to another file"] --> B["Lint stack runs the four\ncited duplication rules"]
+    B --> C["Zero findings — lint is still green,\nthe checkers have not changed"]
+    C --> D{"Skill's own scope note:\ngreen here proves nothing\nabout cross-file/renamed copies"}
+    D --> E["Reader checks by hand —\nan identical implementation has\nexactly one home, wherever it sits"]
+```
+
+### Example you can run in your head
+
+```ts
+// a.ts
+export function computeTotal(value: number): number {
+  return value * 2 + 1;
+}
+```
+
+```ts
+// b.ts — a different file
+export function deriveTotal(input: number): number {
+  return input * 2 + 1;   // identical body, function + parameter renamed
+}
+```
+
+Run `eslint` with `eslint-plugin-sonarjs`'s `no-identical-functions` (and the
+other three cited rules) over both files: zero findings, exit `0`. Put the
+same two (renamed) bodies in **one** file instead: `no-identical-functions`
+still reports nothing — the rename alone is enough, independent of the file
+boundary. Only an **exact, unrenamed** copy in the **same** file is caught.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Name the scope | The four cited rules are same-file, textual-identity checks; none tolerates a rename and none ever compares two files |
+| State the obligation directly | An identical implementation has exactly one home regardless of which file it lives in — a green lint run is not evidence otherwise |
+
+### Where the rule stops
+
+An exact, unrenamed duplicate sitting in the same file **is** caught by
+`no-identical-functions` today — the scope note narrows what the family is
+credited with, it does not claim the family catches nothing; the skill ships
+a dedicated negative case pinning that this one case still counts. Teaching
+the skill's own bundled convention checker to detect cross-file or renamed
+duplication itself is a separate, larger change, left undone here.
+
+### How the change was made
+
+Test first: a regression pinning the new scope-note text in
+`references/lint-clean.md` and its pointer clause in `SKILL.md` was confirmed
+genuinely red against the pre-change files, re-executed live against
+`eslint` 10.7.0 + `eslint-plugin-sonarjs` 4.2.2 on a four-file scratch tree
+to confirm the underlying claim → the minimal delta was added → the
+regression went green → one behavior and one negative evaluation case were
+added → the skill's own test suite and the whole library's suite ran with no
+regressions.
+
+---
+
 ## Two correct rules that leak a secret when chained together
 
 **Releases:** project `3.9.0` (`python-coding` `1.7.0 → 1.8.0`)

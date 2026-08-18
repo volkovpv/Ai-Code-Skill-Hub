@@ -110,7 +110,10 @@ has been promoted into `knowledge/` or this workflow.
   promises, immutable data (no in-place mutation, no parameter reassignment),
   named literals over magic values, small shallow functions, and JSDoc with a
   description on the exported surface — see
-  [references/lint-clean.md](references/lint-clean.md).
+  [references/lint-clean.md](references/lint-clean.md). Note the
+  duplication rules there catch only same-file, textual-identical bodies —
+  a renamed or cross-file copy needs a human check, not just a green lint
+  run.
 - Do not suppress the type checker or linter (`@ts-ignore`, `@ts-nocheck`,
   `eslint-disable`) to go green. Sole exception: a documented upstream
   limitation of a single lint rule, held by a justified line-scoped

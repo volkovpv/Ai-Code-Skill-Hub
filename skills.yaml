@@ -29,11 +29,12 @@ skills:
   # four skills: 226 of 231 attempts. Cases whose text was corrected during
   # that session were re-measured on the same tier afterwards. Re-measure
   # the same way after changing a skill or its cases.
-  # typescript-coding: 17 cases, 50/51 — 2/3 on
-  # boundary-data-is-parsed-not-annotated.
+  # typescript-coding: 21 cases (OBS-20260818-001 added 2) — unmeasured
+  # against the declared bar since; the prior measurement was 17 cases,
+  # 50/51 — 2/3 on boundary-data-is-parsed-not-annotated.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.10.0
+    version: 1.11.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
