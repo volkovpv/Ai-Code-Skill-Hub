@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 import re
 import subprocess
 import sys
@@ -1174,6 +1175,194 @@ class TestChainedValidationExceptionDisclosureGuidance(unittest.TestCase):
             "this pins a value-derived FRAGMENT, never the whole secret — "
             "asserting the full value would flicker on a library's own "
             "repr-length limit, exactly the pitfall the field report flagged",
+        )
+
+
+def _extract_trailing_json_a(text: str) -> dict[str, object] | None:
+    """One independently-maintained copy of a defensive parser over
+    untrusted model output, tested only against its own caller's historical
+    inputs (a fenced block with a clean trailing brace)."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    end = text.rfind("}")
+    if end == -1 or end < start:
+        return None
+    try:
+        return json.loads(text[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+
+
+def _extract_trailing_json_b(text: str) -> dict[str, object] | None:
+    """A second, independently-maintained copy of the *same* routine,
+    tested only against a different caller's own historical inputs — which
+    happen to include an accidental doubled closing brace, so only this
+    copy was ever fixed to collapse it."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    end = text.rfind("}")
+    if end == -1 or end < start:
+        return None
+    candidate = text[start : end + 1]
+    if candidate.endswith("}}"):
+        candidate = candidate[:-1]  # this caller's own local fix
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
+
+
+class TestDuplicationDetectionBoundaryAndUnionRuleGuidance(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3; ``SFL-INV-08``
+    met on both limbs — independent occurrences across unrelated concerns
+    and tasks on the reporting project's own tree, plus a deterministic
+    minimal reproduction re-executed here).
+
+    Two grounds, both absent from this skill before the delta:
+
+    (a) **Detection-boundary silence.** ``references/lint-clean.md``
+    already states "no duplicated or identical branches, conditions, or
+    functions — factor the shared body out," with no tool name and no
+    scope — so on its own this would be a C2 gap (a project may tighten an
+    already-correct rule), not C3. What is genuinely absent, and what
+    makes this a skill-level gap: the stack's own *blocking* linter
+    (``ruff``) carries no rule of this class at any configuration, and the
+    detector that does exist for it (a line-based duplicate-code check,
+    e.g. ``pylint``'s ``duplicate-code``/``R0801``) is blind to identifier
+    renaming. Re-executed live against ``pylint`` 4.0.6 on a three-package
+    scratch tree outside this library:
+
+    ==========================================  ==================
+    case                                          ``duplicate-code``
+    ==========================================  ==================
+    cross-module copy, 5 identifiers renamed      0 findings, 10.00/10
+    cross-module copy, verbatim (no rename)       fires, 9.29/10
+    ==========================================  ==================
+
+    A rule stated in prose but never backed by any check the stack
+    actually runs is easy to treat as met the moment lint is green — this
+    is that trap, named explicitly.
+
+    (b) **No union-of-callers rule for a defensive routine over untrusted
+    input.** Neither ``security.md``, ``type-design.md`` ("Trust
+    boundaries: parse, don't cast"), nor ``runtime-correctness.md`` states
+    that collapsing a parsing/validation routine that stands over
+    untrusted input (network payload, an external API's or model's
+    output, file content) into one shared implementation means giving it
+    the *union* of every calling site's cases — not leaving each
+    independently-maintained copy to cover only the cases its own author
+    tested against. The reproduction below is a stdlib-only, synthetic
+    stand-in for that measured shape: two copies of "the same" parser,
+    each locally patched for only the case its own caller happened to hit.
+    """
+
+    LINT_CLEAN_MD = SKILL / "references" / "lint-clean.md"
+    SECURITY_MD = SKILL / "references" / "security.md"
+    SKILL_MD = SKILL / "SKILL.md"
+
+    LINT_ANCHORS = (
+        "carries no rule of this class at any configuration",
+        "blind to identifier renaming",
+        "A green lint run does not confirm this rule",
+    )
+
+    SECURITY_ANCHORS = (
+        "one home, the union of every caller's cases",
+        "each copy tends to cover only the cases its own author anticipated",
+        "never a pick of one caller's slice of the input space",
+    )
+
+    SKILL_MD_LINT_ANCHOR = "not backed by this stack's blocking linter"
+    SKILL_MD_SECURITY_ANCHOR = (
+        "one home holding the union of every caller's cases, never a per-caller copy"
+    )
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        # Markdown hard-wraps prose, so a multi-word anchor can straddle a
+        # line break; collapse whitespace runs before searching.
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    def test_lint_reference_states_the_detection_boundary(self):
+        text = self._flat(self.LINT_CLEAN_MD)
+        for anchor in self.LINT_ANCHORS:
+            self.assertIn(anchor, text, anchor)
+
+    def test_security_reference_states_the_union_rule(self):
+        text = self._flat(self.SECURITY_MD)
+        for anchor in self.SECURITY_ANCHORS:
+            self.assertIn(anchor, text, anchor)
+
+    def test_skill_md_carries_both_pointer_clauses(self):
+        text = self._flat(self.SKILL_MD)
+        self.assertIn(self.SKILL_MD_LINT_ANCHOR, text)
+        self.assertIn(self.SKILL_MD_SECURITY_ANCHOR, text)
+
+    def test_new_clauses_not_accidentally_duplicated(self):
+        lint_text = self._flat(self.LINT_CLEAN_MD)
+        for anchor in self.LINT_ANCHORS:
+            self.assertEqual(lint_text.count(anchor), 1, anchor)
+        security_text = self._flat(self.SECURITY_MD)
+        for anchor in self.SECURITY_ANCHORS:
+            # The heading anchor legitimately appears twice: once as the
+            # ``##`` heading itself, once in the Contents ToC entry that
+            # links to it (every other section in this file follows the
+            # same pattern) — not a duplicated clause.
+            expected = 2 if anchor == "one home, the union of every caller's cases" else 1
+            self.assertEqual(security_text.count(anchor), expected, anchor)
+
+    def test_pre_existing_rules_survive_untouched(self):
+        # Negative guard: the delta extends the duplication bullet and adds
+        # a new security section, it does not rewrite either file's
+        # pre-existing content.
+        lint_text = self._flat(self.LINT_CLEAN_MD)
+        self.assertEqual(
+            lint_text.count(
+                "No duplicated or identical branches, conditions, or functions"
+            ),
+            1,
+        )
+        self.assertIn("factor the shared", lint_text)
+        security_text = self._flat(self.SECURITY_MD)
+        self.assertIn("Treat untrusted input as hostile by default", security_text)
+        self.assertIn(
+            "SQL: values go through placeholders, never through the string",
+            security_text,
+        )
+
+    def test_security_contents_lists_the_new_section(self):
+        # security.md crosses into a growing Contents ToC pattern shared
+        # with the skill's other multi-section references; keep it honest.
+        text = self.SECURITY_MD.read_text(encoding="utf-8")
+        self.assertIn(
+            "A defensive routine over untrusted input has one home",
+            text,
+        )
+
+    def test_reproduction_per_caller_copy_misses_the_others_case(self):
+        """Executable evidence for the union-rule claim, stdlib-only (the
+        ``json`` module only) — this Hub pins no third-party model client,
+        so the two independently-maintained copies above stand in for "two
+        callers of a defensive parser over untrusted model output, each
+        tested only against its own historical inputs," per the field
+        report's own universality check, rather than importing a real
+        model SDK.
+        """
+        doubled_brace_case = '{"status": "ok"}}'  # a shape only caller B ever saw
+
+        self.assertEqual(
+            _extract_trailing_json_b(doubled_brace_case), {"status": "ok"}
+        )
+        self.assertIsNone(
+            _extract_trailing_json_a(doubled_brace_case),
+            "caller A's independently-maintained copy was tested only "
+            "against caller A's own historical inputs; a case only caller "
+            "B's input space produces is silently unguarded in A's copy "
+            "even though the same underlying parser already handles it "
+            "correctly in B's copy — the failure mode the union rule "
+            "exists to prevent",
         )
 
 

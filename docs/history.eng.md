@@ -36,6 +36,137 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A rule with no check behind it, and a parser that only knew its own caller
+
+**Releases:** project `3.10.0` (`python-coding` `1.8.0 → 1.9.0`)
+**Type:** gap closed — a duplication rule with no enforcing check, and a missing rule for sharing a defensive routine across callers
+
+### In one sentence
+
+"No duplicated or identical branches, conditions, or functions" was already
+in the skill, unscoped and correct — but nothing said the stack's own
+blocking linter cannot check it at all, and nothing told a defensive
+routine standing over untrusted input to cover the union of every caller's
+cases instead of being copied once per caller.
+
+### The gap, precisely
+
+The first framing of this gap claimed the skill states no
+implementation-level duplication rule at all. That claim turned out to be
+false: `references/lint-clean.md` already carries the rule, unscoped, in
+plain prose. What was genuinely missing, once the false claim was
+withdrawn, was narrower and more useful: (a) nothing said that this
+stack's blocking linter enforces none of it, and that the advisory
+detector which does exist for this class is blind to identifier renaming —
+so a green run of both checks is not confirmation; (b) nothing said that a
+defensive/parsing routine sitting over untrusted input (a network payload,
+an external API's or model's output) needs to be collapsed to one shared
+implementation covering the union of every caller's cases, rather than
+duplicated per caller with each copy knowing only the cases its own author
+tested against.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Duplication rule exists in prose,
+unscoped, correct"] --> B["Blocking linter has no
+rule for this class at all"]
+    B --> C["Advisory detector exists,
+but renaming defeats it"]
+    C --> D["Both checks report clean —
+reader reads this as confirmation"]
+    E["Defensive parser over untrusted
+input duplicated per caller"] --> F["Each copy tested only against
+its own caller's cases"]
+    F --> G["A case only one caller's input
+produces is missing everywhere else"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Duplication rule states its own
+detection boundary explicitly"] --> B["Reader knows a clean run of
+both checks proves nothing"]
+    B --> C["Renamed/duplicated implementation
+is found and extracted by hand"]
+    D["Defensive parser over untrusted
+input needed by several callers"] --> E["One shared implementation,
+union of every caller's cases"]
+    E --> F["A new caller's case joins the
+union instead of starting a new copy"]
+```
+
+### Example you can run in your head
+
+```python
+# pkg_a/adapter.py
+def to_int_or_none(raw: object) -> int | None:
+    if raw is None:
+        return None
+    try:
+        return int(str(raw))
+    except ValueError:
+        return None
+```
+
+```python
+# pkg_b/adapter.py — a different module, five identifiers renamed
+def coerce_optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(str(value))
+    except ValueError:
+        return None
+```
+
+Run a line-based duplicate-code check (e.g. `pylint`'s `duplicate-code`/
+`R0801`) over both: zero findings, `10.00/10` — renaming five identifiers
+is enough to make a byte-identical implementation invisible to it. The
+stack's blocking linter has no rule of this class at any configuration, so
+the class is invisible to the blocking gate unconditionally. Copy the file
+verbatim, with no rename, into a third module instead: the same detector
+now reports the pair — confirming it was working, and that the rename is
+exactly what defeated it.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Name the detection boundary | The duplication rule is not backed by the stack's blocking linter, and the advisory detector that exists is blind to renaming — a clean run of both proves nothing |
+| State the union rule | A defensive/parsing routine over untrusted input gets one shared home covering the union of every caller's cases, never a copy per caller |
+
+### Where the rule stops
+
+An exact, unrenamed cross-module copy **is** still caught by the advisory
+line-based detector today — the new clause narrows what the checks are
+credited with, it does not claim they catch nothing; a dedicated negative
+case pins that this one case still counts. The union rule applies where a
+defensive routine genuinely has more than one caller — a validator with
+exactly one caller is not asked to anticipate callers that do not exist,
+and a dedicated negative case pins that too. Teaching the skill's own
+bundled convention checker to detect cross-file or renamed duplication
+itself is left undone here.
+
+### How the change was made
+
+Test first: a regression pinning the new clause in
+`references/lint-clean.md`, the new section in `references/security.md`,
+and both `SKILL.md` pointer clauses was confirmed genuinely red against the
+pre-change files, together with a stdlib-only reproduction of the
+union-rule failure mode (two independently-maintained copies of a parser,
+each patched only for its own caller's case) that was already green on its
+own terms and unaffected by the prose delta → the minimal guidance was
+added → the regression went green → four new evaluation cases (two
+behavior, two negative) were added → the skill's own test suite and the
+whole library's suite ran with no regressions.
+
+---
+
+
 ## A clean lint run that never looked at the other file
 
 **Releases:** project `3.10.0` (`typescript-coding` `1.10.0 → 1.11.0`)

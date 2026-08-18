@@ -272,6 +272,46 @@
         "exit_code": 0,
         "stdout_not_contains": ["this leaks a secret", "this is a disclosure risk", "this is a secret-disclosure risk"]
       }
+    },
+    {
+      "id": "renamed-duplicate-still-a-defect-despite-clean-blocking-lint",
+      "kind": "behavior",
+      "requirement": "This stack's blocking linter has no rule for duplicated implementations at all, and the advisory duplicate-code detector is blind to identifier renaming; a clean run of both must not be read as clearance for a renamed copy of an existing function.",
+      "prompt": "Our blocking lint gate (`ruff`, the project's full configured rule set) is fully green, and the advisory duplicate-code check we also run reports nothing. I have `to_int_or_none` in one module and, in a different module, `coerce_optional_int` with the identical body — only the function name and parameter renamed. Is this fine to leave as is since both checks are clean, or should I do something about it? Answer in one short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(extract|factor|shared|one home|duplicat)", "(?i)(lint|clean|green|pass)"]
+      }
+    },
+    {
+      "id": "verbatim-cross-module-copy-is-caught-by-the-duplicate-code-check",
+      "kind": "negative",
+      "requirement": "An exact, unrenamed copy across modules is already caught by a line-based duplicate-code detector (e.g. pylint's duplicate-code/R0801); the guidance must not be read as claiming this specific case is invisible to tooling.",
+      "prompt": "I copied a function verbatim, with no renaming at all, from one module into a different module. Will a line-based duplicate-code check (like pylint's duplicate-code/R0801) catch this on its own, or do I need a separate manual check just for this exact case?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["it will not catch this", "no check catches this", "invisible to the tooling", "no tool will flag this"]
+      }
+    },
+    {
+      "id": "defensive-parser-over-untrusted-input-needs-the-union-of-cases",
+      "kind": "behavior",
+      "requirement": "A defensive/parsing routine standing over untrusted input (e.g. model output) must not be duplicated per caller, each covering only its own anticipated cases; it needs one shared home covering the union of every caller's cases.",
+      "prompt": "Two independent modules each parse possibly-truncated JSON out of noisy model output. Each has its own small helper function, written separately, each tested only against the malformed shapes its own team happened to see in production. A new team wants to add a third caller with its own copy, tested against its own new malformed shape. What should we do instead, and why?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": ["(?i)(one|single|shared|common).{0,20}(home|place|implementation|function|helper)", "(?i)(union|all.{0,10}cases|every caller|combine)"]
+      }
+    },
+    {
+      "id": "single-caller-input-validation-not-flagged-as-needing-a-union",
+      "kind": "negative",
+      "requirement": "The union-of-callers rule applies to a routine used by multiple independent callers over untrusted input; a validator with exactly one caller must not be flagged as needing to anticipate other callers' cases that do not exist.",
+      "prompt": "I have one function that validates a single API endpoint's request body against untrusted network input, and it has exactly one caller in the codebase. Does this function need to be designed around a 'union of every caller's cases,' or is that guidance not about this situation?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["yes, it needs the union of every caller's cases", "must anticipate other callers' cases"]
+      }
     }
   ]
 }
