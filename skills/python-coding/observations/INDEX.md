@@ -30,3 +30,14 @@ Reading rules for agents:
   (field report from a consuming project; C3, occurrences: 1, `SFL-INV-08` met via the
   deterministic, project-independent minimal-reproduction limb; reviewed by
   HC-AGENT-010, 2026-08-14, provisional pending PR merge by the operator).
+- [OBS-20260818-001](accepted/OBS-20260818-001.md) — two grounds absent from DRY/security
+  guidance: the duplication bullet in `lint-clean.md` is not backed by this stack's
+  blocking linter at all, and the advisory line-based detector is blind to identifier
+  renaming, so a green run does not confirm the rule; and no rule states that a
+  defensive/parsing routine over untrusted input must be collapsed to the union of
+  every caller's cases rather than duplicated per caller (field report from a
+  consuming project; C3, `SFL-INV-08` met on both limbs; the detection-boundary claim
+  re-executed live against `pylint` 4.0.6 `duplicate-code`/`R0801`; the original
+  filing's overbroad "no implementation-level rule at all" claim was withdrawn on
+  re-run and the verdict rests on the two narrower, corrected grounds; reviewed by
+  HC-AGENT-010, 2026-08-18, provisional pending PR merge by the operator).

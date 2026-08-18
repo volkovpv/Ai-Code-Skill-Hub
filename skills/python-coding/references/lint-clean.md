@@ -107,7 +107,13 @@ cancellation, threads and locks) lives in [concurrency.md](concurrency.md).
   lines, file ≤ 500 — the host project's config wins). Extract a helper
   rather than grow one function.
 - **No duplicated or identical branches, conditions, or functions** —
-  factor the shared body out.
+  factor the shared body out. This rule is **not backed by this stack's
+  blocking linter**: `ruff` carries no rule of this class at any
+  configuration. The check that does exist for it — a line-based
+  duplicate-code detector (e.g. `pylint`'s `duplicate-code`/`R0801`) — is
+  itself **blind to identifier renaming**: a renamed copy of a duplicated
+  implementation reports clean. A green lint run does not confirm this
+  rule; apply it by hand.
 - **Prefer the idiom the linter wants:** f-strings over `+`/`%`/
   `.format`; comprehensions over `map`/`filter`-with-lambda and
   accumulate-in-a-loop; `enumerate`/`zip` over manual index bookkeeping
