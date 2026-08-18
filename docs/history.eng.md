@@ -69,34 +69,22 @@ tested against.
 
 ```mermaid
 flowchart LR
-    A["Duplication rule exists in prose,
-unscoped, correct"] --> B["Blocking linter has no
-rule for this class at all"]
-    B --> C["Advisory detector exists,
-but renaming defeats it"]
-    C --> D["Both checks report clean —
-reader reads this as confirmation"]
-    E["Defensive parser over untrusted
-input duplicated per caller"] --> F["Each copy tested only against
-its own caller's cases"]
-    F --> G["A case only one caller's input
-produces is missing everywhere else"]
+    A["Duplication rule exists in prose,\nunscoped, correct"] --> D
+    B["Blocking linter has no\nrule for this class at all"] --> D
+    C["Advisory detector exists,\nbut renaming defeats it"] --> D
+    D["Both checks report clean —\nreader reads this as confirmation"]
+    E["Defensive parser over untrusted\ninput duplicated per caller"] --> F["Each copy tested only against\nits own caller's cases"]
+    F --> G["A case only one caller's input\nproduces is missing everywhere else"]
 ```
 
 ### TO BE — how it goes now
 
 ```mermaid
 flowchart LR
-    A["Duplication rule states its own
-detection boundary explicitly"] --> B["Reader knows a clean run of
-both checks proves nothing"]
-    B --> C["Renamed/duplicated implementation
-is found and extracted by hand"]
-    D["Defensive parser over untrusted
-input needed by several callers"] --> E["One shared implementation,
-union of every caller's cases"]
-    E --> F["A new caller's case joins the
-union instead of starting a new copy"]
+    A["Duplication rule states its own\ndetection boundary explicitly"] --> B["Reader knows a clean run of\nboth checks proves nothing"]
+    B --> C["Renamed/duplicated implementation\nis found and extracted by hand"]
+    D["Defensive parser over untrusted\ninput needed by several callers"] --> E["One shared implementation,\nunion of every caller's cases"]
+    E --> F["A new caller's case joins the\nunion instead of starting a new copy"]
 ```
 
 ### Example you can run in your head
@@ -113,7 +101,7 @@ def to_int_or_none(raw: object) -> int | None:
 ```
 
 ```python
-# pkg_b/adapter.py — a different module, five identifiers renamed
+# pkg_b/adapter.py — a different module, the function name and the parameter renamed
 def coerce_optional_int(value: object) -> int | None:
     if value is None:
         return None
@@ -124,7 +112,7 @@ def coerce_optional_int(value: object) -> int | None:
 ```
 
 Run a line-based duplicate-code check (e.g. `pylint`'s `duplicate-code`/
-`R0801`) over both: zero findings, `10.00/10` — renaming five identifiers
+`R0801`) over both: zero findings, `10.00/10` — renaming the function name and the parameter
 is enough to make a byte-identical implementation invisible to it. The
 stack's blocking linter has no rule of this class at any configuration, so
 the class is invisible to the blocking gate unconditionally. Copy the file
