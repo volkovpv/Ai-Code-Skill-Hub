@@ -945,5 +945,158 @@ class TestDuplicationRuleScopeGuidance(unittest.TestCase):
         self.assertNotIn("never catches a duplicate", text)
 
 
+class TestDuplicationSurveyGuidance(unittest.TestCase):
+    """Regression for an operator-triggered SFL transfer (2026-08-19,
+    C3-universal; not routed through the ordinary WF-STATE-013 pipeline —
+    the occasion was a direct operator audit of a consuming project's
+    build). OBS-20260818-001 (PR #24) added the *negative* half of the
+    duplication story: the four cited SonarJS/ESLint rules are same-file,
+    textual-identity checks, so a clean run is not evidence a duplicate is
+    absent. What stayed missing is the *positive* half — the procedure that
+    would have prevented the copies in the first place. Neither
+    ``## Workflow`` step ever told an author to look at the tree before
+    writing into it.
+
+    Measured on one live TypeScript service tree (293 files of at least 12
+    code lines, comments/blanks stripped, every identifier and string
+    literal rewritten to one token, then hashed — a rename-tolerant
+    structural fingerprint): a prior de-duplication task had already
+    extracted three shared resolvers into a common module and still left
+    the scaffold standing in ten independently maintained configuration
+    modules, two pairs of which were token-identical after renaming *even
+    after* that extraction; five access-guard files differed only in class
+    name; four wiring modules and three repositories each formed a
+    single-hash cluster. The correct collapsed shape already existed one
+    directory away (two shared utilities, 4 and 5 callers) — the authors
+    had a worked example and did not look.
+    """
+
+    SKILL_MD = SKILL / "SKILL.md"
+    SURVEY_MD = SKILL / "references" / "duplication-survey.md"
+    LINT_CLEAN_MD = SKILL / "references" / "lint-clean.md"
+
+    WORKFLOW_STEP_ANCHOR = "1. **Survey before you write.**"
+    WORKFLOW_NEW_FILE_LAST_ANCHOR = "A new file is the last step of that search, not the first"
+
+    RULES_ANCHORS = (
+        "by shape, never by name",
+        "a copy is renamed by construction",
+        "write a new file only because that search came back empty",
+        "A shared fail-closed branch keeps a\n  test per caller",
+        "the union of every caller's cases, never one caller's slice",
+    )
+
+    ROUTING_ROW_ANCHOR = (
+        "Deciding whether to extend, call, or write new — searching by "
+        "shape, the decision order, what a safe collapse preserves"
+    )
+
+    SURVEY_ANCHORS = (
+        "Search by shape, never by name",
+        "copy is renamed by construction",
+        "Extend the existing home",
+        "Call it with your own parameters",
+        "At the third occurrence of one shape",
+        "introduce a parameterized",
+        "Write a new file only because the search above came back genuinely\nempty",
+        "A new file is the last step, not the first",
+        "Per-caller negative coverage",
+        "Union, never a pick, for a routine defending untrusted input",
+    )
+
+    LINT_CLEAN_POINTER_ANCHOR = (
+        "for the search\n  to run *before* you write a\n  duplicate in the first place, see\n  "
+        "[duplication-survey.md](duplication-survey.md)."
+    )
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    @staticmethod
+    def _raw(path: Path) -> str:
+        return path.read_text(encoding="utf-8")
+
+    def test_workflow_step_exists_before_typing_step(self):
+        raw = self._raw(self.SKILL_MD)
+        self.assertIn(self.WORKFLOW_STEP_ANCHOR, raw)
+        # The survey step is the first workflow step, before typing.
+        survey_pos = raw.index("**Survey before you write.**")
+        typing_pos = raw.index("**Type strictly, name explicitly.**")
+        self.assertLess(survey_pos, typing_pos)
+
+    def test_workflow_step_states_new_file_is_last(self):
+        self.assertIn(self._flat_anchor(self.WORKFLOW_NEW_FILE_LAST_ANCHOR), self._flat(self.SKILL_MD))
+
+    def _flat_anchor(self, anchor: str) -> str:
+        return " ".join(anchor.split())
+
+    def test_rules_bullet_carries_all_anchors(self):
+        text = self._flat(self.SKILL_MD)
+        for anchor in self.RULES_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_routing_table_has_new_row(self):
+        text = self._flat(self.SKILL_MD)
+        self.assertIn(self._flat_anchor(self.ROUTING_ROW_ANCHOR), text)
+
+    def test_survey_reference_file_exists_with_all_sections(self):
+        self.assertTrue(self.SURVEY_MD.is_file())
+        text = self._flat(self.SURVEY_MD)
+        for anchor in self.SURVEY_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_lint_clean_cross_links_survey_file_without_duplicating_it(self):
+        text = self._flat(self.LINT_CLEAN_MD)
+        self.assertIn(self._flat_anchor(self.LINT_CLEAN_POINTER_ANCHOR), text)
+        # Cross-link, not a restatement: the decision-order steps must not
+        # appear inside lint-clean.md itself.
+        self.assertNotIn("parameterized factory", text)
+
+    def test_new_anchors_not_accidentally_duplicated(self):
+        skill_text = self._flat(self.SKILL_MD)
+        for anchor in self.RULES_ANCHORS:
+            self.assertEqual(skill_text.count(self._flat_anchor(anchor)), 1, anchor)
+        survey_text = self._flat(self.SURVEY_MD)
+        # Two headings are also linked from the file's own Contents ToC, so
+        # they legitimately appear twice (the same pattern security.md uses
+        # for its own Contents entries in the sibling OBS-20260818-001 test).
+        headings_also_in_contents = {
+            "Search by shape, never by name",
+            "A new file is the last step, not the first",
+        }
+        for anchor in self.SURVEY_ANCHORS:
+            expected = 2 if anchor in headings_also_in_contents else 1
+            self.assertEqual(survey_text.count(self._flat_anchor(anchor)), expected, anchor)
+
+    def test_pre_existing_rule_scope_content_survives_untouched(self):
+        # Negative guard: OBS-20260818-001's delta (the negative half) must
+        # survive this delta (the positive half) unrewritten.
+        text = self._flat(self.LINT_CLEAN_MD)
+        for needle in (
+            "same-file, textual-identity check",
+            "renaming so much as one identifier",
+            "no rule in this family ever compares two different files",
+        ):
+            self.assertIn(needle, text, needle)
+
+    def test_survey_file_cross_links_lint_clean_not_duplicate_of_it(self):
+        text = self._flat(self.SURVEY_MD)
+        self.assertIn("lint-clean.md", text)
+        # The rename/false-assurance framing lives in lint-clean.md; the
+        # survey file must not restate it verbatim.
+        self.assertNotIn("not evidence that a repeated implementation is absent", text)
+
+    def test_measured_evidence_present_and_generic(self):
+        # The evidence section must carry the measured facts and must not
+        # leak a project-specific path, framework name, or this corpus's
+        # own identifier conventions into a universal skill.
+        text = self._raw(self.SURVEY_MD)
+        for needle in ("293 files", "ten independently maintained", "39/39", "35/35"):
+            self.assertIn(needle, text, needle)
+        for forbidden in ("news-intel", "control-plane", "RM-TASK", "coding:CS-", "NestJS", ".config.ts"):
+            self.assertNotIn(forbidden, text, forbidden)
+
+
 if __name__ == "__main__":
     unittest.main()

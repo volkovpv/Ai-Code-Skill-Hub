@@ -14,11 +14,17 @@ uses them, apply those skills on top of this one.
 
 ## Workflow
 
-1. **Type strictly, name explicitly.** Apply the tsconfig flags and style
+1. **Survey before you write.** Before the first line of new implementation
+   code, search for the home this logic already has — by what it is built
+   out of, never by the name you are about to give it — and read the
+   sibling call sites of the same concern before deciding there is nothing
+   to extend. A new file is the last step of that search, not the first —
+   see [references/duplication-survey.md](references/duplication-survey.md).
+2. **Type strictly, name explicitly.** Apply the tsconfig flags and style
    rules in [references/typing-and-style.md](references/typing-and-style.md):
    `as const` registries (never a native `enum`), branded ids, `readonly` by
    default, explicit return types on exports, `import type` for types.
-2. **Design the types before the code.** Model states as discriminated
+3. **Design the types before the code.** Model states as discriminated
    unions so invalid combinations cannot compile, close every switch with a
    `never` check, keep inputs wide and outputs narrow, validate boundary
    data instead of asserting it — see
@@ -26,17 +32,17 @@ uses them, apply those skills on top of this one.
    generic only when it relates two types, and derive related types from one
    source of truth — see
    [references/generics-and-type-level.md](references/generics-and-type-level.md).
-3. **Handle errors and the environment deliberately.** `unknown` in `catch`,
+4. **Handle errors and the environment deliberately.** `unknown` in `catch`,
    never swallow an error, wrap with `cause` at most once at the source,
    centralize `process.env` access — see
    [references/errors-config-logging.md](references/errors-config-logging.md).
-4. **Write it lint-clean the first time.** A strict lint stack rejects far more
+5. **Write it lint-clean the first time.** A strict lint stack rejects far more
    than the compiler and counts warnings too — explicit boolean expressions,
    `??` over `||`, no floating promises, immutable data, named literals, small
    shallow functions, JSDoc on the public surface. Follow
    [references/lint-clean.md](references/lint-clean.md) so the project's `lint`
    comes back with zero errors and zero warnings.
-5. **Self-check before handing off.** Run the convention checker over the
+6. **Self-check before handing off.** Run the convention checker over the
    files you touched:
 
    ```bash
@@ -61,6 +67,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 
 | Situation | Read |
 |-----------|------|
+| Deciding whether to extend, call, or write new — searching by shape, the decision order, what a safe collapse preserves | [references/duplication-survey.md](references/duplication-survey.md) |
 | Choosing types, tsconfig flags, constants, or style | [references/typing-and-style.md](references/typing-and-style.md) |
 | Modeling states, unions, narrowing, boundary validation, `satisfies`, structural-typing gotchas | [references/type-design.md](references/type-design.md) |
 | Writing a generic, deriving types from a source of truth, template literal types, overloads vs conditional types | [references/generics-and-type-level.md](references/generics-and-type-level.md) |
@@ -114,6 +121,15 @@ has been promoted into `knowledge/` or this workflow.
   duplication rules there catch only same-file, textual-identical bodies —
   a renamed or cross-file copy needs a human check, not just a green lint
   run.
+- Before writing a new implementation, search for its existing home **by
+  shape, never by name** — a copy is renamed by construction, so a name
+  search is the one search guaranteed to miss it. Extend the existing home,
+  then call it with your own parameters, then — at the third occurrence of
+  one shape — introduce a parameterized factory; write a new file only
+  because that search came back empty. A shared fail-closed branch keeps a
+  test per caller, and a shared routine defending untrusted input takes the
+  union of every caller's cases, never one caller's slice — see
+  [references/duplication-survey.md](references/duplication-survey.md).
 - Do not suppress the type checker or linter (`@ts-ignore`, `@ts-nocheck`,
   `eslint-disable`) to go green. Sole exception: a documented upstream
   limitation of a single lint rule, held by a justified line-scoped

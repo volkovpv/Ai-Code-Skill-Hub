@@ -133,7 +133,10 @@ The single biggest source of findings under a type-aware stack.
   says no *unrenamed* copy sits in the *same* file as its twin. An identical
   implementation has exactly one home regardless of where it sits — a
   renamed copy, a copy in another file, or both — so find and extract it
-  rather than reading the linter's silence as clearance.
+  rather than reading the linter's silence as clearance. This is the
+  after-the-fact check; for the search to run *before* you write a
+  duplicate in the first place, see
+  [duplication-survey.md](duplication-survey.md).
 - **Prefer the idiom the linter wants:** template strings over `+`
   (`prefer-template`), object spread over `Object.assign` (`prefer-object-spread`),
   `find` / `includes` / `startsWith` / `for-of` over manual equivalents, no

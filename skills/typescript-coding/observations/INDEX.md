@@ -71,6 +71,16 @@ Reading rules for agents:
   re-executed live against eslint 10.7.0 + eslint-plugin-sonarjs 4.2.2;
   reviewed by HC-AGENT-010, 2026-08-18, provisional pending PR merge by the
   operator).
+- [OBS-20260819-001](accepted/OBS-20260819-001.md) — `OBS-20260818-001`
+  (PR #24) stated what the after-the-fact duplication checks catch, but
+  neither `## Workflow` nor `## Rules` ever told an author to search the
+  tree by shape *before* writing a new implementation, so following the
+  skill exactly still produced the copies the linter cannot see (operator
+  direct-audit transfer, 2026-08-19, outside the ordinary `WF-STATE-013`
+  pipeline; C3-universal, measured on one live tree: ten configuration
+  modules left standing around a prior extraction, two token-identical
+  after renaming even after it; reviewed by the operator, 2026-08-19,
+  provisional pending PR merge).
 
 ## Candidates awaiting review
 

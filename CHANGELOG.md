@@ -5,6 +5,72 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.12.0] — 2026-08-19
+
+`typescript-coding` `1.11.0 → 1.12.0`, `python-coding` `1.9.0 → 1.10.0`
+
+### The gap
+
+An operator-triggered SFL transfer (`OBS-20260819-001` in both skills, C3-universal;
+not routed through the ordinary `WF-STATE-013` pipeline — the occasion was a direct
+operator audit of a consuming project's build). `OBS-20260818-001` (`3.10.0`/`3.11.0`,
+PR #24) had already added the *negative* half of the duplication story to both
+skills: what the after-the-fact detection tooling does and does not catch. Neither
+skill's `## Workflow` ever gained the *positive* half — a step telling an author to
+search the tree, by shape, **before** writing a new implementation. Measured on one
+live TypeScript service tree (293 files, rename-tolerant structural fingerprint): a
+prior de-duplication task had already extracted three shared pieces of logic into a
+common module and still left the scaffold standing in ten independently maintained
+configuration modules, two of them token-identical after renaming even after that
+extraction; five access-guard files differed only in class name; the correct
+collapsed shape already existed one directory away, unused as an example. The Python
+plane's own already-recorded measurement (`OBS-20260818-001`) shows the same
+underlying cause: 11 of 13 repository bodies byte-identical, a defensive parser in
+five independently maintained copies.
+
+### What changed
+
+- **`SKILL.md`** (both skills) — a new `## Workflow` step 1, "Survey before you
+  write," ahead of the typing step; a new `## Rules` bullet stating the decision
+  order (extend → call → parameterized factory at the third occurrence → new file
+  only once the search comes back empty); a new `## Routing` table row.
+- **`references/duplication-survey.md`** (both skills, new file) — the search
+  procedure (by shape, never by name), the decision order, and the two invariants a
+  safe collapse must preserve (per-caller fail-closed test coverage; the union, never
+  a pick, of every caller's cases for a routine defending untrusted input — for
+  `python-coding` this cross-links the union rule `OBS-20260818-001` already put in
+  `references/security.md` rather than restating it).
+- **`references/lint-clean.md`** (both skills) — the existing duplication bullet
+  gained one cross-link sentence to the new survey file: it is the after-the-fact
+  check, the survey file is what runs before.
+- **`__test__/evals/typescript-coding/cases.json`** and
+  **`__test__/evals/python-coding/cases.json`** — two new cases each (23 total for
+  `typescript-coding`, 32 for `python-coding`): one `behavior` case (extend/call the
+  existing home instead of writing a renamed duplicate), one `negative` guard (the
+  survey step must not be read as blocking a genuinely new capability once the search
+  comes back empty).
+
+### How the change was made
+
+Test first: `TestDuplicationSurveyGuidance` in both skills' test modules pins the new
+`## Workflow` step, the `## Rules` bullet, the routing-table row, every section of the
+new reference file, and the cross-link sentence in `lint-clean.md` — 18 of 20
+assertions red before the delta (verified by temporarily reverting the content files
+while keeping the tests), green after. Negative guards confirm `OBS-20260818-001`'s
+own delta in both skills survives untouched, and that the new file cross-links rather
+than restates the pre-existing union-of-callers rule in `python-coding`'s
+`security.md`. A further guard pins that the evidence section carries the measured
+facts and carries no project name, framework name, or path from the reporting
+project's repository — the two skills stay universal.
+
+Deliberately out of scope: the bundled convention checkers
+(`scripts/check_conventions.py`, `scripts/check_py_conventions.py`) already have no
+structural, cross-file duplicate-detection capability (`OBS-20260818-001`); this delta
+does not add one — it addresses the moment before a duplicate is written, which no
+static checker can reach.
+
+`uv run skillctl validate && uv run skillctl test`: `997/997` passed, exit 0.
+
 ## [3.11.0] — 2026-08-18
 
 `python-coding` `1.8.0 → 1.9.0`

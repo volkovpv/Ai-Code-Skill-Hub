@@ -14,13 +14,19 @@ on top of this one.
 
 ## Workflow
 
-1. **Type strictly, name explicitly.** Apply the type-checker configuration
+1. **Survey before you write.** Before the first line of new implementation
+   code, search for the home this logic already has — by what it is built
+   out of, never by the name you are about to give it — and read the
+   sibling call sites of the same concern before deciding there is nothing
+   to extend. A new file is the last step of that search, not the first —
+   see [references/duplication-survey.md](references/duplication-survey.md).
+2. **Type strictly, name explicitly.** Apply the type-checker configuration
    and style rules in
    [references/typing-and-style.md](references/typing-and-style.md): full
    annotations on the public surface, closed sets as enums or `Literal`
    unions (never loose strings), `NewType`-branded ids, `Final` constants,
    frozen dataclasses, a single formatter.
-2. **Design the types before the code.** Model variant state as a tagged
+3. **Design the types before the code.** Model variant state as a tagged
    union of frozen dataclasses so invalid combinations cannot type-check,
    close every `match` over a union with `assert_never`, keep inputs wide
    (`Sequence`, `Mapping`, `Iterable`, protocols) and outputs narrow,
@@ -29,29 +35,29 @@ on top of this one.
    `TypeVar` only when it relates two types, and derive related types from
    one source of truth — see
    [references/generics-and-protocols.md](references/generics-and-protocols.md).
-3. **Write it secure by default.** Untrusted input never reaches a shell,
+4. **Write it secure by default.** Untrusted input never reaches a shell,
    a query string, `eval`/`exec`, or a pickle; paths are
    containment-checked, temp files atomic, TLS verification stays on,
    secrets come from `secrets` and compare in constant time — see
    [references/security.md](references/security.md).
-4. **Handle errors and the environment deliberately.** Catch the narrowest
+5. **Handle errors and the environment deliberately.** Catch the narrowest
    exception type, never swallow an error, wrap with `raise ... from` at
    most once at the source, give every external call a timeout, centralize
    `os.environ` access, log each failure once with its chain — see
    [references/errors-config-logging.md](references/errors-config-logging.md).
-5. **Supervise every concurrent path.** Structured concurrency by default:
+6. **Supervise every concurrent path.** Structured concurrency by default:
    `asyncio.TaskGroup`, `asyncio.timeout`, no fire-and-forget tasks, no
    blocking calls on the event loop, locks that never lean on the GIL —
    see [references/concurrency.md](references/concurrency.md).
-6. **Get the runtime values right.** Aware-UTC datetimes, monotonic clocks
+7. **Get the runtime values right.** Aware-UTC datetimes, monotonic clocks
    for durations, `Decimal` (or integer minor units) for money, every
    resource behind a context manager, no quadratic string building — see
    [references/runtime-correctness.md](references/runtime-correctness.md).
-7. **Use the modern language, version-gated.** Prefer the current idiom
+8. **Use the modern language, version-gated.** Prefer the current idiom
    for the project's Python floor and purge the banned legacy forms —
    what 3.12/3.13/3.14 each unlock is in
    [references/modern-python.md](references/modern-python.md).
-8. **Write it lint-clean the first time.** A strict lint stack (a strict
+9. **Write it lint-clean the first time.** A strict lint stack (a strict
    type checker plus a broad Ruff-style rule set) rejects far more than the
    runtime and counts warnings too — explicit boolean expressions, no
    `or`-defaults, no mutation of parameters, no mutable default arguments,
@@ -59,25 +65,25 @@ on top of this one.
    surface. Follow [references/lint-clean.md](references/lint-clean.md) so
    the project's `lint` / `typecheck` come back with zero errors and zero
    warnings.
-9. **Self-check before handing off.** Run the convention checker over the
-   files you touched:
+10. **Self-check before handing off.** Run the convention checker over the
+    files you touched:
 
-   ```bash
-   python scripts/check_py_conventions.py path/to/changed.py
-   ```
+    ```bash
+    python scripts/check_py_conventions.py path/to/changed.py
+    ```
 
-   It is a heuristic backstop — read every finding in context, then run
-   the project's real `lint` / `typecheck` / `test`, which are
-   authoritative. A checked false positive may be suppressed only per
-   rule code and only with a written reason:
+    It is a heuristic backstop — read every finding in context, then run
+    the project's real `lint` / `typecheck` / `test`, which are
+    authoritative. A checked false positive may be suppressed only per
+    rule code and only with a written reason:
 
-   ```python
-   raw = os.environ.get("CI")  # skill-check-ignore: PY-ENV -- CI detection in a build script
-   ```
+    ```python
+    raw = os.environ.get("CI")  # skill-check-ignore: PY-ENV -- CI detection in a build script
+    ```
 
-   A bare `skill-check-ignore`, an unknown code, or an empty
-   justification aborts the check (exit 2); `PY-SUPPRESS` can never be
-   suppressed.
+    A bare `skill-check-ignore`, an unknown code, or an empty
+    justification aborts the check (exit 2); `PY-SUPPRESS` can never be
+    suppressed.
 
 ## Routing: what to read when
 
@@ -85,6 +91,7 @@ Do not preload the whole skill; open a file only when its trigger fires.
 
 | Situation | Read |
 |-----------|------|
+| Deciding whether to extend, call, or write new — searching by shape, the decision order, what a safe collapse preserves | [references/duplication-survey.md](references/duplication-survey.md) |
 | Choosing types, checker configuration, constants, or style | [references/typing-and-style.md](references/typing-and-style.md) |
 | Modeling states, tagged unions, narrowing, boundary validation, exhaustive `match` | [references/type-design.md](references/type-design.md) |
 | Writing a generic or protocol, typing decorators/wrappers, deriving types from a source of truth | [references/generics-and-protocols.md](references/generics-and-protocols.md) |
@@ -185,6 +192,17 @@ has been promoted into `knowledge/` or this workflow.
   [references/lint-clean.md](references/lint-clean.md). Its duplicate-branch
   and duplicate-function rule is not backed by this stack's blocking
   linter — verify it by hand, not by a green lint run.
+- Before writing a new implementation, search for its existing home **by
+  shape, never by name** — a copy is renamed by construction, so a name
+  search is the one search guaranteed to miss it. Extend the existing home,
+  then call it with your own parameters, then — at the third occurrence of
+  one shape — introduce a parameterized factory; write a new file only
+  because that search came back empty. A shared fail-closed branch keeps a
+  test per caller; a shared routine defending untrusted input already has
+  its own union-of-callers rule (see
+  [references/security.md](references/security.md)) — see
+  [references/duplication-survey.md](references/duplication-survey.md) for
+  the search itself.
 - Prefer the modern form for the project's Python floor and purge banned
   legacy spellings (`Optional`, `typing.List`, `utcnow`, `pytz`,
   `get_event_loop`, `os.path` plumbing) — the version-gated list is in

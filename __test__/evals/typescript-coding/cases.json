@@ -1,10 +1,23 @@
 {
   "schema_version": 1,
   "skill": "typescript-coding",
-  "platforms": ["claude", "codex", "opencode", "universal"],
+  "platforms": [
+    "claude",
+    "codex",
+    "opencode",
+    "universal"
+  ],
   "tiers": {
-    "gate": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium" },
-    "debug": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "low" }
+    "gate": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "medium"
+    },
+    "debug": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "low"
+    }
   },
   "cases": [
     {
@@ -14,8 +27,13 @@
       "prompt": "In TypeScript, add an OrderStatus type for the values pending, paid and cancelled. Show only the single final code block you recommend, with no alternative approaches and no examples of what to avoid.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["as const", "(?i)union|keyof typeof"],
-        "stdout_not_contains": ["enum OrderStatus"]
+        "stdout_matches": [
+          "as const",
+          "(?i)union|keyof typeof"
+        ],
+        "stdout_not_contains": [
+          "enum OrderStatus"
+        ]
       }
     },
     {
@@ -25,8 +43,14 @@
       "prompt": "Review this TypeScript utility function for code quality: export function parse(x) { return JSON.parse(x as any); }",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(any|unknown)"],
-        "stdout_not_contains": ["hexagonal", "use case", "driven adapter"]
+        "stdout_matches": [
+          "(?i)(any|unknown)"
+        ],
+        "stdout_not_contains": [
+          "hexagonal",
+          "use case",
+          "driven adapter"
+        ]
       }
     },
     {
@@ -36,7 +60,9 @@
       "prompt": "I have a config.mts module that reads process.env in five different places scattered through the file. How should I restructure env access?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(config|configuration|central)"]
+        "stdout_matches": [
+          "(?i)(config|configuration|central)"
+        ]
       }
     },
     {
@@ -46,7 +72,10 @@
       "prompt": "Which tsconfig compiler flags should a strict TypeScript project enable beyond strict:true?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["noUncheckedIndexedAccess", "exactOptionalPropertyTypes"]
+        "stdout_matches": [
+          "noUncheckedIndexedAccess",
+          "exactOptionalPropertyTypes"
+        ]
       }
     },
     {
@@ -56,7 +85,10 @@
       "prompt": "Our project rules explicitly mandate native TypeScript enums for all closed sets — a documented, settled team decision. Take that decision as given; do not look for the file that records it. Add a PaymentKind closed set with values card and cash following the project rules, as a code snippet in your answer.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["enum", "(?i)project"]
+        "stdout_matches": [
+          "enum",
+          "(?i)project"
+        ]
       }
     },
     {
@@ -66,8 +98,12 @@
       "prompt": "tsc fails on one line in checkout.ts and I need CI green in ten minutes. Should I add @ts-ignore above the failing line?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(no|avoid|instead|fix)"],
-        "stdout_not_contains": ["// @ts-ignore is fine"]
+        "stdout_matches": [
+          "(?i)(no|avoid|instead|fix)"
+        ],
+        "stdout_not_contains": [
+          "// @ts-ignore is fine"
+        ]
       }
     },
     {
@@ -77,7 +113,11 @@
       "prompt": "Write a small Python function that counts vowels in a string.",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["as const", "tsconfig", "unique symbol"]
+        "stdout_not_contains": [
+          "as const",
+          "tsconfig",
+          "unique symbol"
+        ]
       }
     },
     {
@@ -87,8 +127,13 @@
       "prompt": "Review this signature and show only the single replacement you recommend, with one sentence of rationale, no alternatives and no examples of what to avoid: export function parseJson<T>(raw: string): T",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["unknown", "(?i)(assert|narrow|call site)"],
-        "stdout_not_contains": ["parseJson<T>(raw: string): T"]
+        "stdout_matches": [
+          "unknown",
+          "(?i)(assert|narrow|call site)"
+        ],
+        "stdout_not_contains": [
+          "parseJson<T>(raw: string): T"
+        ]
       }
     },
     {
@@ -98,7 +143,9 @@
       "prompt": "We have `const FEATURE_FLAGS = { search: true, exportCsv: false } as const;` and, next to it, a hand-written `type FeatureFlagName = 'search' | 'exportCsv';` that people keep forgetting to update. Show only the single declaration you recommend to replace the hand-written type.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["keyof typeof FEATURE_FLAGS"]
+        "stdout_matches": [
+          "keyof typeof FEATURE_FLAGS"
+        ]
       }
     },
     {
@@ -108,7 +155,10 @@
       "prompt": "I have a switch over a discriminated union with three members, and it already has a case for each of the three, so no default branch is reachable today. Should I add one anyway, and what should it do? Answer with a verdict first, then one short code block.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["never", "(?i)(default|exhaustive)"]
+        "stdout_matches": [
+          "never",
+          "(?i)(default|exhaustive)"
+        ]
       }
     },
     {
@@ -118,7 +168,10 @@
       "prompt": "Our findSkuPosition(sku) returns -1 when the sku is not in the basket, and two call sites forgot to check for it. Show only the signature and return shape you recommend, plus one sentence saying why the checker can now force callers to handle absence.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(\\| *null|\\| *undefined|kind:)", "(?i)(caller|handle|checker|compile)"]
+        "stdout_matches": [
+          "(?i)(\\| *null|\\| *undefined|kind:)",
+          "(?i)(caller|handle|checker|compile)"
+        ]
       }
     },
     {
@@ -128,7 +181,10 @@
       "prompt": "In our fetch wrapper we write `const user: ApiUser = await res.json();` where ApiUser is a hand-written interface sitting next to a separately hand-written validator function. Say what that annotation guarantees at runtime, show the shape you recommend instead, and say what should happen to that hand-written interface-plus-validator pair. Keep it short.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(unknown|guarantees? nothing|nothing at runtime|erased)", "(?i)(single source|one source|derive|infer|schema)"]
+        "stdout_matches": [
+          "(?i)(unknown|guarantees? nothing|nothing at runtime|erased)",
+          "(?i)(single source|one source|derive|infer|schema)"
+        ]
       }
     },
     {
@@ -138,7 +194,10 @@
       "prompt": "Our route table is written as `const ROUTES = { home: '/', profile: '/users/:id' } as Record<string, string>;`. Callers need the exact key names to survive, and every value must be checked at declaration time to be a path starting with a slash. Show only the single declaration you recommend, with no alternatives.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["satisfies", "as const"]
+        "stdout_matches": [
+          "satisfies",
+          "as const"
+        ]
       }
     },
     {
@@ -148,7 +207,10 @@
       "prompt": "Show the try/catch block you recommend around a `await driver.connect(dsn)` call that must surface to callers as a StorageUnavailableError — no alternatives and no examples of what to avoid — and add one sentence naming the static type the caught binding has and what the wrapper must keep from the original error.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["unknown", "cause"]
+        "stdout_matches": [
+          "unknown",
+          "cause"
+        ]
       }
     },
     {
@@ -158,7 +220,10 @@
       "prompt": "In `const pageSize = input.pageSize || 50;` an explicit 0 must stay 0. Show only the corrected line and one sentence of rationale.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["\\?\\?", "(?i)(0|zero|falsy)"]
+        "stdout_matches": [
+          "\\?\\?",
+          "(?i)(0|zero|falsy)"
+        ]
       }
     },
     {
@@ -168,7 +233,10 @@
       "prompt": "Our code has `if (name) { ... }` where name is typed string, and `if (count) { ... }` where count is typed number. Show only the two corrected conditions, nothing else.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["name !== ''|name !== \"\"|name\\.length > 0", "count (!==|>) 0"]
+        "stdout_matches": [
+          "name !== ''|name !== \"\"|name\\.length > 0",
+          "count (!==|>) 0"
+        ]
       }
     },
     {
@@ -178,7 +246,10 @@
       "prompt": "We call `sendAnalytics(event);` from a request handler and deliberately do not want to wait for its promise. The linter flags the line. Show only the line you recommend and one sentence of rationale.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["void ", "(?i)(floating|unhandled|reject|deliberate|intentional|explicit)"]
+        "stdout_matches": [
+          "void ",
+          "(?i)(floating|unhandled|reject|deliberate|intentional|explicit)"
+        ]
       }
     },
     {
@@ -188,8 +259,14 @@
       "prompt": "In a .js module checked with // @ts-check, I wrote this above the constant and the editor still shows no type:\n// @typedef {{ id: string, name: string }} User\n// @type {User}\nconst user = { id: 1 };\nWhy does the annotation have no effect, and what exactly should the comment look like? Show only the corrected comment block and one sentence of rationale.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["/\\*\\*", "(?i)(ignor|inert|not jsdoc|no effect|only.{0,20}block|two asterisk)"],
-        "stdout_not_contains": ["// @typedef", "// @type {User}"]
+        "stdout_matches": [
+          "/\\*\\*",
+          "(?i)(ignor|inert|not jsdoc|no effect|only.{0,20}block|two asterisk)"
+        ],
+        "stdout_not_contains": [
+          "// @typedef",
+          "// @type {User}"
+        ]
       }
     },
     {
@@ -199,8 +276,13 @@
       "prompt": "In a TypeScript test, write the negative type-level assertion that pins that `greet(42)` does not compile, given `export const greet = (name: string): string => `hi ${name}`;`. Show only the two lines of test code, nothing else.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["// @ts-expect-error"],
-        "stdout_not_contains": ["/** @ts-expect-error", "/* @ts-expect-error"]
+        "stdout_matches": [
+          "// @ts-expect-error"
+        ],
+        "stdout_not_contains": [
+          "/** @ts-expect-error",
+          "/* @ts-expect-error"
+        ]
       }
     },
     {
@@ -210,7 +292,10 @@
       "prompt": "Our lint stack (typescript-eslint strictTypeChecked + SonarJS, exactly as this skill configures) is fully green, zero errors and zero warnings. I have computeTotal in a.ts and, in a different module, deriveTotal in b.ts with the identical body — only the function name and one parameter renamed. Is this fine to leave as is because lint passed, or should I do something about it? Answer in one short paragraph.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(extract|factor|shared|one home|duplicat)", "(?i)(lint|green|pass|clean)"]
+        "stdout_matches": [
+          "(?i)(extract|factor|shared|one home|duplicat)",
+          "(?i)(lint|green|pass|clean)"
+        ]
       }
     },
     {
@@ -220,7 +305,43 @@
       "prompt": "In one file I have two functions with byte-identical bodies and different names — no renamed internal variables, nothing else different. Will the configured lint stack (typescript-eslint + SonarJS, no-identical-functions) flag this on its own, or do I need a separate manual check just to catch this particular case?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["the linter will not catch this", "lint will not flag this", "no rule catches this", "invisible to the linter"]
+        "stdout_not_contains": [
+          "the linter will not catch this",
+          "lint will not flag this",
+          "no rule catches this",
+          "invisible to the linter"
+        ]
+      }
+    },
+    {
+      "id": "survey-before-writing-extend-dont-duplicate",
+      "kind": "behavior",
+      "requirement": "Before writing new logic, search the existing tree by shape and extend or call the existing home rather than writing a fresh, differently-named duplicate.",
+      "prompt": "Our codebase already has this function in pricing/order.ts:\nexport function computeOrderTotal(items: ReadonlyArray<{ price: number; qty: number }>): number { return items.reduce((sum, i) => sum + i.price * i.qty, 0); }\nI need the exact same computation available from checkout/summary.ts, under the name deriveCheckoutTotal. What should I do, and why? Answer in one short paragraph, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(import|reuse|call|existing|extend)",
+          "(?i)(duplicat|copy|new (function|implementation))"
+        ],
+        "stdout_not_contains": [
+          "create a new function with the same body",
+          "just copy the implementation"
+        ]
+      }
+    },
+    {
+      "id": "survey-does-not-block-genuinely-new-capability",
+      "kind": "negative",
+      "requirement": "The survey step must not be read as blocking new code when nothing comparable exists — writing new is a normal outcome of the decision order once the search comes back empty, not a last resort to avoid.",
+      "prompt": "I'm building the very first HTTP client wrapper for this project; I already searched the whole tree by what it would be built out of and nothing comparable exists anywhere. Should I hold off writing it until some further formal review, or can I write it now? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "hold off",
+          "wait until a formal review",
+          "do not write it yet"
+        ]
       }
     }
   ]

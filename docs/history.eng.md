@@ -36,6 +36,111 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A duplication rule that told you what got caught, never what to do before you wrote
+
+**Releases:** project `3.12.0` (`typescript-coding` `1.11.0 → 1.12.0`,
+`python-coding` `1.9.0 → 1.10.0`)
+**Type:** gap closed — both skills' duplication guidance covered only the moment
+after a copy already exists; neither ever told an author to look before writing one
+
+### In one sentence
+
+A prior fix in both skills stated exactly what the stack's own tooling does
+and does not catch after a duplicate is written; this one adds the step
+that comes before all of that — search the tree by shape, extend or call
+what is already there, and reach for a new file only once that search
+comes back empty.
+
+### The gap, precisely
+
+The prior fix (below) told a reader, correctly, that a clean lint run is
+not proof a duplicate is absent. What it left standing in both skills:
+`## Workflow` opened directly at typing and style, with no step for
+searching the existing tree first, and `## Rules` had a rule about
+recognizing a duplicate but none about avoiding writing one. An author
+following either skill exactly, from a blank editor, had no instruction
+telling them to look before they typed the first line — and measured
+evidence from one live tree shows exactly that: a prior de-duplication
+task had already extracted three shared pieces of logic into a common
+module, and the scaffold around them still stood, duplicated, in ten
+further modules — two of the ten token-identical after renaming even
+after that extraction — while the correct collapsed shape sat one
+directory away, unused as the example it could have been.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Requirement arrives for logic\nthat may already exist"] --> B["Workflow opens at typing/style,\nno search step"]
+    B --> C["Author writes a new,\ndifferently-named implementation"]
+    C --> D["Lint stack is fully green —\nthe checks that exist are same-file only"]
+    D --> E["Copy ships undetected,\nand the next copy repeats the pattern"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Requirement arrives for logic\nthat may already exist"] --> B["Workflow step 1: search by shape,\nnever by name"]
+    B --> C{"Found an existing home?"}
+    C -->|yes, one caller so far| D["Extend it, or call it\nwith your own parameters"]
+    C -->|yes, third occurrence\nof one shape| E["Factor a parameterized\nfactory in the shared home"]
+    C -->|no, search came\nback empty| F["Write the new file —\nthe last step, not the first"]
+```
+
+### Example you can run in your head
+
+```ts
+// pricing/order.ts — already exists
+export function computeOrderTotal(
+  items: ReadonlyArray<{ price: number; qty: number }>,
+): number {
+  return items.reduce((sum, i) => sum + i.price * i.qty, 0);
+}
+```
+
+A new requirement asks for the identical computation from
+`checkout/summary.ts`. Before this delta, nothing in either skill's
+workflow points an author back at `pricing/order.ts`; the fastest path is
+a fresh `deriveCheckoutTotal` with the same body, renamed — and the four
+same-file, textual-identity lint rules the prior fix already documented
+stay silent, exactly as advertised. After this delta, workflow step 1 is
+the search that finds `computeOrderTotal` before any new code is written,
+and the decision order says: call it.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Search by shape, never by name | A copy is renamed by construction, so a name search is guaranteed to miss it; search by what the logic is built out of |
+| The decision order | Extend the existing home → call it with your own parameters → at the third occurrence of one shape, factor a parameterized home → write a new file only once that search comes back empty |
+| A new file is the last step | An absence nobody searched for is not a finding |
+| Two invariants a collapse may not weaken | A fail-closed branch keeps a test per caller, not once against the shared helper; a routine defending untrusted input takes the union of every caller's cases, never one caller's slice |
+
+### Where the rule stops
+
+The survey step is not a gate that blocks writing new code — once the
+search genuinely comes back empty, writing the new file is the correct
+and expected outcome, not a last resort to justify; a dedicated negative
+case pins exactly that. Teaching either skill's own bundled convention
+checker to perform this search automatically is left undone here — it
+needs a structural, cross-file, shape-aware search that a per-file lexical
+scanner cannot do.
+
+### How the change was made
+
+Test first: a regression pinning the new `## Workflow` step, the `##
+Rules` bullet, the routing-table row, every section of the new
+`references/duplication-survey.md`, and the cross-link sentence in
+`references/lint-clean.md` was confirmed genuinely red against the
+pre-change files (18 of 20 assertions, verified by reverting the content
+while keeping the tests) → the minimal guidance was added → the regression
+went green → two new evaluation cases per skill (one behavior, one
+negative) were added → the skill's own test suite and the whole library's
+suite ran with no regressions.
+
+---
+
 ## A rule with no check behind it, and a parser that only knew its own caller
 
 **Releases:** project `3.11.0` (`python-coding` `1.8.0 → 1.9.0`)
