@@ -29,12 +29,13 @@ skills:
   # four skills: 226 of 231 attempts. Cases whose text was corrected during
   # that session were re-measured on the same tier afterwards. Re-measure
   # the same way after changing a skill or its cases.
-  # typescript-coding: 21 cases (OBS-20260818-001 added 2) — unmeasured
-  # against the declared bar since; the prior measurement was 17 cases,
-  # 50/51 — 2/3 on boundary-data-is-parsed-not-annotated.
+  # typescript-coding: 23 cases (OBS-20260818-001 added 2, OBS-20260819-001
+  # added 2) — unmeasured against the declared bar since; the prior
+  # measurement was 17 cases, 50/51 — 2/3 on
+  # boundary-data-is-parsed-not-annotated.
   - name: typescript-coding
     path: skills/typescript-coding
-    version: 1.11.0
+    version: 1.12.0
     status: stable
     summary: Universal strictly-typed TypeScript coding standard and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
@@ -80,13 +81,13 @@ skills:
       secrets_allowed: false
       observation_review_required: true
   # python-coding: 30 cases (OBS-20260818-001 added 4) — unmeasured against
-  # the declared bar since; the prior measurement was 24 cases, 70/72 — 2/3
-  # on cancellederror-propagates and concurrent-fanout-uses-taskgroup
-  # (OBS-20260814-001's 2 cases, added since that measurement, were also
-  # not yet re-measured).
+  # python-coding: 32 cases (OBS-20260818-001 added 4, OBS-20260819-001
+  # added 2) — unmeasured against the declared bar since; the prior
+  # measurement was 24 cases, 70/72 — 2/3 on cancellederror-propagates and
+  # concurrent-fanout-uses-taskgroup.
   - name: python-coding
     path: skills/python-coding
-    version: 1.9.0
+    version: 1.10.0
     status: stable
     summary: Universal strictly-typed, secure-by-default Python coding standard (typing, security, structured concurrency, runtime correctness, version-gated 3.12-3.14 features) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

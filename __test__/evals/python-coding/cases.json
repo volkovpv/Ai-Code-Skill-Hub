@@ -1,10 +1,23 @@
 {
   "schema_version": 1,
   "skill": "python-coding",
-  "platforms": ["claude", "codex", "opencode", "universal"],
+  "platforms": [
+    "claude",
+    "codex",
+    "opencode",
+    "universal"
+  ],
   "tiers": {
-    "gate": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "medium" },
-    "debug": { "vendor": "anthropic", "model": "claude-sonnet-5", "effort": "low" }
+    "gate": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "medium"
+    },
+    "debug": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "low"
+    }
   },
   "cases": [
     {
@@ -14,8 +27,12 @@
       "prompt": "In Python, add an OrderStatus type for the values pending, paid and cancelled. Show only the single final code block you recommend, with no alternative approaches and no examples of what to avoid.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(StrEnum|Enum|Literal)"],
-        "stdout_not_contains": ["ORDER_STATUSES = [\"pending\", \"paid\", \"cancelled\"]"]
+        "stdout_matches": [
+          "(?i)(StrEnum|Enum|Literal)"
+        ],
+        "stdout_not_contains": [
+          "ORDER_STATUSES = [\"pending\", \"paid\", \"cancelled\"]"
+        ]
       }
     },
     {
@@ -25,8 +42,14 @@
       "prompt": "Review this Python utility function for code quality: def parse(x): return json.loads(x)",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(annotat|typed|validat)"],
-        "stdout_not_contains": ["hexagonal", "use case", "driven adapter"]
+        "stdout_matches": [
+          "(?i)(annotat|typed|validat)"
+        ],
+        "stdout_not_contains": [
+          "hexagonal",
+          "use case",
+          "driven adapter"
+        ]
       }
     },
     {
@@ -36,7 +59,9 @@
       "prompt": "My worker.py module reads os.environ in five different places scattered through the file. How should I restructure env access?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(config|configuration|central)"]
+        "stdout_matches": [
+          "(?i)(config|configuration|central)"
+        ]
       }
     },
     {
@@ -46,7 +71,10 @@
       "prompt": "How should the static type checker be configured for a strict production Python project, and what does that mode imply?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)strict", "(?i)(mypy|pyright)"]
+        "stdout_matches": [
+          "(?i)strict",
+          "(?i)(mypy|pyright)"
+        ]
       }
     },
     {
@@ -56,7 +84,9 @@
       "prompt": "Our project rules explicitly mandate idiomatic PEP 8 truthiness for collection emptiness checks — a documented, settled team decision. Take that decision as given; do not look for the file that records it. Write a small function that returns the first element of a list of ints or None when the list is empty, following the project rules.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(if\\s+\\w+|not\\s+\\w+|project)"]
+        "stdout_matches": [
+          "(?i)(if\\s+\\w+|not\\s+\\w+|project)"
+        ]
       }
     },
     {
@@ -66,8 +96,12 @@
       "prompt": "mypy fails on one line in checkout.py and I need CI green in ten minutes. Should I add # type: ignore above the failing line?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(no|avoid|instead|fix)"],
-        "stdout_not_contains": ["# type: ignore is fine"]
+        "stdout_matches": [
+          "(?i)(no|avoid|instead|fix)"
+        ],
+        "stdout_not_contains": [
+          "# type: ignore is fine"
+        ]
       }
     },
     {
@@ -77,8 +111,13 @@
       "prompt": "In Python, run the `convert` CLI tool on a filename provided by the user and capture its output. Show only the single final code block you recommend, with no examples of what to avoid.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)subprocess"],
-        "stdout_not_contains": [", shell=True", "os.system("]
+        "stdout_matches": [
+          "(?i)subprocess"
+        ],
+        "stdout_not_contains": [
+          ", shell=True",
+          "os.system("
+        ]
       }
     },
     {
@@ -88,8 +127,12 @@
       "prompt": "Write a small Python function that reads a settings.yaml file and returns the parsed mapping. Show only the single final code block you recommend.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["safe_load"],
-        "stdout_not_contains": ["yaml.load("]
+        "stdout_matches": [
+          "safe_load"
+        ],
+        "stdout_not_contains": [
+          "yaml.load("
+        ]
       }
     },
     {
@@ -99,7 +142,9 @@
       "prompt": "In Python, fetch three URLs concurrently with an async HTTP client and return the three response bodies. Show only the single final code block you recommend.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(TaskGroup|task_group)"]
+        "stdout_matches": [
+          "(?i)(TaskGroup|task_group)"
+        ]
       }
     },
     {
@@ -109,7 +154,11 @@
       "prompt": "Write a small Go function that counts vowels in a string.",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["mypy", "dataclass", "def count_vowels"]
+        "stdout_not_contains": [
+          "mypy",
+          "dataclass",
+          "def count_vowels"
+        ]
       }
     },
     {
@@ -119,8 +168,14 @@
       "prompt": "In Python, look up a user row by an email address that arrived in an HTTP request, using a DB-API cursor. Show only the single final code block you recommend, with no alternatives and no examples of what to avoid.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)execute\\(", "(\\?|%s|:email|%\\(email\\)s)"],
-        "stdout_not_contains": ["f\"SELECT", "f'SELECT"]
+        "stdout_matches": [
+          "(?i)execute\\(",
+          "(\\?|%s|:email|%\\(email\\)s)"
+        ],
+        "stdout_not_contains": [
+          "f\"SELECT",
+          "f'SELECT"
+        ]
       }
     },
     {
@@ -130,7 +185,10 @@
       "prompt": "A download endpoint builds a file path from a user-supplied name under a fixed base directory. Show only the containment check you recommend before the file is opened, with no alternatives.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(resolve\\(\\)|realpath)", "(?i)(is_relative_to|commonpath|\\.parents)"]
+        "stdout_matches": [
+          "(?i)(resolve\\(\\)|realpath)",
+          "(?i)(is_relative_to|commonpath|\\.parents)"
+        ]
       }
     },
     {
@@ -140,7 +198,10 @@
       "prompt": "We cache objects in Redis and read them back with pickle.loads(raw). The same cache is also written by an ingestion job that stores documents received from partners. Is pickle acceptable here? Answer with a verdict first, then what you would use instead.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(arbitrary code|code execution|remote code|never)", "(?i)(json|msgpack|data-only|validat)"]
+        "stdout_matches": [
+          "(?i)(arbitrary code|code execution|remote code|never)",
+          "(?i)(json|msgpack|data-only|validat)"
+        ]
       }
     },
     {
@@ -150,7 +211,10 @@
       "prompt": "Show only the two Python lines you recommend: generating a password-reset token, and comparing a token submitted by a client with the stored one. No alternatives, no examples of what to avoid.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["secrets\\.token_", "(hmac|secrets)\\.compare_digest"]
+        "stdout_matches": [
+          "secrets\\.token_",
+          "(hmac|secrets)\\.compare_digest"
+        ]
       }
     },
     {
@@ -160,7 +224,10 @@
       "prompt": "Our staging environment has a certificate our Python HTTP client rejects, and the quickest fix is passing verify=False on the call. Should we ship that? Answer with a verdict first, then what to do instead.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(no|never|not)", "(?i)(trust store|certificate|ca bundle|ca_bundle|cert)"]
+        "stdout_matches": [
+          "(?i)(no|never|not)",
+          "(?i)(trust store|certificate|ca bundle|ca_bundle|cert)"
+        ]
       }
     },
     {
@@ -170,7 +237,10 @@
       "prompt": "We store user passwords as sha256(password + salt) in Python. Say what is wrong with that, and show only the replacement you recommend. Keep it short.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(argon2|scrypt)", "(?i)(memory|cost|fast|brute)"]
+        "stdout_matches": [
+          "(?i)(argon2|scrypt)",
+          "(?i)(memory|cost|fast|brute)"
+        ]
       }
     },
     {
@@ -180,7 +250,9 @@
       "prompt": "This coroutine awaits an HTTP call with no deadline at all: `resp = await client.get(url)`. Show only the corrected block you recommend, with no alternatives.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(asyncio\\.timeout|timeout\\s*=)"]
+        "stdout_matches": [
+          "(?i)(asyncio\\.timeout|timeout\\s*=)"
+        ]
       }
     },
     {
@@ -190,7 +262,10 @@
       "prompt": "Our worker's main loop contains `except asyncio.CancelledError:` followed by a log line and a plain `return`. What breaks because of that, and what must the handler do instead? Answer with a verdict first.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)re-?raise", "(?i)(timeout|task ?group|shutdown|cancel)"]
+        "stdout_matches": [
+          "(?i)re-?raise",
+          "(?i)(timeout|task ?group|shutdown|cancel)"
+        ]
       }
     },
     {
@@ -200,7 +275,10 @@
       "prompt": "Two threads increment a shared dict counter with `counts[key] += 1`. A colleague says the GIL makes that atomic, so no lock is needed. Is the colleague right? Answer with a verdict first, then what the code should do.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(lock|queue)", "(?i)(free.?threaded|not atomic|race|read-modify-write|check-then-act)"]
+        "stdout_matches": [
+          "(?i)(lock|queue)",
+          "(?i)(free.?threaded|not atomic|race|read-modify-write|check-then-act)"
+        ]
       }
     },
     {
@@ -210,7 +288,11 @@
       "prompt": "Our records are stamped with `datetime.utcnow()`. Show only the replacement line you recommend and one sentence of rationale.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)datetime\\.now\\(", "(?i)(timezone\\.utc|UTC)", "(?i)(naive|aware)"]
+        "stdout_matches": [
+          "(?i)datetime\\.now\\(",
+          "(?i)(timezone\\.utc|UTC)",
+          "(?i)(naive|aware)"
+        ]
       }
     },
     {
@@ -220,7 +302,10 @@
       "prompt": "Our invoice totals are Python floats and the sums drift by cents. Show the representation you recommend, and how one amount is constructed from a JSON payload. Keep it short.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)decimal", "(?i)(str|string|minor unit|cents|int)"]
+        "stdout_matches": [
+          "(?i)decimal",
+          "(?i)(str|string|minor unit|cents|int)"
+        ]
       }
     },
     {
@@ -230,7 +315,10 @@
       "prompt": "A class in our code opens a socket in __init__ and closes it in __del__. Say what is wrong with that, and show the lifecycle you recommend instead. Keep it short.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(__enter__|with |context manager)", "(?i)(__del__|garbage|nondeterministic|never run|interpreter shutdown)"]
+        "stdout_matches": [
+          "(?i)(__enter__|with |context manager)",
+          "(?i)(__del__|garbage|nondeterministic|never run|interpreter shutdown)"
+        ]
       }
     },
     {
@@ -240,7 +328,10 @@
       "prompt": "Inside `except OSError as err:` in our storage adapter we write `raise StorageUnavailableError(\"connect failed\")`. The linter is silent but a reviewer objects. Show only the corrected raise statement and one sentence of rationale.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["from err", "(?i)(cause|chain|traceback|context)"]
+        "stdout_matches": [
+          "from err",
+          "(?i)(cause|chain|traceback|context)"
+        ]
       }
     },
     {
@@ -250,7 +341,11 @@
       "prompt": "This helper is annotated `def load(items: typing.List[str], flag: typing.Optional[bool]) -> typing.Dict[str, int]:` in a project whose Python floor is 3.12. Show only the corrected signature you recommend.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["list\\[str\\]", "bool \\| None", "dict\\[str, int\\]"]
+        "stdout_matches": [
+          "list\\[str\\]",
+          "bool \\| None",
+          "dict\\[str, int\\]"
+        ]
       }
     },
     {
@@ -260,7 +355,10 @@
       "prompt": "Our settings loader catches a schema-validation library's ValidationError — its own str() embeds the rejected input value — and re-raises `raise SettingsRefused(\"invalid configuration: see variable names above\") from err`, naming no value. At the top-level handler we call `logger.exception(err)` so the full chain, `__cause__` included, reaches the logs. Is this logging call safe to leave exactly as written, given the input can contain a secret? Answer in one short paragraph.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(leak|disclos|expos)", "(?i)(scrub|redact|do not log|not safe|strip)"]
+        "stdout_matches": [
+          "(?i)(leak|disclos|expos)",
+          "(?i)(scrub|redact|do not log|not safe|strip)"
+        ]
       }
     },
     {
@@ -270,7 +368,11 @@
       "prompt": "Our storage adapter catches `OSError` and re-raises `raise StorageUnavailableError(\"connect failed\") from err`; the top-level handler logs the full chain via `logger.exception(...)`. Is this a secret-disclosure risk?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["this leaks a secret", "this is a disclosure risk", "this is a secret-disclosure risk"]
+        "stdout_not_contains": [
+          "this leaks a secret",
+          "this is a disclosure risk",
+          "this is a secret-disclosure risk"
+        ]
       }
     },
     {
@@ -280,7 +382,10 @@
       "prompt": "Our blocking lint gate (`ruff`, the project's full configured rule set) is fully green, and the advisory duplicate-code check we also run reports nothing. I have `to_int_or_none` in one module and, in a different module, `coerce_optional_int` with the identical body — only the function name and parameter renamed. Is this fine to leave as is since both checks are clean, or should I do something about it? Answer in one short paragraph.",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(extract|factor|shared|one home|duplicat)", "(?i)(lint|clean|green|pass)"]
+        "stdout_matches": [
+          "(?i)(extract|factor|shared|one home|duplicat)",
+          "(?i)(lint|clean|green|pass)"
+        ]
       }
     },
     {
@@ -290,7 +395,12 @@
       "prompt": "I copied a function verbatim, with no renaming at all, from one module into a different module. Will a line-based duplicate-code check (like pylint's duplicate-code/R0801) catch this on its own, or do I need a separate manual check just for this exact case?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["it will not catch this", "no check catches this", "invisible to the tooling", "no tool will flag this"]
+        "stdout_not_contains": [
+          "it will not catch this",
+          "no check catches this",
+          "invisible to the tooling",
+          "no tool will flag this"
+        ]
       }
     },
     {
@@ -300,7 +410,10 @@
       "prompt": "Two independent modules each parse possibly-truncated JSON out of noisy model output. Each has its own small helper function, written separately, each tested only against the malformed shapes its own team happened to see in production. A new team wants to add a third caller with its own copy, tested against its own new malformed shape. What should we do instead, and why?",
       "expect": {
         "exit_code": 0,
-        "stdout_matches": ["(?i)(one|single|shared|common).{0,20}(home|place|implementation|function|helper)", "(?i)(union|all.{0,10}cases|every caller|combine)"]
+        "stdout_matches": [
+          "(?i)(one|single|shared|common).{0,20}(home|place|implementation|function|helper)",
+          "(?i)(union|all.{0,10}cases|every caller|combine)"
+        ]
       }
     },
     {
@@ -310,7 +423,41 @@
       "prompt": "I have one function that validates a single API endpoint's request body against untrusted network input, and it has exactly one caller in the codebase. Does this function need to be designed around a 'union of every caller's cases,' or is that guidance not about this situation?",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": ["yes, it needs the union of every caller's cases", "must anticipate other callers' cases"]
+        "stdout_not_contains": [
+          "yes, it needs the union of every caller's cases",
+          "must anticipate other callers' cases"
+        ]
+      }
+    },
+    {
+      "id": "survey-before-writing-extend-dont-duplicate",
+      "kind": "behavior",
+      "requirement": "Before writing new logic, search the existing tree by shape and extend or call the existing home rather than writing a fresh, differently-named duplicate.",
+      "prompt": "Our codebase already has this function in pricing/order.py:\ndef compute_order_total(items: Sequence[LineItem]) -> Decimal:\n    return sum((item.price * item.qty for item in items), start=Decimal(0))\nI need the exact same computation available from checkout/summary.py, under the name derive_checkout_total. What should I do, and why? Answer in one short paragraph, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(import|reuse|call|existing|extend)",
+          "(?i)(duplicat|copy|new (function|implementation))"
+        ],
+        "stdout_not_contains": [
+          "create a new function with the same body",
+          "just copy the implementation"
+        ]
+      }
+    },
+    {
+      "id": "survey-does-not-block-genuinely-new-capability",
+      "kind": "negative",
+      "requirement": "The survey step must not be read as blocking new code when nothing comparable exists — writing new is a normal outcome of the decision order once the search comes back empty, not a last resort to avoid.",
+      "prompt": "I'm building the very first HTTP client wrapper for this project; I already searched the whole tree by what it would be built out of and nothing comparable exists anywhere. Should I hold off writing it until some further formal review, or can I write it now? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "hold off",
+          "wait until a formal review",
+          "do not write it yet"
+        ]
       }
     }
   ]

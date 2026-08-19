@@ -113,7 +113,9 @@ cancellation, threads and locks) lives in [concurrency.md](concurrency.md).
   duplicate-code detector (e.g. `pylint`'s `duplicate-code`/`R0801`) — is
   itself **blind to identifier renaming**: a renamed copy of a duplicated
   implementation reports clean. A green lint run does not confirm this
-  rule; apply it by hand.
+  rule; apply it by hand. This is the after-the-fact check; for the search
+  to run *before* you write a duplicate in the first place, see
+  [duplication-survey.md](duplication-survey.md).
 - **Prefer the idiom the linter wants:** f-strings over `+`/`%`/
   `.format`; comprehensions over `map`/`filter`-with-lambda and
   accumulate-in-a-loop; `enumerate`/`zip` over manual index bookkeeping

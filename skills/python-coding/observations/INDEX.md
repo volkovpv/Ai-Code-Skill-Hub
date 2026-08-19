@@ -41,3 +41,15 @@ Reading rules for agents:
   filing's overbroad "no implementation-level rule at all" claim was withdrawn on
   re-run and the verdict rests on the two narrower, corrected grounds; reviewed by
   HC-AGENT-010, 2026-08-18, provisional pending PR merge by the operator).
+- [OBS-20260819-001](accepted/OBS-20260819-001.md) — `OBS-20260818-001` stated
+  the detection boundary and the union-of-callers rule, both about a
+  duplicate that already exists, but neither `## Workflow` nor `## Rules`
+  ever told an author to search the tree by shape *before* writing a new
+  implementation, so following the skill exactly still produced the copies
+  the linter cannot see (operator direct-audit transfer, 2026-08-19,
+  outside the ordinary `WF-STATE-013` pipeline; symmetric with a sibling
+  skill's transfer in the same library on the same date; evidence inherited from
+  `OBS-20260818-001`'s own measurement — 11 of 13 repository bodies
+  byte-identical, a defensive parser in five independently maintained
+  copies; reviewed by the operator, 2026-08-19, provisional pending PR
+  merge).
