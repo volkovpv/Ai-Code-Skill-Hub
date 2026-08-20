@@ -136,6 +136,17 @@ has been promoted into `knowledge/` or this workflow.
   type variables); prefer `Protocol`s as structural seams; derive related
   types from one source of truth — see
   [references/generics-and-protocols.md](references/generics-and-protocols.md).
+- **A completeness check derives its cases from the set's owner.** Where
+  the set is a value in this program (an `enum`, a `Literal` union), derive
+  the check from it. Where the set is owned **outside** the program — a
+  database schema's foreign keys, another service's enum, a protocol's
+  message types — obtain it from that owner (introspect, parse the spec,
+  walk the directory) and **diff**; a registry, guard, allowlist or
+  coverage table written by reading off the cases the code already handles
+  is self-referential and reports full coverage of a set it never read. The
+  rule holds for any verification artifact, not only a test file —
+  production code included. See
+  [references/generics-and-protocols.md](references/generics-and-protocols.md#a-completeness-check-derives-its-cases-from-the-sets-owner).
 - Immutable by default: `@dataclass(frozen=True, slots=True)` for data,
   `Final` for constants, `Sequence`/`Mapping`/`AbstractSet` (not
   `list`/`dict`/`set`) for parameters the function only reads; never mutate

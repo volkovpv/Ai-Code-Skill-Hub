@@ -5,6 +5,82 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.13.0] — 2026-08-20
+
+`typescript-coding` `1.12.0 → 1.13.0`, `python-coding` `1.10.0 → 1.11.0`
+
+Two field reports from consuming projects, transferred in one operator pass
+(`OBS-20260820-001` and `OBS-20260820-002` in both skills). Both are delta-sized
+and both sit next to a rule that was already there and already correct.
+
+### 1. A completeness check may be built from the code it checks
+
+`OBS-20260820-001`, verdict class C3, one deterministic project-independent
+minimal reproduction. Both skills told an author how to make a completeness check
+explicit and testable for a closed set whose ground truth is already a value in the
+same program — an enumeration, a literal union, `keyof T`. Neither said anything
+about a set owned **outside** the program: a database schema's foreign keys,
+another service's enumeration, a protocol's message types, the files in a
+directory.
+
+The gap is not cosmetic, because the wrong way round fails quietly. A registry,
+guard, allowlist or coverage table built by reading off the cases the code already
+handles is self-referential: every member of the set the code has forgotten is
+invisible to the code and to its own check at the same time, so the check reports
+full coverage of a set it never read. A mutation battery does not cover for it
+either — the mutants come from the same code the case list was read off, so the
+battery and the check share the blind spot. In the reported occurrence three
+consecutive gatekeeper rounds returned a critical failure on this one shape before
+it was named.
+
+The delta adds one `## Rules` bullet and one reference section to each skill:
+obtain the case list from the owner (introspect, parse the specification, walk the
+directory) and **diff**; a member present in the owner and absent from the handler
+is a failure reported by name. The rule is stated for any verification artifact,
+production code included, not only for a test file. Where the owner cannot be
+introspected at run time, the list is generated from the owner's artifact and
+committed, so drift becomes a diff someone has to accept.
+
+This record spent five consecutive passes at the reporting consumer without being
+transferred, for a routing reason rather than an evidentiary one: the principle was
+stated in this library only by a skill whose own declared scope is unit and
+integration tests, and the failing artifact was production code. The operator's
+routing decision of 2026-08-20 placed it in the two language standards, beside the
+in-program rule it widens.
+
+### 2. The decision order licensed a per-caller environment-variable name
+
+`OBS-20260820-002`, class C5 at the consumer with a narrow universal core that
+transfers on its own reproduction. `references/duplication-survey.md` listed "an
+environment-variable key" among the data a caller may legitimately differ by, with
+no condition attached. Read literally that licenses a per-caller variable name —
+and a per-caller name is precisely what licenses the copy the rest of that file
+exists to prevent: once two names exist for one role, the shared resolver has
+nothing left to be parameterized by, so it is copied too, and the copy is then
+justified by the rule meant to collapse it.
+
+The delta qualifies the decision-order item in place and adds one section: separate
+**processes** read the same role name and each is handed its own **value** by
+whatever starts it; separation of principals was always by value, never by
+spelling. Two boundaries are stated rather than left to judgement — one process
+legitimately holding two principals (a runtime role beside a maintenance role, a
+provisioner seeding several accounts) is the case that does warrant a second name;
+and a single shared environment file for every process is a deployment gap to close
+before collapsing, not a naming rule.
+
+### Verification
+
+Tests-first: `TestCompletenessCheckDerivesFromTheSetsOwner` and
+`TestEnvironmentVariableNamedByRoleGuidance` in both skills' test modules — 16 of
+22 assertions red before the delta and green after; the 6 that were green
+throughout are the negative guards (the pre-existing in-program rule survives
+untouched, both collapse invariants survive untouched, and no reporting project's
+identifier leaks into either skill). Four new eval cases per skill (36 for
+`python-coding`, 27 for `typescript-coding`): one behavior case and one negative
+over-application guard per report. `uv run skillctl validate` and
+`uv run skillctl test` green (1019 tests); `scripts/check_language.py` 0 findings;
+no file under mutation scope touched.
+
 ## [3.12.0] — 2026-08-19
 
 `typescript-coding` `1.11.0 → 1.12.0`, `python-coding` `1.9.0 → 1.10.0`

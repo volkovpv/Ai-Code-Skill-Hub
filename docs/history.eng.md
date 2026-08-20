@@ -36,6 +36,216 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A completeness check built out of the code it was checking
+
+**Releases:** project `3.13.0` (`typescript-coding` `1.12.0 → 1.13.0`,
+`python-coding` `1.10.0 → 1.11.0`)
+**Type:** gap closed — both skills explained how to prove a check covers a set
+the program itself owns, and said nothing about a set somebody else owns
+
+### In one sentence
+
+If you write the list of cases your code must handle by looking at the cases
+your code already handles, the list will always say you are finished — so the
+list has to come from whoever owns the set, not from the code under check.
+
+### The gap, precisely
+
+Both skills already carried the easy half. When a set lives inside your own
+program — an enumeration, a literal union, the keys of a type — key the table by
+that set and assert the two match; add a member and the assertion breaks. That
+rule is correct and is untouched here.
+
+The other half was missing entirely. Plenty of sets are owned by something else:
+the foreign keys of a database schema, another service's enumeration, a
+protocol's message types, the files in a directory, a registry another team
+maintains. Neither skill said where the case list for *those* should come from,
+and the silence read as "the in-program recipe is the whole rule". Nothing
+warned that a list read off your own implementation is circular, and nothing
+said the rule applies to a registry or a guard that ships in production code
+rather than to a test file.
+
+In the reported occurrence the artifact was a table of foreign-key edges that
+drove the order rows were deleted in. Both the delete order and the guard that
+was supposed to prove the order complete were written in the same change, by the
+same author, from the same source — the code. Three consecutive review rounds
+returned a critical failure on that one shape before anybody named it.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["A set S is owned elsewhere\n(schema, protocol, other service)"] --> B["Author writes handler\nfor the cases they know about"]
+    B --> C["Author writes the completeness check\nby reading off those same cases"]
+    C --> D["Check passes: 100% coverage"]
+    D --> E["A member of S the handler forgot\nis invisible to handler AND check"]
+    E --> F["Mutation battery: also silent —\nmutants come from the same code"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["A set S is owned elsewhere"] --> B{"Can S be read\nat run time?"}
+    B -->|yes| C["Introspect / parse / walk\nthe owner"]
+    B -->|no| D["Generate the list from the\nowner's artifact and commit it"]
+    C --> E["Diff the owner's members\nagainst what the handler covers"]
+    D --> E
+    E --> F{"Present in the owner,\nabsent from the handler?"}
+    F -->|yes| G["Fail, naming the member"]
+    F -->|no| H["Pass — and the pass means something"]
+```
+
+### Example you can run in your head
+
+```python
+# The wrong way round: the expectation is copied out of the implementation.
+EXPECTED_FK_EDGES = {("order_item", "order"), ("order", "customer")}   # ← typed by hand
+assert set(DELETE_ORDER_EDGES) == EXPECTED_FK_EDGES                    # ← always true
+
+# The right way round: the expectation comes from the schema.
+declared = introspect_foreign_keys(engine, schema="app")
+assert declared - set(DELETE_ORDER_EDGES) == set()
+```
+
+Add a third table with a foreign key nobody told the delete order about. The
+first version keeps passing forever. The second fails on the next run and names
+the edge it found.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| The set lives in your program | Derive the check from the value itself — an enumeration, a union's tag, `keyof T` |
+| The set lives outside your program | Get the list from its owner: introspect the schema, parse the specification, walk the directory — then diff |
+| A member in the owner and not in the handler | Is a failure reported by name, never a case quietly skipped |
+| A mutation battery is not a substitute | Mutants come from the same code the list was read off, so both share the blind spot |
+| It does not have to be a test | A registry, a guard, an allowlist, a coverage table — production code included |
+| The owner cannot be read at run time | Generate the list from the owner's artifact at build time and commit it, so drift becomes a diff someone has to accept |
+
+### Where the rule stops
+
+It does not apply to a set whose ground truth genuinely is a value in your own
+program — there the existing in-program recipe is right, and a dedicated
+negative case pins that the new rule must not be over-applied to it. It also
+says nothing about *how* to introspect any particular kind of owner; that is a
+property of the schema, protocol or format in front of you, not of this skill.
+And pairing the two lists proves the check reads the right source — not that the
+handler's behaviour for each case is correct.
+
+### How the change was made
+
+Test first: a regression pinning the new `## Rules` bullet, the new reference
+section and every one of its claims was confirmed genuinely red against the
+pre-change files, alongside guards that were green throughout (the pre-existing
+in-program rule survives untouched; no reporting project's identifiers appear in
+either skill) → the minimal delta was added → the regression went green → two
+evaluation cases per skill were added, one behaviour and one over-application
+guard → the whole library's suite ran with no regressions.
+
+---
+
+## An environment variable named after its caller, and the copy that followed it
+
+**Releases:** project `3.13.0` (`typescript-coding` `1.12.0 → 1.13.0`,
+`python-coding` `1.10.0 → 1.11.0`)
+**Type:** correction — one item in the duplication survey's decision order
+licensed exactly the thing the rest of that file exists to prevent
+
+### In one sentence
+
+If two processes each get their own name for the same credential, the shared
+code that reads that credential has nothing left to be parameterized by — so it
+gets copied, and the copy is justified by the rule that was supposed to collapse
+it.
+
+### The gap, precisely
+
+The decision order tells you that at the third occurrence of one shape you
+factor a parameterized home and reduce every caller to the data that genuinely
+differs. Its list of such data ended with "an environment-variable key", with no
+condition attached.
+
+That reads as permission. And it is the one item on the list that is usually
+false: when the callers are separate processes, the variable name is a property
+of the **role**, and the differing part is the **value** each process is handed
+by whatever starts it. Two names for one role is not parameterization — it is
+the thing that makes a single resolver impossible.
+
+Nothing about credential separation requires the names to differ. Distinct
+principals stay distinct because they hold distinct values; sharing a spelling
+gives no process reach into another's credentials.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Second process needs its own\ndatabase principal"] --> B["Decision order: an environment-variable\nkey may differ per caller"]
+    B --> C["STORE_A_USER and STORE_B_USER"]
+    C --> D["The shared resolver has no shared\nname to read"]
+    D --> E["A second resolver module is written"]
+    E --> F["A third process copies the second —\nand cites it as the precedent"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Second process needs its own\ndatabase principal"] --> B{"Is it a separate process?"}
+    B -->|yes| C["Same name STORE_USER;\nthe orchestrator supplies the value"]
+    C --> D["One resolver serves both;\nprincipals stay separate as values"]
+    B -->|no — one process,\ntwo principals| E["A second name IS correct;\nstate why one name is impossible"]
+    B -->|no environment\nper process yet| F["Close that deployment gap first,\nthen collapse"]
+```
+
+### Example you can run in your head
+
+```
+# Before — two names, and therefore two config modules
+service-a:  STORE_A_USER=svc_a  STORE_A_PASSWORD=…    → store_a_config
+service-b:  STORE_B_USER=svc_b  STORE_B_PASSWORD=…    → store_b_config
+
+# After — one name, two values, one config module
+service-a:  STORE_USER=svc_a    STORE_PASSWORD=…  ┐
+service-b:  STORE_USER=svc_b    STORE_PASSWORD=…  ┴→ store_config
+```
+
+The two principals are exactly as separate afterwards as before: `svc_a` and
+`svc_b` are still different accounts with different secrets. What disappeared is
+the second copy of the code that reads them.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| Separate processes | Read the same role-named variable; the orchestrator hands each its own value |
+| Separation of principals | Survives as separate **values**, never as separate spellings |
+| One process, two principals | Is the case that does warrant a second name — write down what makes one name impossible |
+| One shared environment file for everything | Is a deployment gap to close before collapsing, not a naming rule |
+| The decision-order item | Now carries its condition in place, so a reader who only skims the list is not misled |
+
+### Where the rule stops
+
+It says nothing about which principals a system should have, how many, or how
+their secrets are stored — those are the system's own decisions. It does not
+claim a per-caller name is always wrong: the one-process-two-principals case is
+named explicitly, and a dedicated negative case pins that the rule must not be
+read as banning it. And where there is no per-process environment yet, the
+honest reading is that the code is showing you a deployment gap — closing that
+gap comes first.
+
+### How the change was made
+
+Test first: a regression pinning the new section, every one of its claims and
+the condition now attached to the decision-order item was confirmed genuinely
+red against the pre-change files, alongside guards that were green throughout
+(both collapse invariants survive untouched) → the minimal delta was added → the
+regression went green → two evaluation cases per skill were added, one behaviour
+and one over-application guard → the whole library's suite ran with no
+regressions.
+
+---
+
 ## A duplication rule that told you what got caught, never what to do before you wrote
 
 **Releases:** project `3.12.0` (`typescript-coding` `1.11.0 → 1.12.0`,

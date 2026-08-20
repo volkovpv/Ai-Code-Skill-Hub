@@ -1098,5 +1098,161 @@ class TestDuplicationSurveyGuidance(unittest.TestCase):
             self.assertNotIn(forbidden, text, forbidden)
 
 
+class TestCompletenessCheckDerivesFromTheSetsOwner(unittest.TestCase):
+    """Regression for a field report from a consuming project (verdict class
+    C3, one deterministic project-independent reproduction; the operator's
+    routing decision placed the rule in the two language standards rather
+    than in a test-scoped skill, because the artifact that failed was
+    production code, not a test).
+
+    The skill already tells an author to derive a completeness check from a
+    closed set whose ground truth is a value in the same program (an
+    ``enum``, a ``Literal`` union). It said nothing about the harder half:
+    a set owned OUTSIDE the program — a database schema's foreign keys,
+    another service's enum, a protocol's message types. In the reported
+    case the registry that drove a delete order, and the guard that was
+    supposed to verify it, were both written by reading off the cases the
+    delete-order code already handled. Every member the code had forgotten
+    was invisible to the code and to its own check at once, so the check
+    reported full coverage of a set it had never read; three consecutive
+    gatekeeper rounds were spent before the shape was named.
+    """
+
+    SKILL_MD = SKILL / "SKILL.md"
+    GENERICS_MD = SKILL / "references" / "generics-and-type-level.md"
+
+    SECTION_ANCHOR = "## A completeness check derives its cases from the set's owner"
+
+    RULES_ANCHORS = (
+        "A completeness check derives its cases from the set's owner",
+        "owned **outside** the program",
+        "and **diff**",
+        "self-referential",
+        "not only a test file",
+    )
+
+    SECTION_ANCHORS = (
+        "already a value in this program",
+        "introspect the schema",
+        "present in the owner and absent from the handler",
+        "A member the handler forgot",
+        "invisible to both",
+        "mutation battery does not rescue it",
+        "share the blind spot",
+        "does not have to be a test",
+        "production code included",
+        "generate the list from the owner's artifact",
+        "drift then shows up as a diff",
+        "introspectForeignKeys",
+    )
+
+    CONTENTS_ANCHOR = "- [A completeness check derives its cases from the set's owner]"
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    @staticmethod
+    def _flat_anchor(anchor: str) -> str:
+        return " ".join(anchor.split())
+
+    def test_rules_bullet_carries_all_anchors(self):
+        text = self._flat(self.SKILL_MD)
+        for anchor in self.RULES_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_reference_section_exists(self):
+        self.assertIn(self.SECTION_ANCHOR, self.GENERICS_MD.read_text(encoding="utf-8"))
+
+    def test_reference_section_carries_all_anchors(self):
+        text = self._flat(self.GENERICS_MD)
+        for anchor in self.SECTION_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_reference_contents_lists_the_new_section(self):
+        self.assertIn(self._flat_anchor(self.CONTENTS_ANCHOR), self._flat(self.GENERICS_MD))
+
+    def test_the_in_program_half_survives_untouched(self):
+        """The pre-existing enum/Literal completeness bullet is the anchor the
+        new section widens, not content it replaces."""
+        text = self._flat(self.GENERICS_MD)
+        self.assertIn(self._flat_anchor("adding or renaming a property on `T` then breaks the build at the map"), text)
+        self.assertIn(self._flat_anchor("Record<keyof T, V>"), text)
+
+    def test_no_reporting_project_identifier_leaks_into_the_skill(self):
+        text = self._flat(self.GENERICS_MD) + " " + self._flat(self.SKILL_MD)
+        for forbidden in ("RM-TASK", "OBS-2026", "agent-plane", "control-plane", "news-intel"):
+            self.assertNotIn(forbidden, text, forbidden)
+
+
+class TestEnvironmentVariableNamedByRoleGuidance(unittest.TestCase):
+    """Regression for a field report from a consuming project (verdict class
+    C5 at the consumer, whose narrow universal core transfers): the survey's
+    decision order listed ``an environment-variable key`` among the data a
+    caller may legitimately differ by, without saying when that is true.
+    Read literally it licenses a per-caller variable name, and a per-caller
+    name licenses a per-caller copy of the resolver that reads it — measured
+    at the reporting consumer as two config families whose only substantive
+    difference was the credential variable names, one of which carried a
+    comment instructing the next author to add a third."""
+
+    SURVEY_MD = SKILL / "references" / "duplication-survey.md"
+
+    SECTION_ANCHOR = "## An environment variable is named by its role, not by its caller"
+
+    ANCHORS = (
+        "separate **processes**, they read the **same** name",
+        "handed its own **value**",
+        "two names for one role",
+        "nothing left to be parameterized by",
+        "distinct **values**",
+        "One process, two principals",
+        "maintenance/migration role",
+        "One shared environment for every process",
+        "deployment gap, not a naming rule",
+        "Close the gap",
+        "do not write the workaround into the code",
+    )
+
+    STEP_THREE_QUALIFIER = "only where one process legitimately holds two principals"
+
+    CONTENTS_ANCHOR = "- [An environment variable is named by its role, not by its caller]"
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    @staticmethod
+    def _flat_anchor(anchor: str) -> str:
+        return " ".join(anchor.split())
+
+    def test_section_exists(self):
+        self.assertIn(self.SECTION_ANCHOR, self.SURVEY_MD.read_text(encoding="utf-8"))
+
+    def test_section_carries_all_anchors(self):
+        text = self._flat(self.SURVEY_MD)
+        for anchor in self.ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_decision_order_step_three_is_qualified_in_place(self):
+        """The list item that used to license the per-caller name unconditionally
+        now carries the condition next to it, so an author reading only the
+        decision order is not misled."""
+        text = self._flat(self.SURVEY_MD)
+        self.assertIn(self._flat_anchor(self.STEP_THREE_QUALIFIER), text)
+        step_three = text.index("At the third occurrence of one shape")
+        qualifier = text.index(self._flat_anchor(self.STEP_THREE_QUALIFIER))
+        new_file_step = text.index("Write a new file only because the search above")
+        self.assertLess(step_three, qualifier)
+        self.assertLess(qualifier, new_file_step)
+
+    def test_contents_lists_the_new_section(self):
+        self.assertIn(self._flat_anchor(self.CONTENTS_ANCHOR), self._flat(self.SURVEY_MD))
+
+    def test_the_two_collapse_invariants_survive_untouched(self):
+        text = self._flat(self.SURVEY_MD)
+        self.assertIn(self._flat_anchor("Per-caller negative coverage"), text)
+        self.assertIn(self._flat_anchor("Union, never a pick"), text)
+
 if __name__ == "__main__":
     unittest.main()

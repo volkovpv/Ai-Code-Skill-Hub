@@ -13,6 +13,7 @@ source of truth, and where to stop. Framework- and architecture-neutral.
 - [Overloads vs unions](#overloads-vs-unions)
 - [Decorators and wrappers: ParamSpec](#decorators-and-wrappers-paramspec)
 - [DRY at the type level](#dry-at-the-type-level)
+- [A completeness check derives its cases from the set's owner](#a-completeness-check-derives-its-cases-from-the-sets-owner)
 - [Keep types simple; test the complex ones](#keep-types-simple-test-the-complex-ones)
 
 ## When a TypeVar earns its place
@@ -144,6 +145,56 @@ source of truth, and where to stop. Framework- and architecture-neutral.
 - Do not unify types whose fields are only coincidentally identical, and
   prefer eliminating near-duplicate types over maintaining converters
   between them.
+
+## A completeness check derives its cases from the set's owner
+
+The bullet above covers a closed set whose ground truth is already a value
+in this program: an `enum`, a `Literal` union, the keys of a mapping you
+declare. Derive the check from that value and the two cannot drift.
+
+A set owned by something **other** than this program is the harder half,
+and the same discipline applies with the source changed — a database
+schema's foreign keys, another service's enum, a protocol's message types,
+the files in a directory, a registry another team maintains. Obtain the
+case list **from that owner** (introspect the schema, parse the
+specification, walk the directory) and **diff** it against what the code
+handles. A member present in the owner and absent from the handler is a
+failure to report by name, never a case quietly skipped.
+
+Writing the list the other way round — reading off the cases the code
+already implements — is self-referential, and it fails in one specific,
+quiet way:
+
+| | Case list derived from the owner | Case list read off the handler |
+|---|---|---|
+| A member the handler covers | passes | passes |
+| A member the handler forgot | fails, by name | invisible to both |
+| Coverage the check reports | the truth | 100 %, always |
+
+A mutation battery does not rescue it. Mutants come from the same code the
+case list was read off, so a member of the set the code never mentions
+cannot be mutated into view: the battery and the check share the blind spot
+instead of covering for each other.
+
+**The artifact does not have to be a test.** A registry constant, a guard
+function, an allowlist, an "expected shape" fixture, a coverage table —
+anything claiming to enumerate a set — is under this rule wherever it
+lives, production code included. The author writing the handler and its own
+completeness check in one change is exactly the author most likely to write
+the second from the first.
+
+```python
+# Read the edges from the schema, then diff — never list them by hand from
+# the code that consumes them.
+def test_delete_order_covers_every_foreign_key() -> None:
+    declared = introspect_foreign_keys(engine, schema="app")
+    assert declared - set(DELETE_ORDER_EDGES) == set()
+```
+
+Where the owner cannot be introspected at run time, generate the list from
+the owner's artifact at build or test time and commit the generated file:
+drift then shows up as a diff someone has to accept, rather than as a gap
+nobody can see.
 
 ## Keep types simple; test the complex ones
 
