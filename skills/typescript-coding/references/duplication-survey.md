@@ -12,6 +12,7 @@ human reviewer — to catch.
 - [Search by shape, never by name](#search-by-shape-never-by-name)
 - [The decision order](#the-decision-order)
 - [A new file is the last step, not the first](#a-new-file-is-the-last-step-not-the-first)
+- [An environment variable is named by its role, not by its caller](#an-environment-variable-is-named-by-its-role-not-by-its-caller)
 - [Two invariants a collapse may not weaken](#two-invariants-a-collapse-may-not-weaken)
 - [Measured on one live tree](#measured-on-one-live-tree)
 
@@ -41,8 +42,11 @@ new file" because it is the fastest step to take.
 3. **At the third occurrence of one shape, introduce a parameterized
    factory** in the shared home, and reduce every caller — including the
    first two — to the data that genuinely differs between them (a name, a
-   branded identifier, an error code, a message, an environment-variable
-   key). Two occurrences can still be coincidence; a third is a pattern.
+   branded identifier, an error code, a message, and — **only where one
+   process legitimately holds two principals** — an environment-variable
+   key; see [An environment variable is named by its role, not by its
+   caller](#an-environment-variable-is-named-by-its-role-not-by-its-caller)).
+   Two occurrences can still be coincidence; a third is a pattern.
 4. **Write a new file only because the search above came back genuinely
    empty** — never because writing felt faster than searching.
 
@@ -52,6 +56,42 @@ An absence nobody searched for is not a finding. "I didn't find an
 existing implementation" only counts once the search above actually
 happened — by shape, across the whole tree — not after grepping the one
 name you were about to give the new symbol.
+
+## An environment variable is named by its role, not by its caller
+
+The decision order above lists the data a caller may legitimately supply.
+An environment-variable **key** belongs on that list far less often than it
+looks, and getting it wrong is what licenses the copy in the first place.
+
+When the callers are separate **processes**, they read the **same** name,
+and each process is handed its own **value** by whatever starts it — a
+container orchestrator, a unit file, a deployment template. `DB_USER` is the
+name of a role; `DB_SERVICE_A_USER` and `DB_SERVICE_B_USER` are two names
+for one role, and the moment both exist the resolver that reads them is
+duplicated too, because a single shared resolver has nothing left to be
+parameterized by.
+
+Separation of principals survives this intact, because it never depended on
+the spelling: distinct principals stay distinct as distinct **values**, and
+no process gains reach into another's credentials by sharing a name.
+
+Two boundaries, stated here rather than left to judgement:
+
+- **One process, two principals** is the case that does warrant a second
+  name — a service's runtime role beside a maintenance/migration role, or a
+  provisioner that seeds several accounts in a single run. There the second
+  name is written next to the fact that makes one name impossible.
+- **One shared environment for every process** is a deployment gap, not a
+  naming rule. Where every process starts from a single shared environment
+  file, one name genuinely cannot hold two values — so the per-caller names
+  are the symptom, not the design. Close the gap (an environment per
+  process), then collapse; do not write the workaround into the code and
+  call it a parameter.
+
+The failure this prevents is ordinary: the second configuration module is
+written "because this service needs its own variable", the third copies the
+second, and by the time the fail-closed startup check has to be hardened it
+exists in as many independently maintained copies as there are processes.
 
 ## Two invariants a collapse may not weaken
 

@@ -459,6 +459,66 @@
           "do not write it yet"
         ]
       }
+    },
+    {
+      "id": "completeness-check-derives-from-the-external-owner",
+      "kind": "behavior",
+      "requirement": "A completeness check over a set owned outside the program is derived by reading that owner (introspection, the specification) and diffing, never by listing the cases the code under check already handles.",
+      "prompt": "Our service deletes expired rows across a schema and must not violate a foreign key. I've written the delete order, and now I'm writing the guard that proves it covers every non-CASCADE foreign key: I plan to build EXPECTED_FK_EDGES by listing the edges my delete-order code already handles, then assert the delete order matches it. Is that guard sound? Two or three sentences.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(introspect|query the schema|read.*(schema|catalog)|from the (schema|specification)|information_schema)",
+          "(?i)(self-referential|circular|same source|reads? off|derived from the code|would not (see|catch)|blind)"
+        ],
+        "stdout_not_contains": [
+          "that guard is sound",
+          "yes, that is a sound guard"
+        ]
+      }
+    },
+    {
+      "id": "completeness-check-in-program-set-needs-no-introspection",
+      "kind": "negative",
+      "requirement": "The rule must not be over-applied: where the set's ground truth is already a value in this program, deriving the check from that value is correct and no external introspection is required.",
+      "prompt": "The set of supported message kinds is a StrEnum declared in this same module, and my handler map is keyed by that StrEnum with a test asserting set(HANDLERS) == set(MessageKind). Do I also need to introspect some external system for this one? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "you must introspect an external system",
+          "introspect the database schema"
+        ]
+      }
+    },
+    {
+      "id": "env-var-named-by-role-not-by-caller",
+      "kind": "behavior",
+      "requirement": "Separate processes read the same role-named environment variable and are handed different values by whatever starts them; a per-caller variable name is what licenses a per-caller copy of the resolver.",
+      "prompt": "We have two Python services, each with its own process. Both connect to PostgreSQL as their own database role. Should I add PG_REPORTS_USER/PG_REPORTS_PASSWORD for the second service next to the existing PG_USER/PG_PASSWORD, and give it its own config resolver module? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(same (variable )?name|one name|shared name|PG_USER)",
+          "(?i)(value|orchestrat|compose|container|deployment|per process)"
+        ],
+        "stdout_not_contains": [
+          "add PG_REPORTS_USER",
+          "give it its own config resolver"
+        ]
+      }
+    },
+    {
+      "id": "env-var-second-name-when-one-process-holds-two-principals",
+      "kind": "negative",
+      "requirement": "The role-naming rule must not be over-applied: one process legitimately holding two principals is the declared case where a second variable name is correct.",
+      "prompt": "One single process of ours holds two database roles at once: its ordinary runtime role and a separate migration role it uses only at startup. Is it acceptable for that one process to read two different sets of credential variable names? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "never use two sets of variable names",
+          "that is always a defect"
+        ]
+      }
     }
   ]
 }

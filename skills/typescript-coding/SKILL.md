@@ -102,6 +102,17 @@ has been promoted into `knowledge/` or this workflow.
   types or it does not exist (no return-only generics); derive related types
   (`keyof`, mapped, utility types) instead of duplicating them — see
   [references/generics-and-type-level.md](references/generics-and-type-level.md).
+- **A completeness check derives its cases from the set's owner.** Where
+  the set is a value in this program (a `const` registry, a union's tag, `keyof T`), derive
+  the check from it. Where the set is owned **outside** the program — a
+  database schema's foreign keys, another service's enum, a protocol's
+  message types — obtain it from that owner (introspect, parse the spec,
+  walk the directory) and **diff**; a registry, guard, allowlist or
+  coverage table written by reading off the cases the code already handles
+  is self-referential and reports full coverage of a set it never read. The
+  rule holds for any verification artifact, not only a test file —
+  production code included. See
+  [references/generics-and-type-level.md](references/generics-and-type-level.md#a-completeness-check-derives-its-cases-from-the-sets-owner).
 - `readonly` fields and `readonly` arrays by default; `import type` for
   type-only imports; explicit return types on every export.
 - In `catch` the binding is `unknown` — narrow before use; never swallow an

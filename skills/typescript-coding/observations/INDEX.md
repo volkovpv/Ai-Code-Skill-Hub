@@ -23,6 +23,31 @@ Reading rules for agents:
 
 ## Accepted observations
 
+- [OBS-20260820-001](accepted/OBS-20260820-001.md) — the completeness-check rule
+  covered only a set whose ground truth is already a value in this program (a
+  `const` registry, a union's tag, `keyof T`) and was silent on a set owned outside it (a schema's
+  foreign keys, another service's enumeration, a protocol's message types), so a
+  registry or guard built by reading off the cases the code already handles
+  reported full coverage of a set it never read, and a mutation battery — drawn
+  from the same code — shared the blind spot rather than covering for it (field
+  report from a consuming project; C3, one deterministic project-independent
+  minimal reproduction, three consecutive gatekeeper failures on one shape before
+  it was named; five passes untransferred for a routing question, resolved by an
+  operator routing decision on 2026-08-20 placing the rule in the language
+  standards because the failing artifact was production code, not a test;
+  reviewed by the operator, 2026-08-20, provisional pending PR merge).
+
+- [OBS-20260820-002](accepted/OBS-20260820-002.md) — the duplication survey's
+  decision order listed "an environment-variable key" among the data a caller may
+  legitimately differ by, without a condition; read literally it licenses a
+  per-caller variable name, and two names for one role leave the shared resolver
+  with nothing to be parameterized by, so the resolver is copied too and the copy
+  is justified by the rule meant to collapse it (field report from a consuming
+  project; C5 at the consumer, whose narrow universal core — separate processes
+  read the same role name and each is handed its own value, a second name only
+  where one process legitimately holds two principals — transfers on its own
+  project-independent reproduction; reviewed by the operator, 2026-08-20,
+  provisional pending PR merge).
 - [OBS-20260715-001](accepted/OBS-20260715-001.md) — `TS-SUPPRESS` leaves no
   green path for a justified single-rule line-scoped `eslint-disable` working
   around a documented upstream lint-rule limitation (transferred from the
