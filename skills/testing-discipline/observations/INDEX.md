@@ -32,6 +32,17 @@ Reading rules for agents:
   distinct modules, plus a deterministic, project-independent minimal
   reproduction; reviewed by HC-AGENT-010, 2026-08-08, provisional pending PR
   merge by the operator).
+- [OBS-20260826-001](accepted/OBS-20260826-001.md) — the cleanup rule in
+  `adapters-and-persistence.md` ("clean persistent state at the start of a
+  test") was stated without the ownership precondition its own reasoning
+  depends on, even though `schools.md`, in the same skill, already defines
+  the Shared/Out-of-process/Unmanaged archetype the rule silently assumed
+  away — and the neighbouring rejection of rollback isolation closed the one
+  cheap mechanism that would have made the rule safe over such a store,
+  without naming a replacement (field report from a consuming project; C3,
+  two independent occurrences across two different tasks, plus a
+  deterministic, project-independent minimal reproduction; reviewed by
+  HC-AGENT-010, 2026-08-26, provisional pending PR merge by the operator).
 
 ## Candidates awaiting review
 

@@ -233,7 +233,11 @@ Do not preload the whole skill; open a file only when its trigger fires.
   the failure. Nor is a test isolated by rolling its transaction back —
   commit is where pending changes flush, integrity constraints are
   checked, generated values are assigned and triggers fire, so a test that
-  never commits never exercises any of it.
+  never commits never exercises any of it. Cleaning a **shared** or
+  **unmanaged** store's whole table is safe only where the suite owns it
+  exclusively; over a store it does not own alone, make the store private
+  first or restore its rows by value — see
+  [references/adapters-and-persistence.md](references/adapters-and-persistence.md).
 - Generic mapping code is exercised with purpose-built types, not with
   production domain types: the coupling blocks refactoring, and a domain
   type that later loses the feature under test leaves the suite green over

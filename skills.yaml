@@ -109,9 +109,17 @@ skills:
   # this content — no vendor/network access in the agent environment that
   # authored the change. Re-measure with
   # scripts/run_skill_evals.py --tier gate --repeat 3 before/at merge.
+  # 1.7.0 -> 1.8.0 (a field report from a consuming project, C3, two
+  # independent occurrences plus a deterministic reproduction) added the
+  # store-ownership precondition to the persistence cleanup rule and one
+  # cross-reference bullet in schools.md's own consequence list; pinned by
+  # __test__/skills/test_testing_discipline.py (static text pins, offline,
+  # observed red before the delta and green after) rather than by new
+  # cases.json entries — no eval-case content changed, so the case count
+  # and the gate bar above are unaffected by this bump.
   - name: testing-discipline
     path: skills/testing-discipline
-    version: 1.7.0
+    version: 1.8.0
     status: stable
     summary: Rules for writing and reviewing unit and integration tests, and nothing beyond those two levels - the two unit-testing schools (London/mockist and classical/Detroit) declared per project and drawing the unit/integration line, interface discovery where London is declared, the red/green/refactor cycle declared the same way, the evidence rule that a test counts only once seen red and its failure message is legible, tests read as design feedback, structure, naming, data and builders, test value, verification styles and interaction precision, isolation, peers versus internals, fake provenance, wiring-level evidence, asynchrony and concurrency, adapters and persistence, case-set provenance, anti-patterns and suite hygiene; no language, runner, framework or platform assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

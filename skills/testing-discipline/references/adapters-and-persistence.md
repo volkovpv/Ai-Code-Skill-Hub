@@ -31,6 +31,41 @@ fixture must. Do it on the way in.
   a log the test will assert against, a queue, a directory of files. Clear
   it as part of arranging, not as part of tidying up.
 
+### This rule assumes the store is private to the suite
+
+Every consequence above holds only if the persistent store belongs to this
+suite alone — a **private** dependency in
+[schools.md](schools.md)'s vocabulary. Where the store is instead the
+**shared** or **unmanaged** archetype that same file names first — a
+database, a shared table, an instance other suites or a human operator
+also reach — "clean the table" and "clean the suite's own rows" are
+different operations, and everything above has been describing only the
+first.
+
+Establish ownership before applying "clean at the start" to a shared or
+unmanaged store:
+
+- **Make it private.** Give the suite its own instance — a schema, a
+  database, or a container per suite or per run — so cleaning the whole
+  table is once again cleaning only this suite's data. This is the
+  default remedy, and it is also the substitute for the escape hatch the
+  next section forecloses: rolling back a transaction would make a shared
+  store safe without a private instance, cheaply, and this file rejects
+  that trade for reasons that hold in the owned-store case and leave a
+  shared store with no cheap answer unless one is named here.
+- **Where privatizing the store is not yet possible, scope the cleanup to
+  what the suite owns**, never to the whole table: capture the rows the
+  suite is about to touch before mutating them and restore them by value
+  afterwards, or clean only rows tagged as this suite's own fixtures. Both
+  cost more than `DELETE FROM` the table, and that cost is the point — the
+  shortcut is only free once the store is private.
+
+**A suite that cleans a shared or unmanaged store's whole table on the way
+in destroys every other reader's data on the first run** — its own
+pre-existing rows included, not only another suite's fixtures. The
+failure is silent: the suite's own assertions still pass, because they
+never depended on the rows it just erased.
+
 ## Make transaction boundaries explicit; do not isolate by rolling back
 
 A common shortcut runs each test inside a transaction and rolls it back at

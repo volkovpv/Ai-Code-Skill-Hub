@@ -5,6 +5,46 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.14.0] — 2026-08-26
+
+`testing-discipline` `1.7.0 → 1.8.0`
+
+`OBS-20260826-001`, verdict class C3, two independent occurrences (six same-shaped
+integration suites in one build, plus one earlier, independent hand-rolled workaround
+for the same gap in a different task) and a deterministic, project-independent
+minimal reproduction — threshold met on both limbs.
+
+`references/adapters-and-persistence.md`'s "clean persistent state at the start of a
+test, not at the end" was stated unconditionally: every consequence it draws (the
+data that caused a failure is still there to look at, the next test cleans before it
+runs) is true only if the store belongs to the suite alone. The rule named no such
+precondition, and `references/schools.md` — the same skill — already defines the
+archetype the rule silently assumed away: a **Shared** or **Unmanaged** dependency,
+one two suites, or a suite and something outside the tests, can both reach. The
+neighbouring rule, "make transaction boundaries explicit; do not isolate by rolling
+back", forecloses the one cheap mechanism (transactional rollback) that would have
+made the cleanup rule safe over a shared store by construction, without naming a
+replacement.
+
+A suite that follows the literal rule against a store it does not own alone destroys
+every pre-existing row on its first run — not only another suite's fixtures — and does
+so silently: the suite's own assertions never depended on what it just erased.
+
+The delta adds an ownership precondition to the cleanup rule, in the skill's own
+vocabulary: the rule as written applies only to a **private** dependency; over a
+**shared**/**unmanaged** store, privatize it (a schema/database/container per suite or
+per run) — which is also the substitute for the rollback isolation the neighbouring
+rule forecloses — or scope the cleanup to rows the suite itself owns (capture-then-
+restore-by-value, or a tagged-ownership convention). `schools.md`'s own "consequences"
+list, which drew the shared/private distinction's consequence for doubling only, now
+draws it for cleanup too, closing the gap at its source rather than only at its
+symptom. `SKILL.md` carries a one-line pointer so the precondition survives in the
+file that is always loaded. Pinned by nine new tests in
+`__test__/skills/test_testing_discipline.py` (static text pins over the reference
+files, offline — observed red before the delta and green after); no `cases.json`
+content changed, so the eval-gate case count and bar noted in `skills.yaml` are
+unaffected by this release.
+
 ## [3.13.0] — 2026-08-20
 
 `typescript-coding` `1.12.0 → 1.13.0`, `python-coding` `1.10.0 → 1.11.0`

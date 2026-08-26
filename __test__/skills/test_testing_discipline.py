@@ -1555,6 +1555,118 @@ class TestAdaptersAndPersistenceGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestAdaptersOwnershipPrecondition(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3, two independent
+    occurrences — six same-shaped suites in one build plus one independent,
+    earlier hand-rolled workaround for the same gap in a different task —
+    plus a deterministic, project-independent minimal reproduction).
+
+    ``schools.md`` already defines the archetype this file's cleanup rule
+    silently assumes away: a **shared**/**unmanaged** dependency, one whose
+    state other tests or other applications can see. The cleanup rule above
+    draws no consequence from that distinction at all, and the neighbouring
+    rollback-rejection removes the one cheap mechanism that would have made
+    "clean at the start" safe over such a store, without naming a
+    replacement. A suite that follows the rule as written against a store it
+    does not own alone destroys every pre-existing row on its first run,
+    including rows it never created — silently, because its own assertions
+    never depended on what it just erased.
+    """
+
+    DOC = REFERENCES / "adapters-and-persistence.md"
+
+    RULE_OWNERSHIP_HEADING = "### This rule assumes the store is private to the suite"
+    RULE_OWNERSHIP_PRECONDITION = (
+        "Every consequence above holds only if the persistent store belongs "
+        "to this suite alone"
+    )
+    RULE_MAKE_PRIVATE = "**Make it private.**"
+    RULE_SCOPE_TO_OWNED = (
+        "**Where privatizing the store is not yet possible, scope the "
+        "cleanup to what the suite owns**"
+    )
+    RULE_SILENT_FAILURE = (
+        "A suite that cleans a shared or unmanaged store's whole table on "
+        "the way in destroys every other reader's data on the first run"
+    )
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_the_ownership_precondition_is_stated(self):
+        text = self._text()
+        self.assertIn(self.RULE_OWNERSHIP_HEADING, text)
+        self.assertIn(self.RULE_OWNERSHIP_PRECONDITION, text)
+
+    def test_the_precondition_uses_the_schools_vocabulary(self):
+        # It must name the same archetypes schools.md defines, not invent
+        # new vocabulary — otherwise the two files disagree about what a
+        # shared store is.
+        text = self._text()
+        self.assertIn("**private** dependency", text)
+        self.assertIn("**shared** or **unmanaged** archetype", text)
+
+    def test_the_remedy_names_privatizing_the_store(self):
+        self.assertIn(self.RULE_MAKE_PRIVATE, self._text())
+
+    def test_the_remedy_names_the_fallback_when_privatizing_is_not_yet_possible(self):
+        self.assertIn(self.RULE_SCOPE_TO_OWNED, self._text())
+
+    def test_the_foreclosed_rollback_gets_its_replacement_named(self):
+        # The neighbouring rule (TestAdaptersAndPersistenceGuidance) rejects
+        # transactional rollback isolation without naming what a shared
+        # store should do instead; this closes exactly that gap.
+        text = self._text()
+        self.assertIn(
+            "rolling back a transaction would make a shared store safe "
+            "without a private instance, cheaply, and this file rejects "
+            "that trade",
+            text,
+        )
+
+    def test_the_silent_failure_mode_is_named(self):
+        self.assertIn(self.RULE_SILENT_FAILURE, self._text())
+
+    def test_schools_md_draws_the_cleanup_consequence_too(self):
+        # schools.md's own "three consequences" list drew the shared/private
+        # distinction's consequence for doubling only; the same distinction
+        # governs cleanup and the file must say so.
+        text = flat(REFERENCES / "schools.md")
+        self.assertIn(
+            "must first establish the suite owns what it is about to erase",
+            text,
+        )
+
+    def test_the_precondition_is_reachable_from_skill_md(self):
+        body = flat(SKILL / "SKILL.md")
+        self.assertIn(
+            "Cleaning a **shared** or **unmanaged** store's whole table is "
+            "safe only where the suite owns it exclusively",
+            body,
+        )
+
+    def test_negative_the_cleanup_and_rollback_rules_survive_untouched(self):
+        # False-positive guard: the new subsection must extend the existing
+        # rules, not replace or duplicate them.
+        text = self._text()
+        for needle in (
+            TestAdaptersAndPersistenceGuidance.RULE_CLEAN_AT_START,
+            TestAdaptersAndPersistenceGuidance.RULE_NO_ROLLBACK_ISOLATION,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+    def test_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_OWNERSHIP_HEADING,
+            self.RULE_OWNERSHIP_PRECONDITION,
+            self.RULE_MAKE_PRIVATE,
+            self.RULE_SCOPE_TO_OWNED,
+            self.RULE_SILENT_FAILURE,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+
+
 class TestPeerStereotypesAndSubstitutionBoundary(unittest.TestCase):
     """What may be replaced at all, before what a double may assert.
 
