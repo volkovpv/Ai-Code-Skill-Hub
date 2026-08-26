@@ -34,7 +34,7 @@ is unreadable without agreed names for kinds of dependency.
 | **Managed dependency** | an out-of-process dependency reachable *only* through your application, so interactions with it are invisible outside and are an implementation detail — typically your own database |
 | **Unmanaged dependency** | an out-of-process dependency whose side effects other applications can see, so interactions with it are part of your observable behaviour — a broker, a mail server, a shared table |
 
-Three consequences hold under either school:
+Four consequences hold under either school:
 
 - **A value is never replaced by a double.** If it is immutable and
   identity-free, pass the real one; there is nothing to isolate.
@@ -44,6 +44,11 @@ Three consequences hold under either school:
 - Shared and out-of-process are near-synonyms in practice, but not
   identical, and the distinction decides whether a dependency can simply be
   re-created per test instead of being replaced.
+- The same distinction decides more than doubling: a persistence rule that
+  cleans a **shared** or **unmanaged** dependency's state must first
+  establish the suite owns what it is about to erase, or it erases every
+  other reader's data too — see
+  [adapters-and-persistence.md](adapters-and-persistence.md).
 
 ## The London school (mockist)
 

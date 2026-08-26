@@ -36,6 +36,125 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A cleanup rule that never named the store it assumed
+
+**Releases:** project `3.14.0` (`testing-discipline` `1.7.0 → 1.8.0`)
+**Type:** gap closed — the skill already had the vocabulary to name its own
+precondition, and never carried it into the one rule whose safety depends on it
+
+### In one sentence
+
+"Clean the table before the test" is safe by construction only if the suite is
+the only reader of that table, and the rule never said so.
+
+### The gap, precisely
+
+`references/adapters-and-persistence.md` told authors to clean persistent state
+at the *start* of a test, not the end, and gave good reasons for it — the
+evidence of a failure survives, the next test starts from a known state. Every
+one of those reasons is true only if the table belongs to the suite alone; none
+of them holds if another suite, or a human, or another application, also reads
+or writes that table.
+
+`references/schools.md` — the *same* skill — already names that exact
+archetype: a **Shared** dependency ("one that two tests can both reach"), an
+**Unmanaged** dependency ("whose side effects other applications can see...
+a shared table"). Its own "consequences" section draws a conclusion from that
+distinction for exactly one thing — whether a dependency can be re-created per
+test instead of doubled — and never for cleanup, even though cleanup lives one
+file over and the same distinction governs it just as directly.
+
+The neighbouring rule made it worse rather than better: "do not isolate by
+rolling back a transaction" removes the one cheap trick that would have made
+table cleanup safe over a shared store without extra code, and gives no
+replacement for the case it just closed off.
+
+The result, applied literally: a suite that cleans a table it does not own
+alone deletes every pre-existing row on its very first run — not only another
+suite's fixtures — and the failure is silent, because the suite's own
+assertions never depended on the rows it just erased.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Suite's fixture runs\n'clean at the start'"] --> B["DELETE / TRUNCATE\nthe whole table"]
+    B --> C{"Was the table private\nto this suite?"}
+    C -->|never checked| D["Table was actually shared\nor unmanaged"]
+    D --> E["Every pre-existing row\nis gone on the first run"]
+    E --> F["Suite's own assertions still pass —\nthey never depended on what was erased"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Suite's fixture runs\n'clean at the start'"] --> B{"Is the store private\nto this suite? (schools.md)"}
+    B -->|private| C["DELETE / TRUNCATE the whole table\n— safe by construction"]
+    B -->|shared or unmanaged| D{"Can the store\nbe privatized?"}
+    D -->|yes| E["Give the suite its own schema /\ndatabase / container per run"]
+    D -->|not yet| F["Capture the rows the suite touches,\nrestore them by value afterwards"]
+    E --> G["Cleanup is safe again"]
+    F --> G
+```
+
+### Example you can run in your head
+
+```python
+# The wrong way round: "clean at the start" applied without checking who else
+# reads the table.
+def setup():
+    db.execute("DELETE FROM accounts")   # also erases every other reader's
+                                          # pre-existing rows, silently
+
+# The right way round: establish ownership first.
+def setup():
+    if store_is_private_to_this_suite(db):
+        db.execute("DELETE FROM accounts")
+    else:
+        captured = capture_rows(db, "accounts", ids=this_suite_touches)
+        yield
+        restore_rows(db, "accounts", captured)
+```
+
+Point the first version at an instance two suites share, and the failure never
+shows up in either suite's own output — only in whatever else reads that table.
+
+### What the skill now says
+
+| The store is... | What "clean at the start" requires |
+|---|---|
+| **Private** (`schools.md`) | Delete/truncate the whole table — safe by construction, unchanged |
+| **Shared or unmanaged**, can be privatized | Give the suite its own schema/database/container per suite or per run |
+| **Shared or unmanaged**, not yet privatized | Capture-then-restore-by-value, or clean only rows tagged as the suite's own |
+
+`schools.md`'s own consequences list now draws the shared/private distinction's
+consequence for cleanup, not only for doubling, so the two files no longer
+disagree about what that distinction is for. `SKILL.md` carries a one-line
+pointer, since it is the file every caller reads first.
+
+### Where the rule stops
+
+The rule tells you what "clean at the start" requires *given* the archetype of
+the store; it does not tell you which archetype a particular store is — that is
+an infrastructure fact about the project, not something this skill can know.
+Whether a project *should* keep sharing one long-lived instance across suites at
+all is a separate, project-specific decision with its own owner; naming the
+ownership precondition here neither makes nor blocks that decision.
+
+### How the change was made
+
+Test first: nine new pins in `__test__/skills/test_testing_discipline.py` — the
+ownership precondition, both remedies, the silent-failure framing, and the
+`schools.md` consequence bullet — were confirmed genuinely red against the
+pre-change files, alongside a guard that the pre-existing cleanup and
+rollback-rejection rules survive untouched → the minimal delta landed in
+`adapters-and-persistence.md`, `schools.md`, and one pointer line in
+`SKILL.md` → all nine went green → the library's full suite ran with no
+regressions. No `cases.json` content changed.
+
+---
+
 ## A completeness check built out of the code it was checking
 
 **Releases:** project `3.13.0` (`typescript-coding` `1.12.0 → 1.13.0`,
