@@ -159,6 +159,12 @@ has been promoted into `knowledge/` or this workflow.
   defensive/parsing routine over such input has exactly one home holding
   the union of every caller's cases, never a per-caller copy — see
   [references/security.md](references/security.md).
+- **A filter guarding an input a downstream parser also normalizes decides
+  with that parser's own normalization** — it must either **BE** that
+  normalization or be proven equivalent to it; a hand-rolled comparison
+  that can silently diverge from the parser it guards is a bypassable gap,
+  not a filter. See
+  [references/security.md](references/security.md#a-filter-guarding-an-input-a-downstream-parser-also-normalizes-decides-with-that-parsers-own-normalization).
 - **Security primitives are non-negotiable**: `secrets` (never `random`)
   for tokens, `hmac.compare_digest` for secret comparison, memory-hard
   password hashing, `tempfile.mkstemp`-family (never `mktemp`), TLS

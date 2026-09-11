@@ -1663,5 +1663,102 @@ class TestEnvironmentVariableNamedByRoleGuidance(unittest.TestCase):
         self.assertIn(self._flat_anchor("Per-caller negative coverage"), text)
         self.assertIn(self._flat_anchor("Union, never a pick"), text)
 
+
+class TestFilterMustUseDownstreamNormalization(unittest.TestCase):
+    """Regression for a field report from a consuming project (verdict class
+    C3; ``SFL-INV-08``'s reproduction limb met by a deterministic,
+    project-independent minimal reproduction, with an independent supporting
+    occurrence of the same general principle from an unrelated task in that
+    project's own history).
+
+    A security-relevant deny-filter stood in front of a component that
+    itself parses and normalizes the same input, and reimplemented its own
+    name-comparison instead of reusing that component's normalization. The
+    two comparisons disagreed on at least one input shape, so an input in
+    that shape passed the filter's deny check while the downstream component
+    still recognized and trusted it — a live bypass, measured twice in a row
+    on the reporting project's own build before the filter was rewritten to
+    call the downstream component's own normalizer directly. Nothing in this
+    skill's security guidance previously named the general shape: a filter
+    guarding an input a downstream component also parses and normalizes must
+    decide using that component's own normalization, or be proven equivalent
+    to it.
+    """
+
+    SKILL_MD = SKILL / "SKILL.md"
+    SECURITY_MD = SKILL / "references" / "security.md"
+
+    RULES_ANCHORS = (
+        "A filter guarding an input a downstream parser also normalizes decides",
+        "with that parser's own normalization",
+        "must either **BE** that",
+        "normalization or be proven equivalent to it",
+        "a bypassable gap",
+    )
+
+    SECTION_ANCHOR = (
+        "## A filter guarding an input a downstream parser also normalizes "
+        "decides with that parser's own normalization"
+    )
+
+    SECTION_ANCHORS = (
+        "must either **BE** that component's normalization, or be proven equivalent to it",
+        "the two can disagree",
+        "an input in the gap between them bypasses the filter while still reaching the parser",
+        "reuse the downstream component's own normalization function directly",
+        "A hand-rolled comparison that can silently diverge from the parser it guards is not a filter, it is a gap with a name",
+        "HTTP header names, file extensions, MIME types, or differently quoted SQL identifiers",
+    )
+
+    CONTENTS_ANCHOR = (
+        "- [A filter guarding an input a downstream parser also normalizes "
+        "decides with that parser's own normalization]"
+    )
+
+    @staticmethod
+    def _flat(path: Path) -> str:
+        return " ".join(path.read_text(encoding="utf-8").split())
+
+    @staticmethod
+    def _flat_anchor(anchor: str) -> str:
+        return " ".join(anchor.split())
+
+    def test_rules_bullet_carries_all_anchors(self):
+        text = self._flat(self.SKILL_MD)
+        for anchor in self.RULES_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_section_exists(self):
+        self.assertIn(self.SECTION_ANCHOR, self.SECURITY_MD.read_text(encoding="utf-8"))
+
+    def test_section_carries_all_anchors(self):
+        text = self._flat(self.SECURITY_MD)
+        for anchor in self.SECTION_ANCHORS:
+            self.assertIn(self._flat_anchor(anchor), text, anchor)
+
+    def test_contents_lists_the_new_section(self):
+        self.assertIn(self._flat_anchor(self.CONTENTS_ANCHOR), self._flat(self.SECURITY_MD))
+
+    def test_the_existing_union_of_callers_section_survives_untouched(self):
+        """The pre-existing "one home, union of every caller's cases" section is
+        the neighbouring rule this section complements, not content it replaces."""
+        text = self._flat(self.SECURITY_MD)
+        self.assertIn(
+            self._flat_anchor(
+                "A defensive routine over untrusted input has one home, the "
+                "union of every caller's cases"
+            ),
+            text,
+        )
+
+    def test_no_reporting_project_identifier_leaks_into_the_skill(self):
+        text = self._flat(self.SECURITY_MD) + " " + self._flat(self.SKILL_MD)
+        for forbidden in (
+            "RM-TASK", "OBS-2026", "agent-plane", "control-plane", "news-intel",
+            "sentry", "Langfuse",
+        ):
+            self.assertNotIn(forbidden, text, forbidden)
+
+
 if __name__ == "__main__":
     unittest.main()

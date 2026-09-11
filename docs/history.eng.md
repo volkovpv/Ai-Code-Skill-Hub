@@ -36,6 +36,107 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A filter that invented its own idea of a name a parser would recognize
+
+**Releases:** project `3.15.0` (`python-coding` `1.11.0 → 1.12.0`)
+**Type:** gap closed — the skill said a defensive routine over untrusted input
+needs one home covering every caller's cases, and said nothing about a filter
+standing in front of a component that separately parses the same input
+
+### In one sentence
+
+A filter that decides "deny" or "allow" by its own comparison rule is only as
+strict as that rule — if the component behind it normalizes names differently,
+an input can slip through the gap between the two rules and still be trusted.
+
+### The gap, precisely
+
+The skill already told an author where a defensive/parsing routine over
+untrusted input belongs (one home, the union of every caller's cases). It said
+nothing about the narrower, more common shape reported here: a filter placed
+*in front of* a component that itself parses and normalizes the same input.
+When the filter reimplements its own comparison instead of reusing that
+component's normalization, the two rules can quietly diverge. An input shaped
+to defeat the filter's comparison but still recognized by the downstream
+component's normalization passes the filter and reaches the component trusted.
+
+In the reported occurrence a deny-filter compared header names with its own
+case/separator rule, while the SDK behind it normalized the same header names
+with an extra step the filter's rule did not perform. A header supplied in the
+gap between the two rules cleared the filter and was still accepted downstream
+— a live bypass, measured twice in a row on the same build before the filter
+was rewritten to call the SDK's own normalizer directly.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Untrusted header arrives"] --> B["Filter compares the name\nwith its OWN rule"]
+    B -->|"filter's rule: no match"| C["Filter allows it through"]
+    C --> D["Downstream parser normalizes\nthe SAME name with A DIFFERENT rule"]
+    D -->|"parser's rule: match"| E["Downstream parser trusts\nthe forged/attacker value"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Untrusted header arrives"] --> B["Filter calls the downstream\ncomponent's OWN normalizer"]
+    B -->|"normalized name matches deny set"| C["Filter denies it"]
+    B -->|"normalized name does not match"| D["Filter allows it through"]
+    D --> E["Downstream parser normalizes\nwith the SAME rule — no gap left"]
+```
+
+### Example you can run in your head
+
+```python
+DENY = {"x-internal-token", "x-trust-context"}
+
+def is_denied(name: str) -> bool:                       # the wrong way round
+    return name.lower() in DENY                          # filter's own rule
+
+def normalize(name: str) -> str:                          # the downstream rule
+    return name.lower().replace("_", "-").removeprefix("http-")
+
+# "HTTP_X_Internal_Token" fails is_denied() but normalize() still resolves it
+# to "x-internal-token" -- the shape the downstream parser trusts.
+```
+
+The fix is not a longer deny list; it is calling `normalize()` (or the exact
+downstream function) from inside the filter, so there is only one rule to
+diverge from.
+
+### What the skill now says
+
+| Rule | In plain words |
+|---|---|
+| A filter in front of a normalizing parser | Must decide using that parser's own normalization, not a hand-rolled equivalent |
+| "Proven equivalent" is the only alternative | If the filter cannot call the parser's function directly, it must be shown to produce identical results on every input class the parser accepts |
+| A hand-rolled comparison that can diverge | Is not a filter — it is a gap with a name |
+| The shape generalizes | HTTP header names here; the same risk applies to any deny-listed name space a downstream component separately normalizes (file extensions, MIME types, differently quoted identifiers) |
+
+### Where the rule stops
+
+It does not cover the case where no downstream component normalizes the same
+input at all — an isolated filter with no such neighbour has nothing to
+diverge from, and the pre-existing "one home, union of every caller's cases"
+rule for defensive routines still governs that case unchanged.
+
+### How the change was made
+
+Test first: a regression pinning the new `## Rules` bullet and the new
+`references/security.md` section — including every anchor phrase of its final
+wording — was confirmed genuinely red against the pre-change files, alongside
+guards that were green throughout (the neighbouring "union of every caller's
+cases" section survives untouched; no reporting project's identifiers appear
+in the skill) → the minimal delta was added → the regression went green → the
+whole library's suite ran with no regressions. No eval case was added or
+changed by this delta, so the declared gate bar is unaffected; re-measure with
+`scripts/run_skill_evals.py --tier gate --repeat 3` when vendor/network access
+is available.
+
+---
+
 ## A cleanup rule that never named the store it assumed
 
 **Releases:** project `3.14.0` (`testing-discipline` `1.7.0 → 1.8.0`)
