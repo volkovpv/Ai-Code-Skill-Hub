@@ -85,9 +85,19 @@ skills:
   # added 2) — unmeasured against the declared bar since; the prior
   # measurement was 24 cases, 70/72 — 2/3 on cancellederror-propagates and
   # concurrent-fanout-uses-taskgroup.
+  # 1.11.0 -> 1.12.0 (a field report from a consuming project, C3,
+  # SFL-INV-08 met on the reproduction limb, supported by an independent
+  # occurrence of the same principle) added one rule bullet + one
+  # references/security.md section: a filter guarding an input a
+  # downstream parser also normalizes must decide with that parser's own
+  # normalization. Pinned by
+  # __test__/skills/test_python_coding.py::TestFilterMustUseDownstreamNormalization
+  # (static text pins, offline, observed red before the delta and green
+  # after) — no eval-case content changed, so the case count and the gate
+  # bar above are unaffected by this bump.
   - name: python-coding
     path: skills/python-coding
-    version: 1.11.0
+    version: 1.12.0
     status: stable
     summary: Universal strictly-typed, secure-by-default Python coding standard (typing, security, structured concurrency, runtime correctness, version-gated 3.12-3.14 features) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]

@@ -78,3 +78,15 @@ Reading rules for agents:
   byte-identical, a defensive parser in five independently maintained
   copies; reviewed by the operator, 2026-08-19, provisional pending PR
   merge).
+- [OBS-20260911-001](accepted/OBS-20260911-001.md) — no rule in this
+  skill's security guidance stated that a filter guarding an input a
+  downstream parser also normalizes must decide using that parser's own
+  normalization: a reported deny-filter reimplemented its own name
+  comparison instead of reusing the downstream component's normalization,
+  and the two disagreed on at least one input shape, letting an input in
+  the gap between them bypass the filter while still reaching the parser
+  (field report from a consuming project; C3, `SFL-INV-08` met on the
+  reproduction limb — a deterministic, project-independent minimal
+  reproduction — supported by an independent occurrence of the same
+  general principle from an unrelated task; reviewed by the operator
+  (HC-AGENT-008, via HC-AGENT-010's Mode A transfer), pending PR merge).

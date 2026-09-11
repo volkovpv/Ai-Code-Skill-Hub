@@ -11,6 +11,7 @@ file, an environment variable, a queue, or another process.
 ## Contents
 
 - [A defensive routine over untrusted input has one home, the union of every caller's cases](#a-defensive-routine-over-untrusted-input-has-one-home-the-union-of-every-callers-cases)
+- [A filter guarding an input a downstream parser also normalizes decides with that parser's own normalization](#a-filter-guarding-an-input-a-downstream-parser-also-normalizes-decides-with-that-parsers-own-normalization)
 - [Injection: keep data out of code](#injection-keep-data-out-of-code)
 - [Deserialization: only data-only formats for untrusted input](#deserialization-only-data-only-formats-for-untrusted-input)
 - [Files, paths, and archives](#files-paths-and-archives)
@@ -33,6 +34,36 @@ sibling copy that was never told about it. Give the routine exactly one
 home and make its case coverage the **union of every calling site's
 inputs** — malformed, partial, and adversarial included — **never a pick of
 one caller's slice of the input space**.
+
+## A filter guarding an input a downstream parser also normalizes decides with that parser's own normalization
+
+When a security-relevant filter or deny-list sits in front of a component
+that itself parses and normalizes the same input, the filter's own
+comparison rule must either **BE** that component's normalization, or be
+proven equivalent to it. Otherwise the two can disagree, and an input in
+the gap between them bypasses the filter while still reaching the parser:
+
+```python
+DENY = {"x-internal-token", "x-trust-context"}
+
+def is_denied(name: str) -> bool:
+    return name.lower() in DENY                              # filter's own rule
+
+def normalize(name: str) -> str:
+    return name.lower().replace("_", "-").removeprefix("http-")  # parser's own rule
+
+# "HTTP_X_Internal_Token" fails is_denied() but normalize() still resolves it
+# to "x-internal-token" -- the shape the downstream parser trusts.
+```
+
+Do not hand-roll a second comparison that is supposed to track a parser's
+normalization rules; reuse the downstream component's own normalization
+function directly, or call the exact library routine the downstream
+component itself calls. A hand-rolled comparison that can silently diverge
+from the parser it guards is not a filter, it is a gap with a name. The
+same shape recurs anywhere one component gates a name space a different
+component separately normalizes: HTTP header names, file extensions, MIME
+types, or differently quoted SQL identifiers.
 
 ## Injection: keep data out of code
 

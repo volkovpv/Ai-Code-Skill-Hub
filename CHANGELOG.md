@@ -5,6 +5,29 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [3.15.0] — 2026-09-11
+
+`python-coding` `1.11.0 → 1.12.0`
+
+`OBS-20260911-001`, verdict class C3, `SFL-INV-08` met on the reproduction limb (a
+deterministic, project-independent minimal reproduction), supported by an independent
+occurrence of the same general principle from an unrelated task in the reporting
+project's own history.
+
+A field report from a consuming project: a security-relevant deny-filter placed in
+front of a component that itself parses and normalizes the same input reimplemented
+its own name comparison instead of reusing that component's normalization. The two
+comparisons disagreed on at least one input shape, so an input in that shape passed
+the filter's deny check while the downstream component still recognized and trusted
+it — a live bypass, measured twice in a row before the filter was rewritten to call
+the downstream component's own normalizer directly.
+
+Nothing in the skill's security guidance previously stated the general principle. The
+delta adds one rule bullet plus one `references/security.md` section: a filter
+guarding an input a downstream parser also normalizes must decide using that parser's
+own normalization — either be it, or be proven equivalent to it — never a hand-rolled
+comparison that can silently diverge from it.
+
 ## [3.14.0] — 2026-08-26
 
 `testing-discipline` `1.7.0 → 1.8.0`
