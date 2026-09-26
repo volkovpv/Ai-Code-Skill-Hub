@@ -194,7 +194,7 @@ installed into a consumer.
   exit with code 0.
 - When you change a source file that is under mutation scope
   (`[tool.mutmut].only_mutate`: `security.py`, `lockfile.py`, `installer.py`,
-  `yamlio.py`, `validator.py`, and the three skill analyzer scripts), run mutation
+  `yamlio.py`, `validator.py`, and the four skill analyzer scripts), run mutation
   testing **scoped to just that file**, never the whole scope:
   ```bash
   python scripts/mutation.py <path-or-short-name>   # e.g. security  OR  src/skill_library/security.py

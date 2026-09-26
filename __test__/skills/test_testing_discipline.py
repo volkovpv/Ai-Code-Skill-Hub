@@ -2063,6 +2063,7 @@ class TestRulesAreNotDuplicatedInOtherSkills(unittest.TestCase):
         "python-coding",
         "typescript-coding",
         "typescript-nestjs",
+        "go-coding",
     )
 
     ANCHORS = (

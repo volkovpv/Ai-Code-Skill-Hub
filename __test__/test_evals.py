@@ -41,7 +41,7 @@ class TestEvalRunner(TempDirTestCase):
         # The three split skills stay draft until the eval-gate passes; the
         # gate needs a manifest, so its absence would make "draft until evals
         # pass" unfalsifiable.
-        for skill in ("typescript-coding", "hexagonal-service", "typescript-nestjs"):
+        for skill in ("typescript-coding", "hexagonal-service", "typescript-nestjs", "go-coding"):
             manifest = EVALS_DIR / skill / "cases.json"
             self.assertTrue(manifest.is_file(), manifest)
             kinds = {
