@@ -1,0 +1,659 @@
+{
+  "schema_version": 1,
+  "skill": "go-coding",
+  "platforms": [
+    "claude",
+    "codex",
+    "opencode",
+    "universal"
+  ],
+  "tiers": {
+    "gate": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "medium"
+    },
+    "debug": {
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "effort": "low"
+    }
+  },
+  "cases": [
+    {
+      "id": "trigger-on-plain-go-without-architecture",
+      "kind": "trigger",
+      "requirement": "Activate for any Go work; review against the language standard without requiring or inventing an architecture.",
+      "prompt": "Review this Go function for code quality: func Load(path string) interface{} { data, _ := ioutil.ReadFile(path); var v interface{}; json.Unmarshal(data, &v); return v }",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(ioutil|os\\.ReadFile)",
+          "(?i)(ignor|discard|unchecked|dropp|swallow|check(ed|ing)? (the |every )?err)"
+        ],
+        "stdout_not_contains": [
+          "hexagonal",
+          "use case",
+          "driven adapter"
+        ]
+      }
+    },
+    {
+      "id": "boundary-go-mod-and-test-files-are-in-scope",
+      "kind": "trigger",
+      "requirement": "go.mod and _test.go files are Go work: the floor, tool pinning and test spellings apply to them.",
+      "prompt": "Our go.mod says `go 1.27`. We pin golangci-lint and stringer by installing them globally with `go install ...@latest` on every CI run and keep a tools.go file with blank imports. Is that the right way to pin development tools?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)tool\\s+directive|go get -tool|go tool "
+        ]
+      }
+    },
+    {
+      "id": "closed-set-uses-typed-constants",
+      "kind": "behavior",
+      "requirement": "A closed set is a named type with typed constants whose zero value is not a valid state, never loose strings compared by value.",
+      "prompt": "In Go, add an OrderStatus type for the values pending, paid and cancelled. Show only the single final code block you recommend, with no alternative approaches and no examples of what to avoid.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "type OrderStatus \\w+",
+          "(?s)const \\(.*OrderStatus"
+        ],
+        "stdout_not_contains": [
+          "map[string]bool{\"pending\""
+        ]
+      }
+    },
+    {
+      "id": "enum-switch-lists-every-case-and-a-default",
+      "kind": "behavior",
+      "requirement": "A switch over an enum lists every constant and keeps a default that returns an error for values outside the set.",
+      "prompt": "Write a Go function that maps a PaymentMethod enum (Card, Transfer, Wallet — typed int constants) to a fee in cents. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?s)switch.*Card.*Transfer.*Wallet.*default",
+          "(?i)error"
+        ]
+      }
+    },
+    {
+      "id": "error-wrapped-with-context-and-w",
+      "kind": "behavior",
+      "requirement": "A propagated error gets context and keeps its cause with %w; the error is returned, not panicked or dropped.",
+      "prompt": "Write a Go function LoadConfig(path string) (Config, error) that reads a JSON file into a Config struct. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "%w",
+          "os\\.ReadFile|os\\.Open"
+        ],
+        "stdout_not_contains": [
+          "ioutil.",
+          "panic(err)",
+          "interface{}"
+        ]
+      }
+    },
+    {
+      "id": "sentinel-compared-with-errors-is",
+      "kind": "behavior",
+      "requirement": "Errors are inspected with errors.Is / errors.AsType, never == on a possibly wrapped error.",
+      "prompt": "Our Go code checks `if err == sql.ErrNoRows` in the service layer, and last week the repository layer started wrapping its errors with fmt.Errorf(\"find user: %w\", err). What breaks, and what should the check be? Verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "errors\\.Is\\(",
+          "(?i)(wrap|chain)"
+        ]
+      }
+    },
+    {
+      "id": "error-message-matching-is-a-defect",
+      "kind": "behavior",
+      "requirement": "Matching on err.Error() text is a defect; use errors.Is/errors.AsType or an interface the error implements.",
+      "prompt": "A colleague detects timeouts from our Go HTTP client with `strings.Contains(err.Error(), \"timeout\")`. Is that acceptable? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(errors\\.(Is|As|AsType)|net\\.Error|DeadlineExceeded|Timeout\\(\\))"
+        ],
+        "stdout_not_contains": [
+          "that is acceptable",
+          "that's acceptable"
+        ]
+      }
+    },
+    {
+      "id": "handle-an-error-once",
+      "kind": "behavior",
+      "requirement": "An error is either logged or returned (wrapped), never both at every layer.",
+      "prompt": "In our Go service every layer does `log.Printf(\"failed: %v\", err)` and then `return err`. A single failure produces five log lines. Is that the right pattern? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(once|either|not both|twice|duplicate)",
+          "(?i)(wrap|context|%w)"
+        ]
+      }
+    },
+    {
+      "id": "library-returns-errors-instead-of-panicking",
+      "kind": "behavior",
+      "requirement": "Panic is for programmer errors and impossible states; a library returns an error for a missing file.",
+      "prompt": "Should my Go library function panic when its config file is missing, so callers definitely notice? Verdict first, then one short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|don't|do not|should not)",
+          "(?i)return.{0,30}error"
+        ],
+        "stdout_not_contains": [
+          "yes, panic"
+        ]
+      }
+    },
+    {
+      "id": "typed-nil-is-not-a-nil-error",
+      "kind": "behavior",
+      "requirement": "Returning a nil concrete pointer through an interface result produces a non-nil interface; return a literal nil.",
+      "prompt": "My Go function is declared `func validate() error` and ends with `var verr *ValidationError; return verr` when nothing failed. Callers see `err != nil` even though no error happened. Why, and what is the fix?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(interface|type.{0,20}(value|pointer))",
+          "return nil"
+        ]
+      }
+    },
+    {
+      "id": "context-is-a-parameter-not-a-field",
+      "kind": "behavior",
+      "requirement": "context.Context is the first parameter of blocking/I-O functions and is never stored in a struct.",
+      "prompt": "I want to store ctx context.Context in my Go Service struct so methods don't need a ctx parameter. Good idea? Verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|don't|do not|avoid)",
+          "(?i)first (param|argument)|(pass|take).{0,30}(ctx|context).{0,30}(each|every|per)"
+        ],
+        "stdout_not_contains": [
+          "storing it in the struct is fine"
+        ]
+      }
+    },
+    {
+      "id": "background-goroutine-has-an-owner-and-a-stop",
+      "kind": "behavior",
+      "requirement": "A long-running goroutine stops on context cancellation, uses a ticker it stops, and its starter can wait for it.",
+      "prompt": "Write Go code that starts a background goroutine polling an HTTP health endpoint every 30 seconds for the lifetime of a service. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "ctx\\.Done\\(\\)",
+          "time\\.NewTicker|\\.Stop\\(\\)",
+          "(?i)(WaitGroup|wg\\.|errgroup|done|Wait\\(\\))"
+        ],
+        "stdout_not_contains": [
+          "http.Get(",
+          "time.Sleep(30"
+        ]
+      }
+    },
+    {
+      "id": "fanout-is-bounded",
+      "kind": "behavior",
+      "requirement": "Concurrent fan-out over many inputs is bounded and collects the first error (errgroup with SetLimit or an equivalent pool).",
+      "prompt": "In Go, fetch 1000 URLs concurrently and return the first error that occurs. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "errgroup|WaitGroup",
+          "(?i)(SetLimit|semaphore|workers?|limit)",
+          "NewRequestWithContext|ctx"
+        ]
+      }
+    },
+    {
+      "id": "shared-map-needs-synchronization",
+      "kind": "behavior",
+      "requirement": "Concurrent writes to a Go map are a data race (and a fatal runtime error) even with disjoint keys; a mutex or confinement is required.",
+      "prompt": "Two goroutines write to a shared map[string]int. A colleague says it's fine because each goroutine only ever writes its own keys. Is the colleague right? Verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not right|wrong|incorrect)",
+          "(?i)(race|concurrent map writes|fatal)",
+          "(?i)(Mutex|sync\\.Map|channel|confine)"
+        ]
+      }
+    },
+    {
+      "id": "mutex-struct-uses-pointer-receivers",
+      "kind": "behavior",
+      "requirement": "A struct holding a sync.Mutex must not be copied: pointer receivers, and no embedded mutex.",
+      "prompt": "My Go Counter struct has a sync.Mutex field and value receivers on Inc and Value. Tests pass. Is it correct?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)pointer receiver|func \\(\\w+ \\*\\w+\\) (?:Inc|Value)\\(",
+          "(?i)(cop(y|ies|ied)|copylocks)"
+        ]
+      }
+    },
+    {
+      "id": "loop-variable-copy-is-obsolete",
+      "kind": "behavior",
+      "requirement": "With go 1.22+ semantics each loop iteration has its own variables; the `v := v` copy is dead code.",
+      "prompt": "Our go.mod declares go 1.27. Should I still write `v := v` inside range loops before starting goroutines that use v?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not needed|unnecessary|no longer|redundant)",
+          "1\\.22|per-iteration|each iteration"
+        ]
+      }
+    },
+    {
+      "id": "sql-values-go-through-placeholders",
+      "kind": "behavior",
+      "requirement": "SQL values travel as query arguments; SQL text is never built with fmt.Sprintf or concatenation.",
+      "prompt": "Write a Go function that finds a user by email in PostgreSQL using database/sql. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "\\$1",
+          "QueryRowContext|QueryContext"
+        ],
+        "stdout_not_contains": [
+          "fmt.Sprintf(\"SELECT",
+          "\" + email"
+        ]
+      }
+    },
+    {
+      "id": "exec-runs-without-a-shell",
+      "kind": "behavior",
+      "requirement": "External commands run as a program plus argument list, never through sh -c; an untrusted argument cannot become a flag — for git a revision goes after --end-of-options, because git's -- turns it into a path.",
+      "prompt": "Write a Go function that runs `git log --oneline <branch>`, where branch comes from a user request, and returns the output. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "exec\\.CommandContext\\(",
+          "--end-of-options|HasPrefix\\([^)\\n]*\"-\"\\)"
+        ],
+        "stdout_not_contains": [
+          "\"sh\", \"-c\"",
+          "\"bash\", \"-c\""
+        ],
+        "stdout_not_matches": [
+          "\"--\",\\s*[A-Za-z_]\\w*\\s*\\)"
+        ]
+      }
+    },
+    {
+      "id": "path-from-input-stays-inside-root",
+      "kind": "behavior",
+      "requirement": "A filename from untrusted input is opened through os.Root / os.OpenInRoot (or rejected with filepath.IsLocal), never by joining and prefix-checking strings.",
+      "prompt": "In a Go HTTP handler, serve a file from the ./uploads directory where the file name comes from a query parameter. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "os\\.OpenRoot|OpenInRoot|filepath\\.IsLocal|\\.OpenInRoot|FileServerFS"
+        ]
+      }
+    },
+    {
+      "id": "token-comes-from-crypto-rand",
+      "kind": "behavior",
+      "requirement": "Security tokens come from crypto/rand, never math/rand.",
+      "prompt": "Write a Go function that generates a password-reset token. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "crypto/rand"
+        ],
+        "stdout_not_contains": [
+          "\"math/rand\"",
+          "math/rand/v2"
+        ]
+      }
+    },
+    {
+      "id": "secret-comparison-is-constant-time",
+      "kind": "behavior",
+      "requirement": "Secrets are compared in constant time.",
+      "prompt": "How should my Go HTTP middleware compare the API key from the request header with the configured key? Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "subtle\\.ConstantTimeCompare|hmac\\.Equal"
+        ]
+      }
+    },
+    {
+      "id": "tls-verification-stays-on",
+      "kind": "behavior",
+      "requirement": "TLS verification is never disabled; a private CA is added to RootCAs instead.",
+      "prompt": "Our Go client fails against staging with `x509: certificate signed by unknown authority`. Can I set InsecureSkipVerify: true to unblock the team? Verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|don't|do not)",
+          "(?i)(RootCAs|CertPool|AppendCertsFromPEM|trust)"
+        ],
+        "stdout_not_contains": [
+          "yes, set InsecureSkipVerify"
+        ]
+      }
+    },
+    {
+      "id": "http-server-and-client-have-timeouts",
+      "kind": "behavior",
+      "requirement": "An HTTP server is an http.Server with ReadHeaderTimeout (and friends) on its own ServeMux, never http.ListenAndServe with the default mux.",
+      "prompt": "Write a minimal production-ready Go main that serves GET /healthz. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "ReadHeaderTimeout",
+          "http\\.NewServeMux\\(\\)"
+        ],
+        "stdout_not_contains": [
+          "http.ListenAndServe(\":"
+        ]
+      }
+    },
+    {
+      "id": "http-server-shuts-down-gracefully",
+      "kind": "behavior",
+      "requirement": "A server stops with srv.Shutdown when the root context ends, and http.ErrServerClosed after Shutdown is treated as a normal outcome, not a failure.",
+      "prompt": "Write a Go main that serves HTTP on :8080 and stops cleanly on SIGINT or SIGTERM, finishing in-flight requests. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "\\.Shutdown\\(",
+          "ErrServerClosed",
+          "signal\\.NotifyContext|signal\\.Notify"
+        ],
+        "stdout_not_contains": [
+          "http.ListenAndServe(\":"
+        ]
+      }
+    },
+    {
+      "id": "money-is-not-a-float",
+      "kind": "behavior",
+      "requirement": "Money is integer minor units or a decimal type, never float64.",
+      "prompt": "Add a Price field for EUR amounts to our Go Product struct. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(int64|decimal|cents|minor)"
+        ],
+        "stdout_not_contains": [
+          "Price float64",
+          "Price  float64",
+          "float32"
+        ]
+      }
+    },
+    {
+      "id": "durations-use-unit-constants",
+      "kind": "behavior",
+      "requirement": "Durations are time.Duration built from unit constants; a bare integer is nanoseconds.",
+      "prompt": "Our Go code sets `client := &http.Client{Timeout: 30}` meaning 30 seconds. Is that right? Verdict first.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)nanosecond",
+          "30 \\* time\\.Second|30\\*time\\.Second"
+        ]
+      }
+    },
+    {
+      "id": "write-path-close-error-is-not-dropped",
+      "kind": "behavior",
+      "requirement": "When writing a file, the Close error is part of the result (joined into the named error), not dropped by a bare defer.",
+      "prompt": "Write a Go function that writes a CSV report to a file path. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?s)defer.*Close\\(\\)",
+          "errors\\.Join|Close\\(\\); (err|cerr|closeErr) != nil|cerr|closeErr"
+        ]
+      }
+    },
+    {
+      "id": "modern-idioms-no-legacy",
+      "kind": "behavior",
+      "requirement": "Code targets the Go 1.27 floor: slices/maps iterators instead of sort.Strings and manual key loops.",
+      "prompt": "Write a Go function that returns the sorted keys of a map[string]int. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "slices\\.Sorted\\(maps\\.Keys|slices\\.Sort\\("
+        ],
+        "stdout_not_contains": [
+          "sort.Strings",
+          "ioutil"
+        ]
+      }
+    },
+    {
+      "id": "interface-defined-at-the-consumer",
+      "kind": "behavior",
+      "requirement": "Interfaces are small and owned by the consumer; implementations are returned as concrete types.",
+      "prompt": "We have a 20-method UserRepository interface declared next to its Postgres implementation. Our email service depends on it only to look up a user's address. How should we restructure this in Go?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(consumer|where it is used|in the (email|service) package|client side)",
+          "(?i)(small|one method|single method|narrow|only the method)"
+        ]
+      }
+    },
+    {
+      "id": "generic-type-parameter-must-relate-types",
+      "kind": "behavior",
+      "requirement": "A type parameter that is used once and only to accept anything adds nothing; take any/an interface instead.",
+      "prompt": "Should my Go logging helper be declared `func Log[T any](v T)` instead of taking a plain parameter? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|not needed|nothing|unnecessary|doesn't|does not)",
+          "(?i)(any|interface)"
+        ]
+      }
+    },
+    {
+      "id": "no-suppression-to-pass-gates",
+      "kind": "behavior",
+      "requirement": "Never silence a linter to go green; fix the cause. A justified single-linter nolint is the only exception.",
+      "prompt": "golangci-lint's errcheck fails on one line in our Go service and CI must be green in ten minutes. Should I add //nolint above it?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(no|fix|handle|instead)"
+        ],
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])just add `?//nolint(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])adding `?//nolint`? (?:is|would be) fine(?![^.\\n]*\\bonly\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
+        ]
+      }
+    },
+    {
+      "id": "progressive-disclosure-routes-to-lint-reference",
+      "kind": "behavior",
+      "requirement": "Deep detail (the strict golangci-lint v2 configuration) lives in references/lint-clean.md and is used on demand.",
+      "prompt": "What golangci-lint configuration should a strict production Go project use, and how are suppressions kept honest?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(version: \"?2|golangci-lint`? v2\\b)",
+          "nolintlint",
+          "(?i)require-(explanation|specific)"
+        ]
+      }
+    },
+    {
+      "id": "conflict-project-instructions-win",
+      "kind": "behavior",
+      "requirement": "Explicit project instructions take precedence over the skill's own defaults.",
+      "prompt": "Our project rules mandate github.com/pkg/errors for all error wrapping — a documented, settled team decision. Take that decision as given; do not look for the file that records it. Write a Go function that reads a file and wraps the read error, following the project rules.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "errors\\.Wrap|pkg/errors"
+        ]
+      }
+    },
+    {
+      "id": "unrelated-python-request-not-goified",
+      "kind": "negative",
+      "requirement": "Do not force Go conventions onto non-Go work.",
+      "prompt": "Write a small Python function that counts vowels in a string.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "func ",
+          "go vet",
+          "golangci",
+          "package main"
+        ]
+      }
+    },
+    {
+      "id": "renamed-cross-package-duplicate-survives-green-dupl",
+      "kind": "behavior",
+      "requirement": "dupl is rename-blind but runs per package and only above its token threshold; a green run does not clear a renamed copy in a sibling package.",
+      "prompt": "Our golangci-lint run, dupl included, is fully green. pkg/billing has `toCents` and pkg/report has `amountInCents` with the identical 8-line body, only renamed. Is this fine to leave because dupl passed? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(extract|factor|shared|one home|duplicat|move)",
+          "(?i)(per.package|package|threshold|token)"
+        ]
+      }
+    },
+    {
+      "id": "survey-before-writing-extend-dont-duplicate",
+      "kind": "behavior",
+      "requirement": "Before writing new logic, search the tree by shape and call or extend the existing home rather than writing a differently named duplicate.",
+      "prompt": "Our Go module already has `func OrderTotal(items []LineItem) Money` in package pricing. I need exactly the same computation from package checkout, under the name CheckoutTotal. What should I do, and why? One short paragraph, no code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(import|reuse|call|existing|extend)",
+          "(?i)(duplicat|copy|new (function|implementation))"
+        ],
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])copy the function body(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])just duplicate it(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
+        ]
+      }
+    },
+    {
+      "id": "survey-does-not-block-genuinely-new-capability",
+      "kind": "negative",
+      "requirement": "The survey must not block new code once the search by shape came back empty.",
+      "prompt": "I'm writing the first retrying HTTP client wrapper for this Go module; I already searched the whole tree by what it would be built out of and nothing comparable exists. Should I hold off writing it until some further formal review, or can I write it now? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])hold off(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])wait (?:until|for) (?:a |the |some )?(?:further )?formal review(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?i)\\b(?:do not|don['’]t) write it yet"
+        ]
+      }
+    },
+    {
+      "id": "completeness-check-derives-from-the-external-owner",
+      "kind": "behavior",
+      "requirement": "A completeness check over a set owned outside the program reads that owner and diffs; a list read off the code under check is self-referential.",
+      "prompt": "Our Go service deletes expired rows across a PostgreSQL schema and must not violate a foreign key. For the guard proving the delete order covers every non-CASCADE foreign key, I plan to build expectedEdges by listing the edges my delete-order code already handles, then assert they match. Is that guard sound? Two or three sentences.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(introspect|query the schema|information_schema|pg_constraint|read.{0,20}(schema|catalog)|from the (schema|database))",
+          "(?i)(self-referential|circular|same source|would not (see|catch)|blind|never read)"
+        ],
+        "stdout_not_contains": [
+          "that guard is sound",
+          "yes, that is a sound guard"
+        ]
+      }
+    },
+    {
+      "id": "completeness-check-in-program-enum-needs-no-introspection",
+      "kind": "negative",
+      "requirement": "Where the set is an enum declared in this program, deriving the check from it is correct; no external introspection is required.",
+      "prompt": "The set of supported event kinds is a Go iota enum declared in this same package, with an unexported kindCount sentinel after the last constant, and my test ranges from the first kind up to kindCount checking every kind has a handler. Do I also need to introspect some external system for this one? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": [
+          "you must introspect an external system"
+        ],
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])introspect the database schema(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
+        ]
+      }
+    },
+    {
+      "id": "env-var-named-by-role-not-by-caller",
+      "kind": "behavior",
+      "requirement": "An environment variable is named by its role, not by its caller: a second process's config loader reads the same PG_USER/PG_PASSWORD its role already has and gets its own value from whatever starts it — never a per-service name.",
+      "prompt": "We run two Go services, each its own process, each connecting to PostgreSQL as its own role. The first service's config loader reads PG_USER/PG_PASSWORD. Write the Go config loading for the second service's PostgreSQL credentials. Show only the final code.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "\"PG_USER\"",
+          "\"PG_PASSWORD\""
+        ],
+        "stdout_not_matches": [
+          "\\\"(?:[A-Z0-9]+_)+PG_(?:USER|PASSWORD)\\\"|\\\"PG_(?:USER|PASSWORD)_[A-Z0-9_]+\\\"|\\\"PG_[A-Z0-9]+_(?:USER|PASSWORD)\\\""
+        ]
+      }
+    },
+    {
+      "id": "filter-uses-the-downstream-normalization",
+      "kind": "behavior",
+      "requirement": "A deny-filter in front of a component that normalizes the same input decides with that component's normalization (for HTTP header names: http.CanonicalHeaderKey).",
+      "prompt": "Our Go reverse proxy strips internal headers using `if denied[name] { continue }` where denied holds lowercase names like \"x-internal-token\" and name is the raw header name from the request; the headers then go through net/http. Is this filter sound? Two or three sentences.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(CanonicalHeaderKey|canonical|normaliz)",
+          "(?i)(bypass|not sound|unsound|mismatch|case)"
+        ]
+      }
+    },
+    {
+      "id": "defensive-parser-over-untrusted-input-has-one-home",
+      "kind": "behavior",
+      "requirement": "A defensive parser over untrusted input used by several callers lives once and covers the union of every caller's cases.",
+      "prompt": "Two Go packages each parse possibly-truncated JSON out of noisy model output with their own small helper, each tested only against the malformed shapes its own team saw. A third team wants its own copy tested against its new malformed shape. What should we do instead, and why?",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(one|single|shared|common).{0,20}(home|place|implementation|function|helper|package)",
+          "(?i)(union|combin|accumulat|every (caller|team|malformed|shape)|all (three |the )?(teams|callers)'?[^.\\n]{0,40}(cases|shapes)|all.{0,10}cases)"
+        ]
+      }
+    },
+    {
+      "id": "wrapped-cause-that-echoes-input-is-scrubbed",
+      "kind": "behavior",
+      "requirement": "A wrapped standard-library parse error echoes its input (strconv.NumError includes the text); logging the full chain of a secret-bearing value discloses it.",
+      "prompt": "Our Go config loader parses API_SIGNING_KEY with strconv.ParseUint and on failure returns fmt.Errorf(\"invalid signing key: %w\", err); main logs the error with slog. Is that safe given the value is secret? One short paragraph.",
+      "expect": {
+        "exit_code": 0,
+        "stdout_matches": [
+          "(?i)(leak|disclos|expos|echo|contains the (value|input)|includ\\w* the [\\w ]{0,20}(input|value|string)|verbatim)",
+          "(?i)(%v|scrub|redact|(do not|don't|never) (wrap|log|propagat)|not propagat|without the (underlying |original )?(value|input|err|cause)|sentinel|new error|static (message|error)|errors\\.New)"
+        ]
+      }
+    }
+  ]
+}

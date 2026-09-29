@@ -5,6 +5,129 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [4.0.0] — 2026-09-26
+
+### New skill: `go-coding` 1.0.0 (major: a skill was created)
+
+A **universal Go coding standard for a Go 1.27 floor** (toolchain 1.27.1),
+framework-, architecture-, layout- and library-neutral by contract, written
+for the declared runtime environment of this library's gate tier — Sonnet 5
+at `medium` effort: a short imperative `SKILL.md` that routes to twelve
+on-demand references. Catalogued as `status: stable` on a measured live eval
+gate — 129/129, see below.
+
+- **Sources.** Distilled from four books — Bodner, *Learning Go* 2nd ed.
+  (2024); Płotka, *Efficient Go* (2022); Harsanyi, *100 Go Mistakes and How to
+  Avoid Them* (2022); Donovan & Kernighan, *The Go Programming Language*
+  (2015) — and reconciled against the Go 1.21–1.27 release notes. Where the
+  books disagree the newer one wins, and every piece of advice a later
+  release changed is stated in its 1.27 form: optional parameters default to
+  an options struct (functional options only where a package already uses
+  them); sets default to `map[T]bool`; named results only for deferred
+  closures and never a bare `return`; `context.TODO` never shipped; the
+  loop-variable copy, the `time.After` leak, `automaxprocs`, heap ballast,
+  `b.N` loops, `wg.Add/Done`, `errors.As` with a target variable and the
+  pointer-helper functions are replaced by what 1.22–1.27 made true.
+- **Rule surface.** Errors handled exactly once (wrapped with `%w` and
+  context, inspected with `errors.Is`/`errors.AsType`, never matched by
+  message, never `panic(err)`, never logged and returned); a wrapped parse
+  error that echoes its input (`strconv.NumError`) named as a disclosure
+  channel; typed constants with exhaustive switches plus a failing `default`,
+  sealed interfaces, id types parsed at the boundary, literal `nil` for
+  interface results; consumer-owned interfaces and concrete returns; type
+  parameters only where they relate types, including 1.27 generic methods;
+  `ctx` first and never stored, owned and bounded goroutines (`errgroup`,
+  `WaitGroup.Go`), no data races; secure by default (placeholders,
+  `exec.CommandContext` without a shell, `html/template`, `os.Root`,
+  `crypto/rand`, constant-time comparison, TLS verification, HTTP servers and
+  clients with timeouts, bounded input); runtime correctness (unit-typed
+  durations, integer money, slice aliasing, resources closed on every path);
+  modern forms with `go fix`; plus the library-wide rules restated in Go
+  terms — survey by shape before writing, env vars named by role,
+  completeness checks derived from the set's owner, union of callers for
+  defensive routines, filters that decide with the downstream parser's
+  normalization (`http.CanonicalHeaderKey`).
+- **Measured, not assumed.** With Go 1.27.1 and golangci-lint 2.13: the
+  reference golangci-lint v2 configuration in `references/lint-clean.md`
+  passes `golangci-lint config verify` and reports zero issues on the
+  calibration sample; every Go snippet in the skill compiles and passes
+  `go vet`. The same measurement is recorded as guidance: what the stack does
+  not catch (`err.Error()` matching, SQL built with `fmt.Sprintf` inline as
+  the query argument or used in `return db.QueryContext(ctx, q)` — gosec
+  G201/G202 report only the build-into-a-variable-then-call assignment —
+  `panic(err)`, `os.Exit` outside `main`, `errors.As`), that `dupl` is
+  rename-blind but runs
+  per package and above 150 tokens (a renamed 17-line copy in a sibling
+  package is never reported), that errcheck in v2 flags a bare
+  `defer x.Close()`, that a typed enum end marker is an `exhaustive` member
+  (hence `ignore-enum-members: "Unspecified$|\\.[a-z]\\w*Count$"` with
+  `check: [switch, map]`), and which gosec findings the recommended code
+  still needs a justified `//nolint` for (G204 on argv `exec`, G304, G505).
+- **Checker.** New analyzer `scripts/check_go_conventions.py` (stdlib-only,
+  offline): a Go lexical masking scanner (line and block comments,
+  interpreted and raw strings, runes; import paths read from code-anchored
+  raw text) with the library's strict fail-closed
+  `skill-check-ignore: <CODE> -- <reason>` contract. 18 rules aimed at the
+  blind spots above plus the high-signal basics: `GO-PRINT`, `GO-ENV`,
+  `GO-SUPPRESS` (only `//nolint:<one-linter> // <reason>`, single-check
+  `//lint:ignore` and `#nosec <RULE> -- <reason>` are sanctioned),
+  `GO-EXIT`, `GO-CTX-ROOT`, `GO-INIT`, `GO-PANIC-ERR`, `GO-LEGACY-API`,
+  `GO-LEGACY-IMPORT`, `GO-ERR-MATCH`, `GO-TYPE-ASSERT`, `GO-SQL-FMT`,
+  `GO-SHELL`, `GO-TLS-INSECURE`, `GO-HTTP-TIMEOUT`, `GO-DURATION`,
+  `GO-EMBED-LOCK`, `GO-PKG-NAME`. Its contexts relax only what the reference
+  lint configuration also allows — `os.Exit` and the root context in
+  `package main`, environment reads in tests, environment access in
+  configuration files — decided by the path relative to the nearest `go.mod`;
+  generated files, `vendor/` and `testdata/` are skipped.
+- **Layers.** `knowledge/` patterns and pitfalls with evidence links,
+  calibrated `data/` fixtures and an example pair, an `observations/`
+  lifecycle index, adapters for all five registered vendors, and a
+  user-facing `README.md`.
+- **Tests and evals.** `__test__/skills/test_go_coding.py` (fixture contract,
+  exact scanner views, masking, suppression bypass battery, every rule's
+  positives and near-misses, path/main/generated contexts, determinism, IO
+  edge cases, in-process driver, runtime-install link resolution, and prose
+  pins derived from the checker itself — every rule code and every flagged
+  import must be explained in the references).
+  `__test__/evals/go-coding/cases.json` ships 43 trigger/behavior/negative
+  cases with the gate tier anthropic / `claude-sonnet-5` / `medium`.
+- **Eval gate: 129/129, and what it changed.** The first live run showed the
+  skill loading on only 4 of 16 code-only and review prompts — the load
+  trigger was the description's closing sentence — so correct rules went
+  unread and plain-model answers failed (an unbounded 1000-goroutine
+  fan-out; a user-supplied branch passed to `git` as a bare argument or after
+  `--`). Each fix was re-measured:
+  - the description now *opens* with the load trigger and names snippets,
+    code-only answers and design questions (16 of 16 loads on the same
+    prompts);
+  - `SKILL.md` states three rules the gate showed were not reached through
+    the routing table: fan-out over input-sized work is bounded
+    (`g.SetLimit(n)`); an input argument to `exec` cannot become a flag
+    (`--end-of-options` for git, whose `--` turns the value into a path); an
+    environment variable is named by its role, not by its caller;
+  - manifest defects in nine cases, none weakening a requirement: oracles
+    that pinned wording instead of behaviour (a v2 configuration described
+    in prose, "accumulates every shape" for a union, "verbatim" for a
+    disclosure, "don't wrap", pointer receivers shown in code); bans phrased
+    as advice replaced by the negation-aware sentence pattern (a correct "no
+    reason to hold off" had failed) and one made case-insensitive; and the
+    `exec` case's own requirement corrected — it prescribed `--` — and
+    tightened (`--end-of-options` or a leading-dash check required,
+    `"--", branch` rejected);
+  - the env-var case became a code task. As a one-paragraph design question
+    the skill never loaded (0 of 16 across four description variants) and
+    the model answers the opposite; on the code task the skill loads every
+    time and reads `PG_USER`, where the model without it invents
+    `SVC2_PG_USER` in 3 of 3.
+
+  Final run: every case 3/3 — cases 1–27 on 2026-09-27, 28–43 on
+  2026-09-29 (a usage limit split the run; the skill content was identical).
+- **Library wiring.** The analyzer joins the coverage sources and the mutmut
+  `only_mutate` scope; `test_skill_boundaries.py` knows the `GO-` rule-code
+  prefix and scans `.go` files; the universal-test-rule anti-duplication gate
+  and the eval-manifest gate cover `go-coding`; root `README.md`, `AGENTS.md`
+  and `CLAUDE.md` updated (four skill analyzer scripts).
+
 ## [3.15.0] — 2026-09-11
 
 `python-coding` `1.11.0 → 1.12.0`

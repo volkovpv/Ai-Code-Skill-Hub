@@ -55,10 +55,11 @@ OWN_CODE_PREFIX = {
     "typescript-coding": "TS",
     "python-coding": "PY",
     "typescript-nestjs": "NEST",
+    "go-coding": "GO",
 }
-RULE_CODE = re.compile(r"\b(TS|PY|NEST)-[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*\b")
+RULE_CODE = re.compile(r"\b(TS|PY|NEST|GO)-[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*\b")
 
-TEXT_SUFFIXES = (".md", ".yaml", ".py", ".ts")
+TEXT_SUFFIXES = (".md", ".yaml", ".py", ".ts", ".go")
 
 # Records an agent may not edit (AGENTS.md); their authored index is gated.
 OBSERVATION_RECORD_DIRS = (
@@ -206,8 +207,11 @@ class TestGateMechanics(unittest.TestCase):
         self.assertTrue(is_conditional(sentences(text)[0]))
 
     def test_the_rule_code_pattern_matches_the_shapes_checkers_emit(self):
-        found = [m.group(0) for m in RULE_CODE.finditer("TS-ENV PY-TLS-NOVERIFY NEST-DI-TOKEN")]
-        self.assertEqual(found, ["TS-ENV", "PY-TLS-NOVERIFY", "NEST-DI-TOKEN"])
+        found = [
+            m.group(0)
+            for m in RULE_CODE.finditer("TS-ENV PY-TLS-NOVERIFY NEST-DI-TOKEN GO-SQL-FMT")
+        ]
+        self.assertEqual(found, ["TS-ENV", "PY-TLS-NOVERIFY", "NEST-DI-TOKEN", "GO-SQL-FMT"])
 
 
 if __name__ == "__main__":

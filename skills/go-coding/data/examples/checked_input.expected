@@ -1,0 +1,4 @@
+<stdin>:4: GO-PRINT fmt.Print*/print/println/log.Print* writes around the project's logging; log through an injected logger, write output to an injected io.Writer, use t.Log in tests
+<stdin>:5: GO-ENV environment access outside the config layer; centralize os.Getenv/LookupEnv in configuration code (tests set variables with t.Setenv)
+<stdin>:6: GO-HTTP-TIMEOUT HTTP call or server without timeouts; use an http.Server with ReadHeaderTimeout and an http.Client with Timeout plus request contexts
+<stdin>:10: GO-SQL-FMT SQL text built with fmt.Sprintf or concatenation; pass values as query arguments through placeholders
