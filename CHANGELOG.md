@@ -7,14 +7,14 @@ the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
 ## [4.0.0] — 2026-09-26
 
-### New skill: `go-coding` 0.1.0 (major: a skill was created)
+### New skill: `go-coding` 1.0.0 (major: a skill was created)
 
 A **universal Go coding standard for a Go 1.27 floor** (toolchain 1.27.1),
 framework-, architecture-, layout- and library-neutral by contract, written
 for the declared runtime environment of this library's gate tier — Sonnet 5
 at `medium` effort: a short imperative `SKILL.md` that routes to twelve
-on-demand references. Catalogued as `status: draft` until the eval gate is
-run against a real harness.
+on-demand references. Catalogued as `status: stable` on a measured live eval
+gate — 129/129, see below.
 
 - **Sources.** Distilled from four books — Bodner, *Learning Go* 2nd ed.
   (2024); Płotka, *Efficient Go* (2022); Harsanyi, *100 Go Mistakes and How to
@@ -60,7 +60,7 @@ run against a real harness.
   per package and above 150 tokens (a renamed 17-line copy in a sibling
   package is never reported), that errcheck in v2 flags a bare
   `defer x.Close()`, that a typed enum end marker is an `exhaustive` member
-  (hence `ignore-enum-members: "(Unspecified|Count)$"` with
+  (hence `ignore-enum-members: "Unspecified$|\\.[a-z]\\w*Count$"` with
   `check: [switch, map]`), and which gosec findings the recommended code
   still needs a justified `//nolint` for (G204 on argv `exec`, G304, G505).
 - **Checker.** New analyzer `scripts/check_go_conventions.py` (stdlib-only,
@@ -90,8 +90,38 @@ run against a real harness.
   pins derived from the checker itself — every rule code and every flagged
   import must be explained in the references).
   `__test__/evals/go-coding/cases.json` ships 43 trigger/behavior/negative
-  cases with the gate tier anthropic / `claude-sonnet-5` / `medium`;
-  **unmeasured** — no live harness run was made while authoring.
+  cases with the gate tier anthropic / `claude-sonnet-5` / `medium`.
+- **Eval gate: 129/129, and what it changed.** The first live run showed the
+  skill loading on only 4 of 16 code-only and review prompts — the load
+  trigger was the description's closing sentence — so correct rules went
+  unread and plain-model answers failed (an unbounded 1000-goroutine
+  fan-out; a user-supplied branch passed to `git` as a bare argument or after
+  `--`). Each fix was re-measured:
+  - the description now *opens* with the load trigger and names snippets,
+    code-only answers and design questions (16 of 16 loads on the same
+    prompts);
+  - `SKILL.md` states three rules the gate showed were not reached through
+    the routing table: fan-out over input-sized work is bounded
+    (`g.SetLimit(n)`); an input argument to `exec` cannot become a flag
+    (`--end-of-options` for git, whose `--` turns the value into a path); an
+    environment variable is named by its role, not by its caller;
+  - manifest defects in nine cases, none weakening a requirement: oracles
+    that pinned wording instead of behaviour (a v2 configuration described
+    in prose, "accumulates every shape" for a union, "verbatim" for a
+    disclosure, "don't wrap", pointer receivers shown in code); bans phrased
+    as advice replaced by the negation-aware sentence pattern (a correct "no
+    reason to hold off" had failed) and one made case-insensitive; and the
+    `exec` case's own requirement corrected — it prescribed `--` — and
+    tightened (`--end-of-options` or a leading-dash check required,
+    `"--", branch` rejected);
+  - the env-var case became a code task. As a one-paragraph design question
+    the skill never loaded (0 of 16 across four description variants) and
+    the model answers the opposite; on the code task the skill loads every
+    time and reads `PG_USER`, where the model without it invents
+    `SVC2_PG_USER` in 3 of 3.
+
+  Final run: every case 3/3 — cases 1–27 on 2026-09-27, 28–43 on
+  2026-09-29 (a usage limit split the run; the skill content was identical).
 - **Library wiring.** The analyzer joins the coverage sources and the mutmut
   `only_mutate` scope; `test_skill_boundaries.py` knows the `GO-` rule-code
   prefix and scans `.go` files; the universal-test-rule anti-duplication gate

@@ -141,16 +141,19 @@ skills:
       pii_allowed: false
       secrets_allowed: false
       observation_review_required: true
-  # go-coding: 43 cases in __test__/evals/go-coding/cases.json, declared gate
-  # tier anthropic / claude-sonnet-5 / medium — UNMEASURED: the skill stays
-  # draft until scripts/run_skill_evals.py --tier gate --repeat 3 passes on
-  # the per-case majority bar used for the other skills. The reference lint
-  # configuration and the calibration sample were verified offline with
-  # Go 1.27.1 and golangci-lint 2.13 (zero issues).
+  # go-coding: stable since 2026-09-29 on the declared bar (every case passes
+  # at least 2 of 3 attempts) with a clean sweep — 129/129 on the gate tier
+  # (anthropic / claude-sonnet-5 / medium) over the 43 cases in
+  # __test__/evals/go-coding/cases.json. The final run was split by a usage
+  # limit: cases 1-27 on 2026-09-27, 28-43 on 2026-09-29, the same skill
+  # content both days. Re-measure with scripts/run_skill_evals.py --tier gate
+  # --repeat 3 after changing the skill. The reference lint configuration and
+  # the calibration sample were verified offline with Go 1.27.1 and
+  # golangci-lint 2.13 (zero issues).
   - name: go-coding
     path: skills/go-coding
-    version: 0.1.0
-    status: draft
+    version: 1.0.0
+    status: stable
     summary: Universal Go 1.27 coding standard (explicit error handling, type design without sum types, owned goroutines, secure by default, runtime correctness, lint-clean golangci-lint v2) and convention checker; no framework or architecture assumptions.
     platforms: [universal, codex, opencode, claude, hermes]
     license: MIT

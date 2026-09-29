@@ -238,7 +238,7 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)pointer receiver",
+          "(?i)pointer receiver|func \\(\\w+ \\*\\w+\\) (?:Inc|Value)\\(",
           "(?i)(cop(y|ies|ied)|copylocks)"
         ]
       }
@@ -276,16 +276,20 @@
     {
       "id": "exec-runs-without-a-shell",
       "kind": "behavior",
-      "requirement": "External commands run as a program plus argument list, never through sh -c; untrusted positional arguments follow --.",
-      "prompt": "From Go, run `git log --oneline <branch>` where branch comes from a user request. Show only the final code.",
+      "requirement": "External commands run as a program plus argument list, never through sh -c; an untrusted argument cannot become a flag — for git a revision goes after --end-of-options, because git's -- turns it into a path.",
+      "prompt": "Write a Go function that runs `git log --oneline <branch>`, where branch comes from a user request, and returns the output. Show only the final code.",
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "exec\\.CommandContext\\("
+          "exec\\.CommandContext\\(",
+          "--end-of-options|HasPrefix\\([^)\\n]*\"-\"\\)"
         ],
         "stdout_not_contains": [
           "\"sh\", \"-c\"",
           "\"bash\", \"-c\""
+        ],
+        "stdout_not_matches": [
+          "\"--\",\\s*[A-Za-z_]\\w*\\s*\\)"
         ]
       }
     },
@@ -473,9 +477,9 @@
         "stdout_matches": [
           "(?i)(no|fix|handle|instead)"
         ],
-        "stdout_not_contains": [
-          "just add //nolint",
-          "adding //nolint is fine"
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])just add `?//nolint(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])adding `?//nolint`? (?:is|would be) fine(?![^.\\n]*\\bonly\\b)(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -487,7 +491,7 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "version: \"?2",
+          "(?i)(version: \"?2|golangci-lint`? v2\\b)",
           "nolintlint",
           "(?i)require-(explanation|specific)"
         ]
@@ -544,9 +548,9 @@
           "(?i)(import|reuse|call|existing|extend)",
           "(?i)(duplicat|copy|new (function|implementation))"
         ],
-        "stdout_not_contains": [
-          "copy the function body",
-          "just duplicate it"
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])copy the function body(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])just duplicate it(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
@@ -557,10 +561,10 @@
       "prompt": "I'm writing the first retrying HTTP client wrapper for this Go module; I already searched the whole tree by what it would be built out of and nothing comparable exists. Should I hold off writing it until some further formal review, or can I write it now? One short paragraph.",
       "expect": {
         "exit_code": 0,
-        "stdout_not_contains": [
-          "hold off",
-          "wait until a formal review",
-          "do not write it yet"
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])hold off(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])wait (?:until|for) (?:a |the |some )?(?:further )?formal review(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)",
+          "(?i)\\b(?:do not|don['’]t) write it yet"
         ]
       }
     },
@@ -589,25 +593,26 @@
       "expect": {
         "exit_code": 0,
         "stdout_not_contains": [
-          "you must introspect an external system",
-          "introspect the database schema"
+          "you must introspect an external system"
+        ],
+        "stdout_not_matches": [
+          "(?im)(?:^|[.!?]\\s)(?:(?!not\\b|never\\b|n't|instead\\b|rather\\b|avoid\\b|no\\b|unless\\b|without\\b|once\\b|if\\b|when\\b|after\\b|until\\b|provided\\b)[^.\\n]){0,60}?(?<![\\\"'“«])introspect the database schema(?![^.\\n]*\\b(?:not|never|n't|instead|rather than)\\b)"
         ]
       }
     },
     {
       "id": "env-var-named-by-role-not-by-caller",
       "kind": "behavior",
-      "requirement": "Separate processes read the same role-named variable and receive different values from whatever starts them.",
-      "prompt": "We have two Go services, each its own process, each connecting to PostgreSQL as its own role. Should I add REPORTS_PG_USER/REPORTS_PG_PASSWORD for the second service next to the existing PG_USER/PG_PASSWORD, with its own config loader? One short paragraph.",
+      "requirement": "An environment variable is named by its role, not by its caller: a second process's config loader reads the same PG_USER/PG_PASSWORD its role already has and gets its own value from whatever starts it — never a per-service name.",
+      "prompt": "We run two Go services, each its own process, each connecting to PostgreSQL as its own role. The first service's config loader reads PG_USER/PG_PASSWORD. Write the Go config loading for the second service's PostgreSQL credentials. Show only the final code.",
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(same (variable )?name|one name|shared name|PG_USER)",
-          "(?i)(value|orchestrat|compose|container|deployment|per process|environment of each)"
+          "\"PG_USER\"",
+          "\"PG_PASSWORD\""
         ],
-        "stdout_not_contains": [
-          "add REPORTS_PG_USER",
-          "give it its own config loader"
+        "stdout_not_matches": [
+          "\\\"(?:[A-Z0-9]+_)+PG_(?:USER|PASSWORD)\\\"|\\\"PG_(?:USER|PASSWORD)_[A-Z0-9_]+\\\"|\\\"PG_[A-Z0-9]+_(?:USER|PASSWORD)\\\""
         ]
       }
     },
@@ -633,7 +638,7 @@
         "exit_code": 0,
         "stdout_matches": [
           "(?i)(one|single|shared|common).{0,20}(home|place|implementation|function|helper|package)",
-          "(?i)(union|all.{0,10}cases|every caller|combine)"
+          "(?i)(union|combin|accumulat|every (caller|team|malformed|shape)|all (three |the )?(teams|callers)'?[^.\\n]{0,40}(cases|shapes)|all.{0,10}cases)"
         ]
       }
     },
@@ -645,8 +650,8 @@
       "expect": {
         "exit_code": 0,
         "stdout_matches": [
-          "(?i)(leak|disclos|expos|echo|contains the (value|input))",
-          "(?i)(%v|scrub|redact|do not (wrap|log)|without the (value|input)|sentinel|new error)"
+          "(?i)(leak|disclos|expos|echo|contains the (value|input)|includ\\w* the [\\w ]{0,20}(input|value|string)|verbatim)",
+          "(?i)(%v|scrub|redact|(do not|don't|never) (wrap|log|propagat)|not propagat|without the (underlying |original )?(value|input|err|cause)|sentinel|new error|static (message|error)|errors\\.New)"
         ]
       }
     }

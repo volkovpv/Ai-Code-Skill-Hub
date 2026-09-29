@@ -1406,6 +1406,17 @@ class TestSkillMdContract(unittest.TestCase):
         for needle in ("Go 1.27", ".go", "go.mod", "_test.go"):
             self.assertIn(needle, description)
 
+    def test_description_opens_with_the_load_trigger_for_code_only_answers(self):
+        # Gate evidence (Sonnet 5 / medium): with the trigger as the closing
+        # sentence the skill loaded on 4 of 16 code-only and review prompts;
+        # moved first and naming snippets and code-only answers, on 16 of 16;
+        # naming design questions too lifted a reuse question from 0/2 to 2/2.
+        description = frontmatter_description()
+        self.assertTrue(description.startswith("Load before writing any Go"))
+        first_sentence = description.split(". ")[0]
+        self.assertIn("code-only answer", first_sentence)
+        self.assertIn("answering a design question about Go code", first_sentence)
+
     def test_skill_md_stays_short_for_a_medium_effort_reader(self):
         self.assertLessEqual(len(skill_md().splitlines()), 260)
 
@@ -1421,6 +1432,30 @@ class TestSkillMdContract(unittest.TestCase):
 
     def test_project_instructions_take_precedence(self):
         self.assertIn("Project instructions always take precedence", " ".join(skill_md().split()))
+
+    def test_bounded_fan_out_is_its_own_rule_naming_set_limit(self):
+        # Gate evidence: folded into the goroutine-ownership bullet, the bound
+        # was dropped from a loaded skill's 1000-URL errgroup answer.
+        text = " ".join(skill_md().split())
+        self.assertIn("- **Fan-out over input-sized work is bounded**: `g.SetLimit(n)`", text)
+
+    def test_env_var_naming_by_role_is_stated_in_skill_md(self):
+        # Gate evidence: routed only through the table, the rule was not read
+        # and 3 of 3 answers endorsed a per-caller variable name.
+        text = " ".join(skill_md().split())
+        self.assertIn("- **An environment variable is named by its role, not by its caller**", text)
+        self.assertIn("separate processes read the same name (`PG_USER`)", text)
+        self.assertIn(
+            "(references/duplication-survey.md#an-environment-variable-is-named-by-its-role-not-by-its-caller)",
+            text,
+        )
+
+    def test_exec_rule_stops_option_parsing_with_the_git_terminator(self):
+        # Gate evidence: answers passed a user-supplied branch either as a bare
+        # argv element (a flag injection) or after `--` (git reads it as a path).
+        text = " ".join(skill_md().split())
+        self.assertIn("an input argument cannot become a flag", text)
+        self.assertIn("after `--end-of-options`; its `--` makes the value a path", text)
 
 
 class TestCheckerIsDocumented(unittest.TestCase):

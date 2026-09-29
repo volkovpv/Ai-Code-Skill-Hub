@@ -1,6 +1,6 @@
 ---
 name: go-coding
-description: Universal coding standard and workflow for production Go on a Go 1.27 floor, with no framework, architecture or library assumptions. Errors handled exactly once — wrapped with %w and context, inspected with errors.Is/errors.AsType, never matched by message or panicked; small consumer-owned interfaces and concrete returns; typed constants with exhaustive switches, sealed interfaces, named id types; context as the first parameter, owned and bounded goroutines (errgroup, WaitGroup.Go), no data races; secure by default (SQL placeholders, os/exec without a shell, os.Root for input paths, crypto/rand, TLS verification on, HTTP servers and clients with timeouts); runtime correctness (unit-typed durations, no float money, slice aliasing, every resource closed); modern Go 1.27 forms via go fix; golangci-lint v2 clean, no blanket nolint. Use whenever writing, reviewing, or refactoring Go — .go files, go.mod, _test.go tests. Where the host project also declares an architecture standard, apply it on top.
+description: Load before writing any Go — even a snippet or a code-only answer — and before reviewing, refactoring or answering a design question about Go code or its config (.go, go.mod, _test.go). Universal Go 1.27 standard; no framework, architecture or library assumed. Errors handled exactly once — wrapped with %w and context, inspected with errors.Is/AsType, never matched by message or panicked; small consumer-owned interfaces and concrete returns; typed constants with exhaustive switches, sealed interfaces, named id types; context as the first parameter, owned and bounded goroutines (errgroup, WaitGroup.Go), no data races; secure by default (SQL placeholders, os/exec without a shell, os.Root for input paths, crypto/rand, TLS verification on, HTTP timeouts on both sides); runtime correctness (unit-typed durations, no float money, slice aliasing, every resource closed); modern forms via go fix; golangci-lint v2 clean, no blanket nolint. Where the host project declares an architecture standard, apply it on top.
 ---
 
 # Go coding (universal)
@@ -129,9 +129,13 @@ has been promoted into `knowledge/` or this workflow.
   `main` or tests; every `WithCancel`/`WithTimeout` is followed by
   `defer cancel()`.
 - **Every goroutine has an owner, a stop signal and a waiter**
-  (`errgroup` when it can fail, `sync.WaitGroup.Go` otherwise); fan-out is
-  bounded (`SetLimit`, a pool); no fire-and-forget; no goroutine per tiny
-  item. Shared state has one synchronization story: a named `mu` field
+  (`errgroup` when it can fail, `sync.WaitGroup.Go` otherwise); no
+  fire-and-forget; no goroutine per tiny item.
+- **Fan-out over input-sized work is bounded**: `g.SetLimit(n)` right after
+  `errgroup.WithContext`, `n` a named constant, or a fixed pool of `n`
+  workers — an errgroup without `SetLimit` over 1000 URLs starts 1000
+  goroutines and opens 1000 connections at once.
+- **Shared state has one synchronization story**: a named `mu` field
   (never embedded, never copied — pointer receivers), a channel hand-off, or
   a typed atomic; maps and appends are never shared unsynchronized — see
   [references/concurrency.md](references/concurrency.md).
@@ -159,7 +163,10 @@ has been promoted into `knowledge/` or this workflow.
   thin `main`, optional settings in an options struct.
 - **Untrusted input never becomes code**: SQL values through placeholders,
   never `fmt.Sprintf`/`+` into query text; `exec.CommandContext(ctx, prog,
-  args...)`, never `sh -c`; `html/template` for HTML; input paths through
+  args...)`, never `sh -c`, and an input argument cannot become a flag —
+  option parsing is stopped before it (for `git` a revision goes after
+  `--end-of-options`; its `--` makes the value a path); `html/template` for
+  HTML; input paths through
   `os.Root`; every size, count and body read from input bounded — see
   [references/security.md](references/security.md). A defensive routine over
   untrusted input has one home covering the union of every caller's cases;
@@ -197,6 +204,13 @@ has been promoted into `knowledge/` or this workflow.
   `io.Writer`, tests use `t.Log`; secrets never logged — including
   through a wrapped parse error that echoes its input (`strconv.NumError`) —
   see [references/errors-config-logging.md](references/errors-config-logging.md).
+- **An environment variable is named by its role, not by its caller**:
+  separate processes read the same name (`PG_USER`) and each is handed its
+  own value by whatever starts it; `BILLING_PG_USER` beside `PG_USER` is two
+  names for one role and duplicates the loader that reads them. A second
+  name only for two principals in one process (a runtime role beside a
+  migration role) — see
+  [references/duplication-survey.md](references/duplication-survey.md#an-environment-variable-is-named-by-its-role-not-by-its-caller).
 - **Modern forms only**: `any`, `slices`/`maps`/`cmp`, `min`/`max`,
   `for i := range n`, no `v := v`, `errors.AsType`, `wg.Go`, typed atomics,
   `math/rand/v2`, `b.Loop()`; never `ioutil`, `interface{}`, `sort.Slice`,
