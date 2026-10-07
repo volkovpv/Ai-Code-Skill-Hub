@@ -168,6 +168,21 @@ suite survivable at all — see [schools.md](schools.md).
   pinning the exact rendering. An argument matched exactly when the test
   only cared about part of it is a false positive waiting for the next
   unrelated change.
+- **A negative call assertion must be able to fail, and a signature
+  change can silently take that ability away.** "This call never
+  happened" is checked by comparing the recorded calls with an expected
+  argument list as a whole. When the callee gains, loses or reorders a
+  parameter, every real call is recorded in the new shape, so the stale
+  list cannot equal any recorded call and the assertion passes whatever
+  the code does — with no compile or run signal. The positive assertions
+  on the same call go red and get rewritten; the negative one stays green
+  and is left behind. When a signature changes, re-observe each negative
+  call assertion on that callee red (make the code perform the forbidden
+  call and watch the assertion fail), and write it so a later change
+  cannot silence it: constrain the arguments that discriminate the
+  forbidden call and leave the rest to a wildcard matcher. The
+  discriminating arguments stay exact — never loosen it to match any
+  call.
 - **Constrain call order only where the order is part of the contract.**
   Most orderings are incidental, and pinning them locks down the
   implementation for nothing. Where order genuinely matters — a result

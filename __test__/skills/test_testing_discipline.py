@@ -1819,6 +1819,113 @@ class TestInteractionPrecisionGuidance(unittest.TestCase):
             self.assertEqual(text.count(needle), 1, needle)
 
 
+class TestNegativeCallAssertionsStayAbleToFail(unittest.TestCase):
+    """Regression for a field report (Reviewer-confirmed C3, one occurrence,
+    SFL-INV-08 met by a deterministic, project-independent minimal
+    reproduction).
+
+    The interaction-precision rules argue only one direction: an assertion
+    matched too tightly is a false positive that breaks on an unrelated
+    change. They are silent on the opposite direction. A *negative* call
+    assertion ("this call never happened") that lists the full argument list
+    does not break when the callee's signature grows -- it stops being able to
+    fail at all, because no recorded call can equal the stale list any more.
+    A positive assertion on the same call goes red and is rewritten; the
+    negative one stays green and is left behind. Nothing at compile time or
+    run time signals it, and the evidence rule ("seen red") covers a new
+    test, not an existing assertion that a signature change made vacuous.
+    """
+
+    DOC = REFERENCES / "unit-test-value.md"
+
+    RULE_NEGATIVE_CAN_FAIL = (
+        "**A negative call assertion must be able to fail, and a signature "
+        "change can silently take that ability away.**"
+    )
+    RULE_RE_OBSERVE = (
+        "re-observe each negative call assertion on that callee red"
+    )
+    RULE_DISCRIMINATING = (
+        "constrain the arguments that discriminate the forbidden call and "
+        "leave the rest to a wildcard matcher"
+    )
+    RULE_SILENT = "with no compile or run signal"
+    SKILL_POINTER = (
+        "A negative call assertion is re-observed red whenever the callee's "
+        "signature changes"
+    )
+    POSITIVE_BULLET = (
+        "**Match arguments only as precisely as the scenario constrains "
+        "them.**"
+    )
+
+    def _text(self) -> str:
+        return flat(self.DOC)
+
+    def test_the_negative_direction_rule_is_stated(self):
+        self.assertIn(self.RULE_NEGATIVE_CAN_FAIL, self._text())
+
+    def test_the_rule_names_why_the_assertion_goes_vacuous(self):
+        text = self._text()
+        self.assertIn(self.RULE_SILENT, text)
+        self.assertIn("cannot equal any recorded call", text)
+
+    def test_the_rule_asks_to_re_observe_after_a_signature_change(self):
+        self.assertIn(self.RULE_RE_OBSERVE, self._text())
+
+    def test_the_remedy_constrains_only_the_discriminating_arguments(self):
+        self.assertIn(self.RULE_DISCRIMINATING, self._text())
+
+    def test_the_rule_sits_in_the_precision_section(self):
+        text = self._text()
+        start = text.index(TestInteractionPrecisionGuidance.RULE_HEADING)
+        end = text.index("## What deserves a unit test at all")
+        section = text[start:end]
+        self.assertIn(self.RULE_NEGATIVE_CAN_FAIL, section)
+        self.assertLess(
+            section.index(self.POSITIVE_BULLET),
+            section.index(self.RULE_NEGATIVE_CAN_FAIL),
+        )
+
+    def test_skill_md_points_at_the_rule(self):
+        self.assertIn(self.SKILL_POINTER, flat(SKILL / "SKILL.md"))
+
+    def test_negative_the_positive_direction_bullet_survives_untouched(self):
+        # False-positive guard: the new bullet extends the precision rules,
+        # it must not weaken or replace the existing over-precision warning.
+        text = self._text()
+        self.assertEqual(text.count(self.POSITIVE_BULLET), 1)
+        self.assertIn(
+            "An argument matched exactly when the test only cared about part "
+            "of it is a false positive waiting for the next unrelated "
+            "change.",
+            text,
+        )
+
+    def test_negative_the_rule_does_not_ask_for_loose_matching_everywhere(self):
+        # False-positive guard: the remedy keeps the discriminating arguments
+        # exact; it is not a licence to match any call at all.
+        text = self._text()
+        self.assertIn("never loosen it to match any call", text)
+
+    def test_negative_the_rule_stays_language_and_library_neutral(self):
+        text = self._text()
+        start = text.index(self.RULE_NEGATIVE_CAN_FAIL)
+        bullet = text[start : start + 2500].split(" - **", 1)[0]
+        for banned in ("jest", "mockito", "unittest.mock", "sinon", "gomock"):
+            self.assertNotIn(banned, bullet.lower())
+
+    def test_rules_are_not_accidentally_duplicated(self):
+        text = self._text()
+        for needle in (
+            self.RULE_NEGATIVE_CAN_FAIL,
+            self.RULE_RE_OBSERVE,
+            self.RULE_DISCRIMINATING,
+        ):
+            self.assertEqual(text.count(needle), 1, needle)
+        self.assertEqual(flat(SKILL / "SKILL.md").count(self.SKILL_POINTER), 1)
+
+
 class TestCoexistenceBoundariesWithPreExistingRules(unittest.TestCase):
     """Four places where the process rules and the artifact rules collide.
 
@@ -2093,6 +2200,8 @@ class TestRulesAreNotDuplicatedInOtherSkills(unittest.TestCase):
         "**Pass the builder into the helper instead of its arguments.**",
         "**Only peers are ever replaced.**",
         "**Allow queries; expect commands.**",
+        "**A negative call assertion must be able to fail, and a signature "
+        "change can silently take that ability away.**",
         "**The point of a test is not to pass but to fail well.**",
         "**Never let an integration test grow quietly inside the unit "
         "suite.**",

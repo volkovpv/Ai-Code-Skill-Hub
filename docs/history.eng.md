@@ -36,6 +36,106 @@ Three conventions hold everywhere in this file:
 
 ---
 
+## A "never called" check that quietly lost the ability to fail
+
+**Releases:** project `4.1.0` (`testing-discipline` `1.8.0 → 1.9.0`)
+**Type:** gap closed — the interaction-precision rules warned about an
+assertion that is too tight and said nothing about one that has become empty
+
+### In one sentence
+
+A test that says "this call never happened" by listing the call's full
+argument list stops being able to fail the moment the callee gains a
+parameter — and nothing in the build tells you.
+
+### The gap, precisely
+
+The skill already tells authors to match call arguments only as precisely as
+the scenario needs, because an over-tight match breaks on an unrelated
+change. That warning describes one direction: a test that is red when it
+should be green.
+
+The opposite direction was never written down. A *negative* assertion
+("this call never happened") compares the recorded calls with an expected
+argument list **as a whole**. When the callee's signature grows, every real
+call is recorded with the new, longer list, so the old, shorter expected list
+cannot equal any recorded call. The assertion is now true whatever the code
+does. The positive assertions for the same call go red and get rewritten; the
+negative one stays green and is left behind. The compiler is happy, the runner
+is happy, and the "seen red" rule — which covers a *new* test — has nothing to
+say about an *existing* assertion that a signature change made vacuous.
+
+### AS IS — how it went wrong
+
+```mermaid
+flowchart LR
+    A["Callee gains a parameter"] --> B["Positive assertions go red"]
+    B --> C["Author rewrites them for the new signature"]
+    A --> D["Negative assertion still lists the old arguments"]
+    D --> E{"Does any recorded call equal the old list?"}
+    E -->|never again| F["Assertion passes whatever the code does"]
+    F --> G["No compile signal, no run signal"]
+```
+
+### TO BE — how it goes now
+
+```mermaid
+flowchart LR
+    A["Callee signature changes"] --> B["Find every negative call assertion on it"]
+    B --> C["Make the code perform the forbidden call"]
+    C --> D{"Does the assertion fail?"}
+    D -->|yes| E["It can still fail - keep it"]
+    D -->|no| F["Rewrite it over the discriminating arguments plus a wildcard"]
+    F --> C
+```
+
+### Example you can run in your head
+
+```python
+def save(id): ...                  # test: never called with ["a"]
+# the callee grows:  def save(id, payload): ...
+# the real call and the positive assertions are updated to two arguments;
+# the negative assertion is left as ["a"]
+
+# a mutant now calls save("a", x) where it must not -> assertion still passes
+assert_never_called(save, with_args=["a"])           # vacuous
+
+assert_never_called(save, with_args=["a", ANY])      # the mutant fails it
+```
+
+### What the skill now says
+
+| Situation | What to do |
+|---|---|
+| A callee's signature changes | Re-observe each negative call assertion on it red: make the code perform the forbidden call and watch the assertion fail |
+| Writing the assertion | Constrain the arguments that discriminate the forbidden call; leave the rest to a wildcard matcher |
+| Tempted to match any call at all | Don't — the discriminating arguments stay exact |
+
+`SKILL.md` carries one pointer sentence in its precision bullet, since it is
+the file every caller reads first.
+
+### Where the rule stops
+
+The rule does not say *which* matcher a given mock library calls its wildcard,
+and it does not ask for a negative call assertion in the first place — whether
+an interaction deserves to be asserted at all is still decided by the
+boundary-crossing rule above it. It only keeps an assertion that was already
+chosen honest after the code around it moves.
+
+### How the change was made
+
+Test first: ten new pins in `__test__/skills/test_testing_discipline.py` — the
+rule, why the assertion goes vacuous, the re-observation step, the remedy, its
+position in the precision section, the `SKILL.md` pointer and the guards that
+the existing over-precision warning survives and the wording stays neutral —
+were run against the unchanged files and nine of the ten were red (the tenth is
+the guard that the old warning is untouched) → the minimal delta landed in
+`references/unit-test-value.md` plus one sentence in `SKILL.md` → all ten went
+green → the library's full suite ran with no regressions. No `cases.json`
+content changed.
+
+---
+
 ## A filter that invented its own idea of a name a parser would recognize
 
 **Releases:** project `3.15.0` (`python-coding` `1.11.0 → 1.12.0`)

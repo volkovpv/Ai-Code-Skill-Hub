@@ -43,6 +43,15 @@ Reading rules for agents:
   two independent occurrences across two different tasks, plus a
   deterministic, project-independent minimal reproduction; reviewed by
   HC-AGENT-010, 2026-08-26, provisional pending PR merge by the operator).
+- [OBS-20261007-001](accepted/OBS-20261007-001.md) — the interaction-precision
+  rules argued only one direction (an over-tight match is a false positive);
+  they were silent on the opposite one: a negative call assertion ("this call
+  never happened") pinned to a full argument list can no longer fail once the
+  callee's signature grows, with no compile or run signal, and no rule asked
+  to re-observe such assertions (field report from a consuming project; C3,
+  one occurrence plus a deterministic, project-independent minimal
+  reproduction; reviewed by the consuming project's Reviewer, 2026-10-07,
+  provisional pending PR merge by the operator).
 
 ## Candidates awaiting review
 
