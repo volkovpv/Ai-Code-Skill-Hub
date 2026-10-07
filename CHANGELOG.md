@@ -5,6 +5,39 @@ version in `pyproject.toml` — enforced by the `scripts/check_version_drift.py`
 gate. Entry header format: `## [X.Y.Z] — YYYY-MM-DD`; the entry body becomes
 the GitHub release notes (extracted by `.github/workflows/release.yml`).
 
+## [4.1.0] — 2026-10-07
+
+`testing-discipline` `1.8.0 → 1.9.0`
+
+`OBS-20261007-001`, verdict class C3, one occurrence from a consuming project and a
+deterministic, project-independent minimal reproduction — threshold met on the
+reproduction limb.
+
+`references/unit-test-value.md`'s interaction-precision rules ("Match arguments only
+as precisely as the scenario constrains them") argued one direction only: an
+argument matched more tightly than the scenario needs is a false positive waiting
+for the next unrelated change. They were silent on the opposite direction. A
+*negative* call assertion ("this call never happened") compares the recorded calls
+with an expected argument list as a whole; when the callee's signature grows, every
+real call is recorded in the new shape, no recorded call can equal the stale list,
+and the assertion passes whatever the code does — with no compile or run signal. The
+positive assertions on the same call go red and are rewritten; the negative one stays
+green and is left behind. The "seen red" rule covers a new test, not an existing
+assertion that a signature change made vacuous.
+
+The delta adds one bullet next to the over-precision warning: a negative call
+assertion must be able to fail; when a signature changes, re-observe each negative
+call assertion on that callee red (make the code perform the forbidden call), and
+write it over the arguments that discriminate the forbidden call plus a wildcard
+matcher for the rest — never loosened to match any call. `SKILL.md` carries one
+pointer sentence in its precision bullet. A pair of docs entries in
+`docs/history.*.md` shows the defect.
+
+Pinned by ten new tests in `__test__/skills/test_testing_discipline.py`, observed red
+before the delta (nine of ten; the tenth guards that the existing warning survives)
+and green after, plus one anchor added to the no-restatement list of the sibling
+standards; no `cases.json` content changed. Project `4.0.0 → 4.1.0`.
+
 ## [4.0.0] — 2026-09-26
 
 ### New skill: `go-coding` 1.0.0 (major: a skill was created)

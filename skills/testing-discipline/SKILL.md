@@ -187,7 +187,8 @@ Do not preload the whole skill; open a file only when its trigger fires.
   Allow queries any number of times; expect commands exactly as often as
   the contract says. Keep required interactions few, match arguments only
   as tightly as the scenario constrains them, and pin call order only
-  where the order is part of the contract.
+  where the order is part of the contract. A negative call assertion is re-observed red whenever the callee's
+  signature changes: it can lose the ability to fail with no signal.
 - A unit test touches nothing external: no network, disk, database, or
   wall-clock dependence. Control time by injecting it, preferably as a
   value, never by sleeping and never through an ambient global.
